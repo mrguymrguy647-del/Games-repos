@@ -1,0 +1,6 @@
+/target
+out/
+*/out/
+# A game's save files (made where you run it from).
+*_save.dat
+*_save.dat.new
