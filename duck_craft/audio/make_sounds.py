@@ -6,12 +6,16 @@ but sine waves, noise and arithmetic (Duck Echo isn't ready yet).
 writes into assets/, all at 44100 samples a second (the engine's own rate,
 so nothing is resampled when the game loads them):
 
-  music_day.wav    "Still Water": slow felt piano over a soft pad, D minor,
-                   64 s, stereo, loops with no seam
-  music_night.wav  "Nothing Waits": a low drone, a minor second that comes
-                   and goes, wind, a far bell; 64 s, stereo, loops
-  music_title.wav  "The Island Doesn't Remember": a falling piano figure
-                   over the drone; 32 s, stereo, loops
+  music_day.wav    "Still Water": a calm piano song on a warped tape, that
+                   isn't calm: flat notes, an out-of-tune music box, a
+                   far choir, a backwards swell, silences; 64 s, stereo,
+                   loops with no seam
+  music_night.wav  "Nothing Waits": a low drone, a tone that falls
+                   forever, whispers, strings that pile up and cut off,
+                   bowed metal, a sinking choir, a far bell; 64 s, stereo
+  music_title.wav  "The Island Doesn't Remember": a music box lullaby that
+                   sticks, then winds down, into a backwards bell and a
+                   whisper; 32 s, stereo, loops
   wind.wav         the island's wind, 24 s, stereo, loops
   groan.wav        a Hollow, somewhere near (mono: the game pans it
                    toward the Hollow)
@@ -153,7 +157,9 @@ def room(seconds, decay, seed, ears=2, predelay=0.02):
         tail = np.zeros(n)
         for low, high, scale in [(20, 250, 1.25), (250, 1000, 1.0), (1000, 3500, 0.75),
                                  (3500, 8000, 0.5), (8000, 20000, 0.3)]:
-            tail += bandpass(noise, low, high) * np.exp(-6.9 * t / (decay * scale))
+            band = bandpass(noise, low, high)
+            band /= np.std(band[: int(0.5 * RATE)]) + 1e-12  # each band as strong in both ears
+            tail += band * np.sqrt((high - low) / 20000) * np.exp(-6.9 * t / (decay * scale))
         tail *= np.clip((t - predelay) / 0.03, 0, 1)  # the room fills in
         early = np.zeros(n)
         for _ in range(10):
@@ -200,10 +206,20 @@ def middle(track, length):
     return track[n:2 * n]
 
 
+def balance(x):
+    """Both ears equally loud over the whole sound (things can still move
+    from side to side inside it)."""
+    if x.ndim == 1:
+        return x
+    levels = np.sqrt(np.mean(x ** 2, axis=0)) + 1e-12
+    return x * (np.mean(levels) / levels)[None, :]
+
+
 def loudness(x, rms, ceiling=0.92):
     """Scaled to an average loudness (`rms`, like the old files, so the
     game's mix doesn't change), with any rare peak above `ceiling`
     rounded off gently instead of clipped."""
+    x = balance(x)
     x = x * (rms / (np.sqrt(np.mean(x ** 2)) + 1e-12))
     over = np.abs(x) > ceiling * 0.8
     if over.any():
@@ -318,13 +334,186 @@ def bell(hz, seconds, seed=0):
     return out + pan(strike, 0)
 
 
+# ---- Uncanny instruments ----
+
+
+def stretch_rng(seed):
+    return np.random.default_rng(seed)
+
+
+def music_box(hz, seconds, seed=0, cents_off=0.0):
+    """One tine of a music box: a bright ping with a metal click, its
+    overtones at the comb's odd ratios, a little out of tune."""
+    rng = stretch_rng(seed)
+    hz = hz * 2 ** (cents_off / 1200)
+    t = time_axis(seconds)
+    out = np.zeros_like(t)
+    for ratio, amp, decay in [(1.0, 1.0, 2.4), (2.0, 0.08, 0.9), (3.01, 0.22, 0.5), (5.63, 0.1, 0.2), (9.2, 0.05, 0.08)]:
+        f = hz * ratio
+        if f > 17000:
+            continue
+        out += amp * np.sin(2 * np.pi * f * t + rng.uniform(0, 6.28)) * envelope(len(t), 0.001, decay)
+    click = highpass(rng.normal(0, 1, len(t)), 3000) * envelope(len(t), 0.0003, 0.003) * 0.25
+    return fade(out + click, 0, 0.1)
+
+
+def choir(names, seconds, vowel="oo", sag_cents=0.0, seed=0):
+    """Voices humming, far off: three slightly out-of-tune singers a note,
+    each with a slow wobble, shaped by a vowel's formants. With `sag_cents`
+    the whole choir sinks in pitch as it holds, which no real choir does."""
+    rng = stretch_rng(seed)
+    formants = {"oo": [((240, 400), 1.0), ((650, 1000), 0.45), ((2200, 2900), 0.06)],
+                "ah": [((600, 900), 1.0), ((1000, 1350), 0.6), ((2400, 3000), 0.1)]}[vowel]
+    t = time_axis(seconds)
+    sag = 2 ** (-sag_cents / 1200 * (t / seconds) ** 1.5)
+    out = np.zeros((len(t), 2))
+    for name in names:
+        hz = note_hz(name)
+        for cents, where in [(-9, -0.65), (1, 0.05), (8, 0.6)]:
+            vibrato = 1 + 0.0045 * np.sin(2 * np.pi * rng.uniform(4.3, 5.4) * t + rng.uniform(0, 6.28))
+            f = hz * 2 ** (cents / 1200) * vibrato * sag
+            buzz = lowpass(saw(f), 3500)
+            sung = sum(bandpass(buzz, low, high) * level for (low, high), level in formants)
+            sung += bandpass(rng.normal(0, 1, len(t)), 500, 3000) * 0.04  # breath
+            out += pan(sung, where)
+    swell = np.clip(t / (seconds * 0.35), 0, 1) ** 2 * np.clip((seconds - t) / (seconds * 0.3), 0, 1)
+    return out * swell[:, None] / (len(names) * 3)
+
+
+def whisper(seconds, seed=0):
+    """Breath shaped into syllables that never make words: hiss through
+    vowel formants in short bursts, with a sharp 's' now and then. Mono."""
+    rng = stretch_rng(seed)
+    n = int(seconds * RATE)
+    t = np.arange(n) / RATE
+    hiss = rng.normal(0, 1, n)
+    vowels = [(700, 1200), (350, 2200), (500, 950), (420, 1900)]
+    voiced = [bandpass(hiss, f1 * 0.7, f1 * 1.3) * 0.8 + bandpass(hiss, f2 * 0.85, f2 * 1.15) for f1, f2 in vowels]
+    sibilant = highpass(hiss, 4500) * 0.5
+    out = np.zeros(n)
+    at = rng.uniform(0.05, 0.2)
+    while at < seconds - 0.3:
+        length = rng.uniform(0.07, 0.22)
+        a, b = int(at * RATE), int(min(at + length, seconds) * RATE)
+        shape = np.hanning(b - a) * rng.uniform(0.5, 1.0)
+        source = sibilant if rng.random() < 0.18 else voiced[rng.integers(len(vowels))]
+        out[a:b] += source[a:b] * shape
+        at += length + (rng.uniform(0.25, 0.6) if rng.random() < 0.2 else rng.uniform(0.02, 0.08))
+    return lowpass(out, 7000)
+
+
+def shepard(seconds, length, sweep_seconds, octaves=6, low=40.0, voices=6, seed=0):
+    """A tone that falls forever: voices an octave apart all gliding down,
+    each fading out at the bottom as another fades in at the top. Every
+    voice's phase comes back round exactly at `length`, so it loops."""
+    rng = stretch_rng(seed)
+    n = int(seconds * RATE)
+    t = np.arange(n) / RATE
+    out = np.zeros((n, 2))
+    for i in range(voices):
+        place_in_sweep = (i / voices - t / sweep_seconds) % 1.0  # 1 at the top, falling to 0
+        f = low * 2 ** (place_in_sweep * octaves)
+        cycles = np.sum(f[: int(length * RATE)]) / RATE
+        f *= round(cycles) / cycles  # a whole number of cycles a loop
+        phase = 2 * np.pi * np.cumsum(f) / RATE + rng.uniform(0, 6.28)
+        loudness_curve = np.exp(-0.5 * ((place_in_sweep - 0.5) / 0.17) ** 2)
+        out += pan(np.sin(phase) * loudness_curve, 0.5 * np.sin(2 * np.pi * i / voices))
+    return out / voices
+
+
+def cluster_swell(names, seconds, seed=0):
+    """Strings, all the wrong notes together, growing louder and louder,
+    then cut off dead."""
+    rng = stretch_rng(seed)
+    t = time_axis(seconds)
+    out = np.zeros((len(t), 2))
+    for i, name in enumerate(names):
+        hz = note_hz(name)
+        vibrato = 1 + 0.005 * np.sin(2 * np.pi * rng.uniform(4.5, 6.5) * t + rng.uniform(0, 6))
+        string = bandpass(lowpass(saw(np.full_like(t, hz) * vibrato), 6000), 250, 5000)
+        out += pan(string, -0.8 + 1.6 * i / max(len(names) - 1, 1))
+    grow = (t / seconds) ** 3
+    return fade(out * grow[:, None] / len(names), 0, 0.012)
+
+
+def bowed_metal(hz, seconds, seed=0):
+    """A sheet of metal bowed slowly: inharmonic partials that creep in and
+    waver, and the scrape of the bow."""
+    rng = stretch_rng(seed)
+    t = time_axis(seconds)
+    out = np.zeros((len(t), 2))
+    bow = 0.7 + 0.3 * lowpass(rng.normal(0, 1, len(t)), 8) * 3
+    for i, (ratio, amp) in enumerate([(1.0, 1.0), (2.32, 0.6), (4.25, 0.4), (6.63, 0.25), (9.38, 0.15), (12.8, 0.08)]):
+        f = hz * ratio * (1 + 0.002 * np.sin(2 * np.pi * rng.uniform(0.2, 0.7) * t))
+        partial = np.sin(2 * np.pi * np.cumsum(f) / RATE) * amp * bow
+        out += pan(partial, 0.6 * np.sin(i * 2.1))
+    scrape = bandpass(rng.normal(0, 1, len(t)), hz * 3, hz * 9) * bow * 0.15
+    shape = np.sin(np.pi * np.clip(t / seconds, 0, 1)) ** 2
+    return (out + pan(scrape, 0.2)) * shape[:, None] / 3
+
+
+def reversed_swell(sound, ir):
+    """A sound and its echo played backwards: it rises out of nothing and
+    stops dead, as if time ran the wrong way. Place it so it ends where
+    the next thing begins."""
+    wet = np.stack([fftconvolve(sound[:, c], ir[:, c]) for c in range(2)], axis=1)
+    return wet[::-1].copy()
+
+
+def wow(x, length, cents, seed=0):
+    """A warped tape: the pitch slowly drifts sharp and flat by about
+    `cents`, never quite repeating within the loop (but exactly once a
+    loop, so the seam holds)."""
+    rng = stretch_rng(seed)
+    n = len(x)
+    t = np.arange(n) / RATE
+    dev = 2 ** (cents / 1200) - 1
+    delay = np.zeros(n)
+    for cycles, weight in [(5, 0.55), (11, 0.3), (23, 0.15)]:
+        amp = weight * dev * length / (2 * np.pi * cycles)
+        delay += amp * (1 + np.sin(2 * np.pi * cycles * t / length + rng.uniform(0, 6.28)))
+    read = np.clip(t - delay, 0, t[-1])
+    return np.stack([np.interp(read, t, x[:, c]) for c in range(x.shape[1])], axis=1)
+
+
+def dropouts(n_total, length, gaps):
+    """A gain that drops to nothing for each (start, seconds) in `gaps`,
+    once a pass, with short fades: the music forgets itself."""
+    gain = np.ones(n_total)
+    t = np.arange(n_total) / RATE
+    local = t % length
+    for start, seconds in gaps:
+        inside = np.clip(np.minimum(local - start, start + seconds - local) / 0.06, 0, 1)
+        gain *= 1 - inside
+    return gain[:, None]
+
+
+def record_skip(x, at, piece, times):
+    """The record sticks: `piece` seconds from `at` repeat `times` times,
+    then it goes on as if nothing happened (the length stays the same)."""
+    a, w = int(at * RATE), int(piece * RATE)
+    chunk = x[a:a + w].copy()
+    edge = int(0.004 * RATE)
+    chunk[:edge] *= np.linspace(0, 1, edge)[:, None]
+    chunk[-edge:] *= np.linspace(1, 0, edge)[:, None]
+    out = x.copy()
+    out[a - edge:a] *= np.linspace(1, 0, edge)[:, None]  # no click going in
+    for k in range(times):
+        out[a + k * w:a + (k + 1) * w] = chunk
+    after = a + times * w
+    out[after:after + edge] *= np.linspace(0, 1, edge)[:, None]  # or coming out
+    return out
+
+
 # ---- Music ----
 
 
 def day_music():
-    """'Still Water': i - VI - III - VII in D minor, four bars a chord at
-    60 beats a minute. A felt piano wanders over a pad; bass notes on the
-    first beat. Sparse on purpose: lots of room for the wind."""
+    """'Still Water': i - VI - III - VII in D minor, slow. It sounds like a
+    calm song on an old warped tape, and it isn't calm: some notes land a
+    quarter-tone flat, a music box plays a lullaby a little out of tune, a
+    choir hums very far off, a chord rises in backwards, and twice the
+    whole song simply stops for a moment and the room rings on without it."""
     length = 64.0
     rng = np.random.default_rng(11)
     chords = [
@@ -333,87 +522,128 @@ def day_music():
         (["F3", "A3", "C4"], "F2", ["C4", "F4", "A4", "C5", "G4", "E4"]),
         (["C3", "E3", "G3"], "C2", ["C4", "E4", "G4", "D5", "E5", "G4"]),
     ]
-    # The melody, chosen once (the same each pass): per chord, 16 beats,
-    # a note on some of them.
     melody = []
     for c, (_, _, notes) in enumerate(chords):
         for beat in range(16):
-            # Fewer notes as each chord goes on; never on the very last beat.
-            if beat < 15 and rng.random() < (0.55 if beat % 4 == 0 else 0.22):
+            if beat < 15 and rng.random() < (0.5 if beat % 4 == 0 else 0.2):
                 melody.append((c * 16 + beat + rng.choice([0, 0, 0.5]), rng.choice(notes), rng.uniform(0.5, 0.85)))
 
-    events = []
+    piano_events = []
+    pad_events = []
     for c, (chord, bass, _) in enumerate(chords):
         start = c * 16.0
-        events.append((start - 1.0, pad(chord, 18.0, 0.55)))
+        pad_events.append((start - 1.0, pad(chord, 18.0, 0.4)))
         for bar in range(4):
             velocity = 0.55 if bar % 2 == 0 else 0.35
-            events.append((start + bar * 4.0, piano(note_hz(bass), 7.0, velocity, seed=c * 4 + bar)))
+            piano_events.append((start + bar * 4.0, piano(note_hz(bass), 7.0, velocity, seed=c * 4 + bar)))
     for i, (beat, name, velocity) in enumerate(melody):
-        events.append((beat, piano(note_hz(name), 6.0, velocity * 0.6, seed=100 + i)))
+        hz = note_hz(name)
+        if i % 6 == 4:
+            hz *= 2 ** (-0.5 / 12)  # a quarter-tone flat: wrong, but only just
+        piano_events.append((beat, piano(hz, 6.0, velocity * 0.6, seed=100 + i)))
 
-    track = seamless(events, length)
-    track = reverb(track, room(4.0, 3.2, seed=1), wet=0.38)
+    # The lullaby, twice: the second time under the wrong chord.
+    lullaby = ["A5", "F5", "E5", "D5", "E5", "F5", "A5", "G5", "F5", "E5", "D5", "C#5", "D5"]
+    box_events = []
+    for start, seed in [(2.0, 0), (34.0, 50)]:
+        box_rng = np.random.default_rng(200 + seed)
+        for k, name in enumerate(lullaby):
+            off = box_rng.normal(0, 14) + (-30 if k == 11 else 0)
+            box_events.append((start + k * 0.62 + (0.4 if k == 12 else 0),
+                               pan(music_box(note_hz(name), 3.0, seed=seed + k, cents_off=off) * 0.3, 0.45)))
+
+    far_choir = [(18.0, choir(["Bb3", "D4", "F4"], 14.0, "oo", sag_cents=35, seed=1) * 0.5),
+                 (50.0, choir(["C4", "E4", "G4"], 13.0, "oo", sag_cents=50, seed=2) * 0.5)]
+    swell_room = room(3.0, 2.6, seed=21)
+    backwards = reversed_swell(piano(note_hz("F3"), 2.5, 0.7, seed=300) + piano(note_hz("C4"), 2.5, 0.6, seed=301), swell_room) * 0.35
+    rising = [(32.0 - len(backwards) / RATE, backwards)]
+
+    n3 = int(length * RATE) * 3
+    tape = wow(seamless(piano_events + box_events, length), length, cents=16, seed=4)
+    track = tape + seamless(pad_events + rising, length) + seamless(far_choir, length) * 1.1
+    track *= dropouts(n3, length, [(30.3, 1.4), (57.5, 1.1)])
+    track = reverb(track, room(4.0, 3.4, seed=1), wet=0.42)
     return loudness(middle(highpass(track, 30), length), 0.113)
 
 
 def night_music():
-    """'Nothing Waits': D and A held low, an E-flat that creeps in a minor
-    second above (and leaves), wind, a thin whine that drifts from ear to
-    ear, and a bell now and then, far away."""
+    """'Nothing Waits': D and A held low, an E-flat creeping in a minor
+    second above; under it a tone that falls forever and never arrives.
+    Whispers come from one side, then the other. Twice, strings pile up
+    on the wrong notes, louder and louder, and are cut off. Metal is
+    bowed somewhere in the dark; a choir sinks on a tritone; a far bell."""
     length = 64.0
     t = time_axis(length)
     rng = np.random.default_rng(23)
     drone = np.zeros((len(t), 2))
-    for name, level, cycles in [("D1", 0.9, 1), ("D2", 0.55, 2), ("A2", 0.30, 3)]:
+    for name, level, cycles in [("D1", 0.8, 1), ("D2", 0.5, 2), ("A2", 0.25, 3)]:
         hz = note_hz(name)
         for detune, where in [(-0.07, -0.6), (0.0, 0.0), (0.07, 0.6)]:
             f = snap(hz + detune, length)
             tone = np.sin(2 * np.pi * f * t) + 0.12 * np.sin(2 * np.pi * 2 * f * t) + 0.05 * np.sin(2 * np.pi * 3 * f * t)
             drone += pan(level * tone * (0.6 + 0.4 * loop_lfo(t, length, cycles, detune * 10)), where)
-    # The minor second: comes in over the first half of the loop, leaves
-    # over the second.
     creep = np.sin(np.pi * t / length) ** 3
     for d, where in [(-0.1, -0.4), (0.1, 0.4)]:
-        drone += pan(0.18 * np.sin(2 * np.pi * snap(note_hz("Eb3") + d, length) * t) * creep, where)
-    # A faint high whine, a tritone above, wandering slowly between the ears.
-    whine = 0.03 * np.sin(2 * np.pi * snap(note_hz("G#5"), length) * t) * loop_lfo(t, length, 2, 1.0)
-    drift = np.sin(2 * np.pi * t / length)
-    angle = (np.clip(drift * 0.8, -1, 1) + 1) * np.pi / 4
-    drone += np.stack([whine * np.cos(angle), whine * np.sin(angle)], axis=1) * np.sqrt(2)
-    # Wind: noise, low-passed, gusting, not quite the same in each ear.
+        drone += pan(0.2 * np.sin(2 * np.pi * snap(note_hz("Eb3") + d, length) * t) * creep, where)
+    # A slow throb deep down, like something breathing under the ground.
+    throb = np.sin(2 * np.pi * snap(31.0, length) * t) * loop_lfo(t, length, 16) ** 4 * 0.35
+    drone += pan(throb, 0)
+    falling = shepard(length, length, sweep_seconds=length / 2, octaves=6, low=55.0, seed=5) * 0.22
     common = looping_noise(len(t), 520, rng, low=25)
     gust = 0.4 + 0.6 * loop_lfo(t, length, 3, 2.0) * loop_lfo(t, length, 5, 0.5)
     wind = np.stack([0.7 * common + 0.3 * looping_noise(len(t), 520, rng, low=25),
                      0.7 * common + 0.3 * looping_noise(len(t), 520, rng, low=25)], axis=1)
-    wind *= 0.12 * gust[:, None]
+    wind *= 0.11 * gust[:, None]
 
-    events = [(at, bell(note_hz(name), 9.0, seed=int(at)) * 0.6) for at, name in [(6.0, "D2"), (29.0, "Ab2"), (47.5, "D2")]]
-    track = seamless(events, length, beds=[drone + wind])
-    track = reverb(track, room(5.0, 4.5, seed=2), wet=0.4)
+    events = [(at, bell(note_hz(name), 9.0, seed=int(at)) * 0.5) for at, name in [(6.0, "D2"), (47.5, "Ab1")]]
+    # Whispers: far on the left, then nearer on the right, then close behind.
+    for at, seconds, where, level, seed in [(9.0, 3.5, -0.85, 1.4, 1), (23.0, 2.5, 0.8, 1.8, 2),
+                                            (38.5, 4.0, -0.3, 1.2, 3), (55.0, 2.0, 0.9, 2.4, 4)]:
+        events.append((at, pan(whisper(seconds, seed) * level, where)))
+    events.append((13.0, cluster_swell(["D5", "Eb5", "E5", "Ab5", "A4", "Bb4", "C#5"], 7.5, seed=6) * 1.8))
+    events.append((41.0, cluster_swell(["G#4", "A4", "D5", "Eb5", "F#5"], 5.0, seed=7) * 2.2))
+    events.append((27.0, bowed_metal(note_hz("F#3"), 9.0, seed=8) * 0.5))
+    events.append((50.5, bowed_metal(note_hz("C4"), 7.0, seed=9) * 0.4))
+    events.append((30.0, choir(["D3", "G#3"], 12.0, "ah", sag_cents=80, seed=10) * 0.9))
+
+    track = seamless(events, length, beds=[drone + falling + wind])
+    track = reverb(track, room(5.0, 4.5, seed=2), wet=0.42)
     return loudness(middle(highpass(track, 25), length), 0.130)
 
 
 def title_music():
-    """'The Island Doesn't Remember': a four-note figure falling through
-    D minor, over the low drone, slowing, then the bell."""
+    """'The Island Doesn't Remember': a music box plays a falling lullaby
+    over the low drone, a piano doubling it softly. The record sticks for a
+    moment. Then the box winds down, slower and flatter, a sound rises in
+    backwards into the bell, and something whispers."""
     length = 32.0
     t = time_axis(length)
     drone = np.zeros((len(t), 2))
-    for name, level in [("D2", 0.5), ("A2", 0.25)]:
+    for name, level in [("D2", 0.5), ("A2", 0.22), ("Eb3", 0.05)]:
         for detune, where in [(-0.06, -0.5), (0.06, 0.5)]:
             f = snap(note_hz(name) + detune, length)
             drone += pan(level * (np.sin(2 * np.pi * f * t) + 0.1 * np.sin(2 * np.pi * 2 * f * t)), where)
     drone *= (0.7 + 0.3 * np.sin(2 * np.pi * t / length))[:, None]
-    figure = [("A4", 0.0), ("F4", 1.0), ("E4", 2.0), ("D4", 3.0),
-              ("G4", 4.0), ("E4", 5.0), ("D4", 6.0), ("C#4", 7.0),
-              ("F4", 8.0), ("D4", 9.0), ("C4", 10.0), ("Bb3", 11.0),
-              ("A3", 12.5), ("D4", 14.5)]
-    events = [(1.0 + beat * 1.1, piano(note_hz(name), 7.0, 0.55, seed=i)) for i, (name, beat) in enumerate(figure)]
-    events.append((19.0, bell(note_hz("D2"), 10.0, seed=3) * 0.3))
+    figure = ["A5", "F5", "E5", "D5", "G5", "E5", "D5", "C#5", "F5", "D5", "C5", "Bb4", "A4", "D5"]
+    events = []
+    at = 1.0
+    for i, name in enumerate(figure):
+        wind_down = max(0, i - 9)  # the last notes: slower, flatter
+        at += 0.95 + 0.28 * wind_down ** 1.3
+        cents = np.random.default_rng(i).normal(0, 10) - 18 * wind_down
+        events.append((at, pan(music_box(note_hz(name), 3.5, seed=i, cents_off=cents) * 0.5, 0.25)))
+        events.append((at, piano(note_hz(name) / 2 * 2 ** (cents / 1200), 6.0, 0.35, seed=i) * 0.6))
+    bell_at = 22.5
+    events.append((bell_at, bell(note_hz("D2"), 9.0, seed=3) * 0.35))
+    backwards = reversed_swell(bell(note_hz("A2"), 2.5, seed=4), room(3.0, 2.8, seed=31)) * 0.25
+    events.append((bell_at - len(backwards) / RATE, backwards))
+    events.append((26.5, pan(whisper(2.4, seed=9) * 0.5, -0.7)))
     track = seamless(events, length, beds=[drone])
+    track = wow(track, length, cents=10, seed=6)
     track = reverb(track, room(5.0, 4.0, seed=3), wet=0.45)
-    return loudness(middle(highpass(track, 25), length), 0.145)
+    music = middle(highpass(track, 25), length)
+    music = record_skip(music, 7.1, 0.23, 3)
+    return loudness(music, 0.145)
 
 
 def wind_loop():
@@ -454,6 +684,7 @@ def voice(f, formants, rng, breath=0.25):
 
 
 def peak(x, level):
+    x = balance(x)
     return x / (np.max(np.abs(x)) + 1e-9) * level
 
 
