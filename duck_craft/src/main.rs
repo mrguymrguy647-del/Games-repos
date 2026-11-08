@@ -385,6 +385,9 @@ struct World {
     plants_changed: bool,
     /// What each chest holds, by its cell (`furniture::CHEST_SLOTS` each).
     chests: std::collections::HashMap<[i32; 3], Vec<Option<Stack>>>,
+    /// Torches knocked down (what held them up went): the duck gets them
+    /// back (`DuckCraft::pick_up_loose`).
+    loose_torches: u32,
     /// The number the island grew from (the same number grows the same island).
     seed: u32,
     /// Where the duck starts: its feet, and which way it looks.
@@ -489,6 +492,7 @@ impl World {
             grid: BlockWorld::with_chunk_size(SIZE, TALL, SIZE, CHUNK),
             lamps: Vec::new(),
             chests: Default::default(),
+            loose_torches: 0,
             unsettled: Vec::new(),
             sky: vec![0; SIZE * SIZE],
             plants: std::collections::HashMap::new(),
@@ -691,7 +695,9 @@ impl World {
         let mut normal = [0; 3];
         loop {
             let block = self.get(cell[0], cell[1], cell[2]);
-            if block.solid() && World::inside(cell[0], cell[1], cell[2]) {
+            // Open doors stop the ray too: you can click them shut.
+            let stops = block.solid() || block.is_door();
+            if stops && World::inside(cell[0], cell[1], cell[2]) {
                 return Some(RayHit {
                     cell,
                     normal,
@@ -1462,7 +1468,8 @@ impl DuckCraft {
     fn settle_sand(&mut self) {
         for [x, y, z] in std::mem::take(&mut self.world.unsettled) {
             let block = self.world.get(x, y, z);
-            if block == Block::Sand && !self.world.get(x, y - 1, z).solid() && y > 0 {
+            let under = self.world.get(x, y - 1, z);
+            if block == Block::Sand && !under.solid() && !under.is_door() && y > 0 {
                 // Under the sea, water fills in behind it.
                 let wet = DIRECTIONS
                     .iter()
@@ -1495,7 +1502,10 @@ impl DuckCraft {
             let to = next.floor() as i32;
             let floor = (to..=from)
                 .rev()
-                .find(|&y| y < 0 || self.world.get(falling.x, y, falling.z).solid());
+                .find(|&y| {
+                    let block = self.world.get(falling.x, y, falling.z);
+                    y < 0 || block.solid() || block.is_door()
+                });
             match floor {
                 Some(y) => {
                     falling.y = (y + 1) as f32;
@@ -1619,6 +1629,9 @@ struct DuckCraft {
     sleeping: f32,
     /// The weather (see `weather.rs`).
     weather: weather::Sky,
+    /// The right click now held used a door, bed or chest (so holding it
+    /// builds nothing till it's let go).
+    used_block: bool,
     /// The Hollows' maps of the way to the duck (walkers, crawlers).
     walk_field: hunt::Field,
     climb_field: hunt::Field,
@@ -1737,6 +1750,7 @@ impl DuckCraft {
             bed: None,
             sleeping: 0.0,
             weather: weather::Sky::default(),
+            used_block: false,
             walk_field: hunt::Field::new(false),
             climb_field: hunt::Field::new(true),
             hunt_wait: 0.0,
@@ -2232,6 +2246,9 @@ impl DuckCraft {
         let input = &ctx.input;
         let pressed = input.was_mouse_pressed(MouseButton::Right) || input.was_pressed(Key::C);
         let held = input.is_mouse_down(MouseButton::Right) || input.is_down(Key::C);
+        if !held {
+            self.used_block = false;
+        }
         self.place_wait -= ctx.dt();
         if !(pressed || (held && self.place_wait <= 0.0)) {
             return;
@@ -2239,9 +2256,14 @@ impl DuckCraft {
         let Some(hit) = self.target else {
             return;
         };
-        // Right click on a door, bed or chest uses it.
+        // Right click on a door, bed or chest uses it (and holding the
+        // click on afterwards builds nothing).
         if pressed && hit.plant.is_none() && self.use_block(hit, ctx) {
             self.place_wait = PLACE_REPEAT;
+            self.used_block = true;
+            return;
+        }
+        if self.used_block {
             return;
         }
         if let Some(item) = self.holding().map(|s| s.item)
@@ -2266,7 +2288,8 @@ impl DuckCraft {
             }
             return;
         }
-        if self.world.get(x, y, z).solid() {
+        let there = self.world.get(x, y, z);
+        if there.solid() || there.is_door() {
             return;
         }
         // Not inside the duck, a duckling or a Hollow.
@@ -2439,6 +2462,7 @@ impl Game for DuckCraft {
                 self.place(ctx);
             }
         }
+        self.pick_up_loose();
         self.update_ducklings(ctx);
         self.update_hollows(ctx);
         self.update_watcher(ctx);

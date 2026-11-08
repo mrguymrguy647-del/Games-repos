@@ -147,7 +147,7 @@ impl Field {
                 let Some(i) = index(x, y, z) else {
                     continue;
                 };
-                if self.steps[i] != UNSEEN || avoid(x, y, z) || !self.stands(world, x, y, z) {
+                if self.steps[i] != UNSEEN || !self.stands(world, x, y, z) || avoid(x, y, z) {
                     continue;
                 }
                 if !self.step_ok(world, from, at) {

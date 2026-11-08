@@ -62,6 +62,10 @@ impl DuckCraft {
             Block::DoorLow | Block::DoorLowOpen => y,
             _ => y - 1,
         };
+        // Only a whole door swings (both halves there).
+        if !(self.world.get(x, low, z).is_door() && self.world.get(x, low + 1, z).is_door()) {
+            return false;
+        }
         let shutting = !self.world.get(x, low, z).solid();
         if shutting {
             for cell_y in [low, low + 1] {
@@ -76,8 +80,17 @@ impl DuckCraft {
                 self.world.set(x, cell_y, z, half.door_swung());
             }
         }
+        self.door_damage.remove(&[x, low, z]); // a fresh start for the Hollows
         self.update_chunks();
         true
+    }
+
+    /// Torches knocked down come back to the bag (in survival).
+    pub fn pick_up_loose(&mut self) {
+        let loose = std::mem::take(&mut self.world.loose_torches);
+        if loose > 0 && self.mode == Mode::Survival {
+            self.give(Item::Torch, loose);
+        }
     }
 
     /// Whether the duck, a duckling or a Hollow is in the cell.
@@ -261,6 +274,8 @@ impl DuckCraft {
             .or_insert_with(|| vec![None; CHEST_SLOTS]);
         self.screen = Some(Screen {
             chest: Some(cell),
+            // What waits in the crafting grid stays waiting (unseen).
+            grid: std::mem::take(&mut self.kept_grid),
             ..Screen::default()
         });
         self.digging = None;

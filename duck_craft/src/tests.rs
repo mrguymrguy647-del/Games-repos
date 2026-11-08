@@ -2805,3 +2805,97 @@ fn the_weather_is_saved() {
     assert_eq!(loaded.weather.left, 77.0);
     assert_eq!(loaded.weather.turns, 5);
 }
+
+// ---- Bugs found in review of the furniture (each was real) ----
+
+/// The arena with a shut door two ahead, the duck looking at its bottom.
+fn door_ahead(item: Option<Item>) -> DuckCraft {
+    let mut game = furniture_ahead(Block::Air, item);
+    game.world.set(8, FLOOR, 10, Block::DoorLow);
+    game.world.set(8, FLOOR + 1, 10, Block::DoorHigh);
+    game
+}
+
+#[test]
+fn an_open_door_can_be_clicked_shut_and_broken() {
+    let mut game = door_ahead(None);
+    assert!(game.swing_door(8, FLOOR, 10));
+    let played = PlayTest::new(config(), game).script(&tap("C")).frames(5).run();
+    assert_eq!(played.game().world.get(8, FLOOR, 10), Block::DoorLow, "shut again");
+    let mut game = played.game().clone();
+    game.swing_door(8, FLOOR, 10);
+    let played = PlayTest::new(config(), game).script(&hold(&["X"], 90)).run();
+    assert_eq!(played.game().world.get(8, FLOOR, 10), Block::Air, "and broken, open");
+    assert_eq!(played.game().count(Item::Door), 1);
+}
+
+#[test]
+fn nothing_is_built_inside_a_door_and_holding_the_click_builds_nothing() {
+    // Holding right click on a shut door: it opens, and that's all.
+    let game = door_ahead(Some(Item::Block(Block::Planks)));
+    let played = PlayTest::new(config(), game).script(&hold(&["C"], 40)).run();
+    let game = played.game();
+    assert_eq!(game.world.get(8, FLOOR, 10), Block::DoorLowOpen);
+    assert_eq!(game.world.get(8, FLOOR + 1, 10), Block::DoorHighOpen);
+    assert_eq!(game.count(Item::Block(Block::Planks)), 3, "no planks used");
+    // And a half door (made any old way) doesn't swing.
+    let mut game = game.clone();
+    game.world.set(8, FLOOR, 10, Block::Planks);
+    assert!(!game.swing_door(8, FLOOR + 1, 10));
+}
+
+#[test]
+fn sand_lands_on_an_open_door() {
+    let mut game = door_ahead(None);
+    game.swing_door(8, FLOOR, 10);
+    game.world.set(8, FLOOR + 3, 10, Block::Sand);
+    let played = PlayTest::new(config(), game).frames(120).run();
+    let world = &played.game().world;
+    assert_eq!(world.get(8, FLOOR, 10), Block::DoorLowOpen);
+    assert_eq!(world.get(8, FLOOR + 1, 10), Block::DoorHighOpen);
+    assert_eq!(world.get(8, FLOOR + 2, 10), Block::Sand, "it sits on the door");
+}
+
+#[test]
+fn opening_a_chest_keeps_what_waits_in_the_grid() {
+    let mut game = arena(|w| w.set(8, FLOOR, 10, Block::Chest));
+    game.kept_grid[0] = Some(Stack::new(Item::Gold, 5));
+    for i in 0..items::SLOTS {
+        game.inventory.slots[i] = Some(Stack::new(Item::Block(Block::Brick), 64));
+    }
+    game.screen = Some(inventory::Screen {
+        chest: Some([8, FLOOR, 10]),
+        grid: std::mem::take(&mut game.kept_grid),
+        ..Default::default()
+    });
+    game.world.chests.insert([8, FLOOR, 10], vec![None; furniture::CHEST_SLOTS]);
+    game.close_inventory();
+    assert_eq!(game.kept_grid[0], Some(Stack::new(Item::Gold, 5)), "still waiting");
+}
+
+#[test]
+fn a_mimic_that_shows_itself_by_a_wall_is_never_in_it() {
+    let wall = |w: &mut World| {
+        for y in FLOOR..FLOOR + 3 {
+            w.set(8, y, 12, Block::Stone);
+        }
+    };
+    // Right against the wall.
+    let at = vec3(8.5, FLOOR as f32, 12.0 - night::MIMIC.half_width);
+    let mimic = Hollow::of_kind(night::Kind::Mimic { revealed: false }, at, PI);
+    let mut game = night_arena(3, wall, mimic);
+    game.position = vec3(8.5, FLOOR as f32, 10.0);
+    let played = PlayTest::new(config(), game).frames(30).run();
+    assert!(played.failed_checks().is_empty(), "{:?}", played.failed_checks());
+    assert_eq!(played.game().hollows[0].kind, night::Kind::Mimic { revealed: true });
+}
+
+#[test]
+fn a_torch_that_loses_its_floor_comes_back_to_you() {
+    let mut game = door_ahead(None);
+    game.world.put_torch(8, FLOOR + 2, 10); // on top of the shut door
+    game.swing_door(8, FLOOR, 10); // open: nothing to stand on
+    assert!(game.world.plant(8, FLOOR + 2, 10).is_none());
+    let played = PlayTest::new(config(), game).frames(3).run();
+    assert_eq!(played.game().count(Item::Torch), 1);
+}

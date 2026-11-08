@@ -30,8 +30,9 @@ pub const CRAWLER: Body = Body {
     height: 0.9,
 };
 /// A mimic while it looks like a duckling.
+/// (As wide as a crawler, what it turns into, so it never turns into a wall.)
 pub const MIMIC: Body = Body {
-    half_width: 0.25,
+    half_width: 0.3,
     height: 0.6,
 };
 /// It smells you this near, wall or no wall.
@@ -319,6 +320,9 @@ impl DuckCraft {
                 Kind::Walker
             };
             self.hollows.push(Hollow::of_kind(kind, feet, facing));
+            if kind != Kind::Walker {
+                self.hunt_wait = 0.0; // the climbers' map, now
+            }
             return;
         }
     }

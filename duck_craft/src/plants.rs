@@ -138,15 +138,15 @@ impl World {
     /// After block (x, y, z) changed: a plant can't share a cell with a
     /// block, and needs grass or dirt under it (a torch, anything solid).
     pub fn plants_after_set(&mut self, x: i32, y: i32, z: i32, block: Block) {
-        if block != Block::Air {
-            self.remove_plant(x, y, z);
+        if block != Block::Air && self.remove_plant(x, y, z) == Some(Plant::Torch) {
+            self.loose_torches += 1;
         }
         let keeps = match self.plant(x, y + 1, z) {
             Some(Plant::Torch) => block.solid(),
             _ => grows_on(block),
         };
-        if !keeps {
-            self.remove_plant(x, y + 1, z);
+        if !keeps && self.remove_plant(x, y + 1, z) == Some(Plant::Torch) {
+            self.loose_torches += 1;
         }
     }
 }

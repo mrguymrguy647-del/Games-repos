@@ -314,7 +314,7 @@ impl DuckCraft {
     pub fn inventory_screen(&mut self, ctx: &mut Context) {
         let input = &ctx.input;
         if self.screen.is_none() {
-            if input.was_pressed(Key::E) && !self.vitals.fainted {
+            if input.was_pressed(Key::E) && !self.vitals.fainted && self.sleeping <= 0.0 {
                 // In creative the panel of everything is open from the start.
                 // What didn't fit in the bag last time is still in the grid.
                 self.screen = Some(Screen {
