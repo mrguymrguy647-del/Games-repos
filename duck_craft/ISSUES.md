@@ -3,7 +3,8 @@
 A log for improving Duck Forge, Duck Quill and Duck Echo, kept while
 building the game. Only open issues are here: resolved ones are taken out
 (git history has them). Duck Forge's numbers stay as they were, so a gap
-is an issue that's been resolved. "The game works round it" means the
+is an issue that's been resolved, or folded into another that's the same
+gap (26 into 41, 39 into 23, 44 into 19). "The game works round it" means the
 game copes; the tool still has the gap.
 
 ## Duck Forge
@@ -18,16 +19,14 @@ game copes; the tool still has the gap.
     aren't saved. The pause menu saves when you quit from it, and the game
     autosaves every 30 seconds, but the close button still loses up to
     30 s. A `Game::quit(&mut self, ctx)` called on any way out would fix it.
-18. **The command line refuses the game's own options.** `duckforge::run`
-    parses the arguments and stops at any it doesn't know, so a game can't
-    offer options like `--new-world`. (Duck Craft no longer needs that one:
-    the title screen offers a new island.) Letting options after `--` (or
-    unknown `--game-*` ones) through to the game would help.
-19. **The fuzzer's freeze rule fires on menus.** Keys that do nothing in a
-    menu look like a frozen game. Duck Craft gets round it (every menu key
-    does something, and the menu's state is reported), but a game with a
-    plain pause screen will meet the same rule; a way to say "paused"
-    (`ctx.report_paused(true)`) that the fuzzer respects would be fairer.
+19. **The fuzzer cries "freeze" on menus.** It presses every key the game
+    reads, and a menu ignores most of them, so ten seconds on a menu
+    pressing keys it ignores looks like a frozen game. It got worse as the
+    game read more keys (the inventory's Q, R, Tab, Backspace). Duck Craft
+    gets round it: every menu takes many keys (W/S, A/D, arrows, Tab) and
+    reports its state. A way to say "paused" (`ctx.report_paused(true)`),
+    or the fuzzer pressing only the keys the current screen reads (a game
+    could report them), would be fairer.
 20. **`Simulation` tests have no way to step until something is true.**
     The bots and the showcase write `for _ in 0..N { if done { break } sim.step() }`.
     A `sim.run_until(limit, |game| ...)` would read better and stop
@@ -39,10 +38,12 @@ game copes; the tool still has the gap.
     drags, within the canvas) would cover mouse-driven screens.
 23. **No way to draw 3D into part of the screen.** The duck in the
     inventory is drawn with `draw_mesh_in_view` at a depth worked out so
-    it lands in its box (`draw_duck_preview`); the box can't clip it.
-    A `canvas.draw_mesh_in_rect(mesh, transform, rect)` (its own little
-    camera and viewport) would make previews, item spinners and
-    character screens easy.
+    it lands in its window (`draw_duck_preview`), and made small enough
+    never to poke out, because nothing can clip it. A
+    `canvas.draw_mesh_in_rect(mesh, transform, rect)` (its own little
+    camera and viewport), or a `canvas.clip(rect)` push and pop for 2D
+    and 3D drawing, would make previews, character screens and scrolling
+    lists easy.
 24. **`draw_mesh_in_view` is lit by the scene's light**, so the preview
     duck is dark at night unless the game swaps the light just before
     drawing it (it does). Fine, but worth a sentence in its docs.
@@ -50,11 +51,6 @@ game copes; the tool still has the gap.
     `Tileset`.** The plants keep their own copy of `atlas.uv_rect(tile)`
     for each kind, taken when the art loads. `BlockPalette` could hand
     them out, since it has the atlas.
-26. **The engine has no "plant" (crossed pictures) block shape.**
-    `BlockWorld` draws only cubes, so tall grass and flowers live in
-    their own map and their own mesh (`plants.rs`), rebuilt whole when
-    one changes. A `BlockKind::crossed()` shape would let them sit in the
-    grid like any other block, chunk by chunk.
 27. **The windowed game shows the system's pointer, recorded videos
     don't.** The showcase draws its own arrow (`draw_pointer`), off in
     the real game. A video option to draw the pointer would help every
@@ -71,14 +67,14 @@ game copes; the tool still has the gap.
     `Wav::from_samples(&[f32], rate)` would let a game make sounds at
     start.
 30. **Loading all the sound in every play test** (each `arena` loads the
-    art, now 36 MB of `.wav`) takes the tests from 0.5 s to about 7 s. A
+    art, now 39 MB of `.wav`) takes the tests from 0.5 s to about 9 s. A
     load cache in `Wav::load` (or the engine sharing loaded files) would
     bring it back.
-31. **Replays don't apply the tune values they were recorded with.** The
-    night showcase starts at dusk (`start_time_of_day`); its recording
-    notes the value, but the replay needs `--set start_time_of_day=0.47`
-    again, or it plays a different game. An option to use the recorded
-    values (or a warning that blocks the run) would help.
+31. **Replays don't use the tune values they were recorded with.** The
+    night showcase starts at dusk (`start_time_of_day`). A replay now
+    warns when its tune values differ from the recording's, but it still
+    needs `--set start_time_of_day=0.47` to play the same game. An option
+    to replay with the recorded values would finish it.
 32. **Labels under a menu make `verify` fail.** The title and pause
     screens are drawn over the world, and a duckling's label under a
     button counts as "spawned on top of each other". The game labels
@@ -93,34 +89,31 @@ game copes; the tool still has the gap.
     only sends a change when it's bigger than 0.004. The engine could
     skip changes too small to hear.
 36. **`Simulation` has no `frame()`;** `sim.context().frame()` works.
-37. **Only `.wav` loads, so the music is big.** At full quality (44.1 kHz,
-    stereo, 16-bit) 64 s of music is 11 MB; the game's sounds are 36 MB,
-    nearly all music, where `.ogg` would be about 2 MB. Reading Ogg
-    Vorbis (or FLAC, lossless at about half) in `Wav::load` would keep
-    repos and downloads small.
+37. **Only `.wav` loads, so the sound is big.** At full quality (44.1 kHz,
+    stereo, 16-bit) 64 s of music is 11 MB; the game's sounds are 39 MB,
+    nearly all music, rain and wind, where `.ogg` would be about 2 MB.
+    Reading Ogg Vorbis (or FLAC, lossless at about half) in `Wav::load`
+    would keep repos and downloads small.
 38. **No gradient or pattern fill.** The inventory's PlayStation-style
     panels are shaded in bands that meet in a dithered checkerboard, which
     takes hundreds of one-pixel `fill_rect`s a frame. A
     `fill_rect_gradient(rect, top, bottom, dither: bool)` (or an ordered
     dither option on `fill_rect`) would do it in one call, and look more
     like the real thing.
-39. **No clipping rectangle.** The duck drawn in the inventory's window
-    (`draw_mesh_in_view`) can't be clipped to the window, so it had to be
-    made small enough never to poke out. A `canvas.clip(rect)` / push and
-    pop for 2D and 3D drawing would let UI windows hold models, and
-    scrolling lists.
 40. **No way to start a fresh depth buffer for 3D drawn over 2D.** The
     items in the hotbar are small 3D models drawn in view; the hand, drawn
     in view just before, left its depths behind, so it hid the items it
     overlapped. Only a world draw makes the next in-view draw forget old
     depths, so the game draws an invisible mesh to get one
     (`fresh_depth`). A `canvas.clear_depth()` would say what it means.
-41. **Every block is a full cube.** `BlockWorld` has no slabs, panes or
-    thin shapes, so the new furniture is faked: an open door is a frame
-    drawn on a see-through cube, and a torch is drawn with the plants'
-    crossed pictures (`Plant::Torch`), its light kept by the game. A
-    block shape (cube, slab, panel on one side, crossed pictures) in
-    `BlockKind` would let a door be a door.
+41. **Every block is a full cube.** `BlockWorld` draws only cubes, so
+    anything else is faked or kept outside the grid. Tall grass, flowers
+    and torches are crossed pictures in their own map and mesh
+    (`plants.rs`), rebuilt whole when one changes (a torch's light is kept
+    by the game too). An open door is a frame drawn on a see-through cube.
+    A block shape in `BlockKind` (cube, slab, panel on one side, crossed
+    pictures) would let them all sit in the grid, chunk by chunk, and let
+    a door be a door.
 42. **Block kinds need unique names, but one thing can be two kinds.** A
     door's halves, open and shut, are four kinds of block, and
     `BlockPalette::new` panics on two kinds both called "Door". They had
@@ -130,12 +123,6 @@ game copes; the tool still has the gap.
     game builds itself (`hunt.rs`, a breadth-first search over the
     blocks). Any block game needs one: a `BlockWorld::flow_field(goal,
     can_stand, can_step)` would save every game writing its own.
-44. **The fuzzer cries "freeze" on menus.** It presses every key the game
-    reads, so as the game reads more keys (the inventory's Q, R, Tab,
-    Backspace), it spent ten seconds on the title screen pressing only
-    keys the title ignores, and called that a freeze. The menus now take
-    more keys, but the fuzzer could press only the keys the current
-    screen reads (a game could report them).
 
 ## Duck Quill
 
@@ -159,19 +146,21 @@ game copes; the tool still has the gap.
 5. **`check` warned that ~26 palette colours were "never used"** though
    they are used inside `define`d symbols (via `pixels` `colors`). Worth
    a look: either a false warning or symbols aren't scanned.
-6. **More than 52 colours in one pixel script.** The atlas has 63
+6. **More than 52 colours in one pixel script.** The atlas has 64
    colours, and `pixels` rows use one character a colour, so
    `make_blocks.py` ran out of letters and uses digits and symbols too.
    A `colors` map of short names (two characters) would read better.
 
 ## Duck Echo
 
-- Not used: it isn't ready. The music and the longer sounds come from
-  `audio/make_sounds.py` (numpy and scipy, written for this game); the
-  wind loop is Mini Craft's; short sounds (dig, place, step, quack,
-  click) are `Sound { .. }` in code. What it took, for Duck Echo's
-  sake: notes with harmonics and decays for a felt piano, inharmonic
-  partials for bells, band-passed saws for voices, a Schroeder reverb,
-  and loops made seamless by rendering three passes and keeping the
-  middle one (the drones tuned to whole cycles per loop, the wind made
-  periodic in the frequency domain).
+- Not used: it isn't ready. The music, wind, rain, thunder and the
+  Hollows' sounds come from `audio/make_sounds.py` (numpy and scipy,
+  written for this game); short sounds (dig, place, step, quack, click,
+  doors, bangs) are `Sound { .. }` in code. What it took, for Duck Echo's
+  sake: a felt piano (harmonics, detuned strings, two-stage decays),
+  inharmonic bells, a music box, band-passed saws for voices and a
+  choir, whispers (breath through vowel formants), a Shepard tone, tape
+  wow and flutter, a VHS treatment, a convolution reverb with a
+  different room per ear, dither, and loops made seamless by rendering
+  three passes and keeping the middle one (drones and LFOs tuned to
+  whole cycles per loop, noise made periodic in the frequency domain).
