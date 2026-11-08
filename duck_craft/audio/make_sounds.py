@@ -52,13 +52,37 @@ What makes it sound clean:
   low-pass instead of bare sines.
 - Dither when writing 16-bit, so quiet tails fade smoothly instead of
   crunching.
+- Mastered (`master`): every file set to a loudness in LUFS (the
+  `LOUDNESS` table), so things meant to be as loud are as loud, and held
+  under -1 dB true peak by a limiter that looks ahead (nothing clips, not
+  even between samples), with any DC taken out. Loops are mastered as
+  loops, so their seams hold.
+- Heard on small speakers too (`audible_low_end`): a laptop's or phone's
+  speaker plays almost nothing below 180 Hz, which left the night music,
+  the heartbeat and the dusk bell nearly silent there; their lows now
+  carry harmonics a small speaker can play.
+
+Check what comes out with the ear, beside this file:
+
+    python3 audio/ear.py assets          # every file: levels, faults, tone, a picture each
+    python3 audio/ear.py --loop assets/wind.wav
+
+It found what the second version fixed: bells cut off still ringing (a
+click), crackle made of single-sample ticks (now short bursts), files
+from -24 to -14 LUFS that should have matched, a breath whose two ears
+cancelled on one speaker, and the small-speaker losses above.
 """
 
 from pathlib import Path
+import sys
 import wave
 
 import numpy as np
-from scipy.signal import butter, fftconvolve, sosfilt
+from scipy.ndimage import minimum_filter1d, uniform_filter1d
+from scipy.signal import butter, fftconvolve, resample_poly, sosfilt
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ear import loudness as measure_loudness  # noqa: E402 (the ear, beside this file)
 
 OUT = Path(__file__).resolve().parent.parent / "assets"
 RATE = 44100
@@ -263,6 +287,78 @@ def write(name, samples, seed=0):
           f"  rms {np.sqrt(np.mean(samples ** 2)):.3f}  end-to-start step {seam:.4f}")
 
 
+# ---- Mastering: loud enough, the same loudness, never clipping ----
+
+def audible_low_end(x, cutoff=150.0, amount=0.6, drive=4.0):
+    """Lets a laptop's or a phone's little speaker, which plays almost
+    nothing below ~180 Hz, hear the low end: the lows go through a hard
+    saturation, which makes their harmonics (heard as the low note itself:
+    the ear fills in the missing fundamental), and only the harmonics a
+    small speaker can play (260 Hz to 1.5 kHz) are added back. Headphones
+    still get the real lows; `ear.py` says how much a small speaker loses.
+    """
+    lows = lowpass(x, cutoff, order=4)
+    level = np.sqrt(np.mean(lows ** 2)) + 1e-12
+    harmonics = np.tanh(lows / level * drive)
+    harmonics = bandpass(harmonics, 260, 1500, order=3)
+    harmonics *= level / (np.sqrt(np.mean(harmonics ** 2)) + 1e-12)
+    return x + amount * harmonics
+
+
+def limit(x, ceiling_db=-1.0):
+    """Keeps the true peak (between samples too, checked at four times
+    the rate) under `ceiling_db`, by turning the sound down smoothly round
+    each peak: looking 8 ms ahead and behind, so nothing is clipped and the
+    gain never jumps. `x` is (n, channels)."""
+    ceiling = 10 ** (ceiling_db / 20)
+    up = np.abs(resample_poly(x, 4, 1, axis=0)).max(axis=1)
+    level = up[: 4 * len(x)].reshape(len(x), 4).max(axis=1)
+    need = np.minimum(1.0, ceiling / np.maximum(level, 1e-9))
+    if need.min() >= 1.0:
+        return x
+    reach = 2 * int(0.008 * RATE) + 1
+    gain = uniform_filter1d(minimum_filter1d(need, reach), reach)
+    return x * gain[:, None]
+
+
+def master(x, lufs, loop=False, ceiling_db=-1.0):
+    """The last step for every file: its loudness set to `lufs` (measured
+    as ear.py and loudness meters do, so files that should sound as loud
+    do), then held under a true peak of `ceiling_db`. A loop is limited as
+    a loop, its end running into its start, so the seam holds."""
+    x = np.asarray(x, dtype=float)
+    stereo = x.ndim == 2
+    xs = x if stereo else x[:, None]
+    # No DC (a sound pushed through a saturation can lean to one side):
+    # a gentle high-pass at 12 Hz, round the loop for a loop.
+    if loop:
+        n = len(xs)
+        xs = highpass(np.concatenate([xs, xs, xs]), 12)[n:2 * n]
+    else:
+        xs = highpass(xs, 12)
+    now, _ = measure_loudness(xs, RATE)
+    xs = xs * 10 ** ((lufs - now) / 20)
+    if loop:
+        n = len(xs)
+        xs = limit(np.concatenate([xs, xs, xs]), ceiling_db)[n:2 * n]
+    else:
+        xs = limit(xs, ceiling_db)
+    return xs if stereo else xs[:, 0]
+
+
+# How loud each file is, in LUFS (as ear.py measures it). Things meant to
+# be as loud are as loud; the far groan is quieter on purpose, the scare
+# louder. The game sets each loop's volume on top of this.
+LOUDNESS = {
+    "music_day": -16.5, "music_night": -17.5, "music_title": -15.0,
+    "wind": -19.5, "rain": -17.5, "static": -15.5,
+    "groan": -17.0, "groan_far": -26.0, "hollow_hurt": -15.0, "hollow_die": -17.0,
+    "sting": -15.5, "heartbeat": -19.0, "bell_dusk": -18.0, "bell_dawn": -18.0,
+    "thunder": -16.5, "scare": -14.0, "glitch": -16.0, "joined": -20.0, "breath": -19.0,
+}
+LOOPS = {"music_day", "music_night", "music_title", "wind", "rain", "static", "heartbeat"}
+
+
 # ---- Instruments ----
 
 
@@ -337,7 +433,8 @@ def bell(hz, seconds, seed=0):
         partial = amp * np.sin(2 * np.pi * f * t + rng.uniform(0, 6.28)) * envelope(len(t), 0.003, decay) * beat
         out += pan(partial, 0.35 * np.sin(i * 1.7))
     strike = bandpass(rng.normal(0, 1, len(t)), 1500, 9000) * envelope(len(t), 0.0005, 0.006) * 0.15
-    return out + pan(strike, 0)
+    # Faded out at its end: cut off still ringing, it clicked.
+    return fade(out + pan(strike, 0), 0, min(0.8, seconds * 0.25))
 
 
 # ---- Uncanny instruments ----
@@ -359,7 +456,7 @@ def music_box(hz, seconds, seed=0, cents_off=0.0):
         if f > 17000:
             continue
         out += amp * np.sin(2 * np.pi * f * t + rng.uniform(0, 6.28)) * envelope(len(t), 0.001, decay)
-    click = highpass(rng.normal(0, 1, len(t)), 3000) * envelope(len(t), 0.0003, 0.003) * 0.25
+    click = bandpass(rng.normal(0, 1, len(t)), 2500, 9000) * envelope(len(t), 0.0008, 0.003) * 0.2
     return fade(out + click, 0, 0.1)
 
 
@@ -613,6 +710,9 @@ def night_music():
     events.append((30.0, choir(["D3", "G#3"], 12.0, "ah", sag_cents=80, seed=10) * 0.9))
 
     track = seamless(events, length, beds=[drone + falling + wind])
+    # The drone is almost all below what a laptop's speaker can play: its
+    # harmonics are added, so it's still there (and growls a little).
+    track = audible_low_end(track, cutoff=150, amount=0.8)
     track = reverb(track, room(5.0, 4.5, seed=2), wet=0.42)
     return loudness(middle(highpass(track, 25), length), 0.130)
 
@@ -685,8 +785,12 @@ def radio_static(seconds, seed=0, crackle=0.004):
     for _ in range(2):
         hiss = bandpass(rng.normal(0, 1, n), 500, 5000)
         flicker = 0.35 + 0.65 * np.clip(lowpass(rng.random(n), 18) * 2.2 - 0.4, 0, 1)
+        # Crackle: each pop a burst of a few milliseconds, dying fast, not
+        # one sample (those were sharp digital ticks).
         pops = (rng.random(n) < crackle) * rng.normal(0, 1, n)
-        pops = bandpass(pops, 1200, 7000) * 4.0
+        k = np.arange(int(0.004 * RATE))
+        burst = rng.normal(0, 1, len(k)) * (1 - np.exp(-k / (0.00015 * RATE))) * np.exp(-k / (0.0007 * RATE))
+        pops = bandpass(fftconvolve(pops, burst)[:n], 900, 5000) * 0.5
         ears.append(hiss * flicker * 0.5 + pops)
     return np.stack(ears, axis=1)
 
@@ -873,6 +977,7 @@ def groan():
     out = np.tanh(out * 2.5)  # a rasp
     out = lowpass(out, 7000)
     out *= envelope(len(t), 0.35, 0.9)
+    out = audible_low_end(out, cutoff=130, amount=0.8)
     return fade(peak(reverb(out, small_room(), 0.3), 0.7), 0, 0.1)
 
 
@@ -897,8 +1002,13 @@ def hollow_die():
     f = 110 * np.exp(-t * 1.4) + 30
     moan = voice(f, [((90, 400), 1.2), ((250, 650), 1.0)], rng, breath=0.08) * envelope(len(t), 0.02, 0.5)
     moan = np.tanh(moan * 2)
-    crackle = (rng.random(len(t)) < 0.003 * np.clip(t * 2 - 0.3, 0, 1)) * rng.normal(0, 1, len(t))
-    crackle = bandpass(crackle, 1500, 9000) * 2 * np.exp(-np.maximum(t - 0.6, 0) * 2)
+    # Ash: dry crackle, each crack a tiny burst (not one sample: those
+    # were sharp digital ticks).
+    cracks = (rng.random(len(t)) < 0.003 * np.clip(t * 2 - 0.3, 0, 1)) * rng.normal(0, 1, len(t))
+    k = np.arange(int(0.003 * RATE))
+    burst = rng.normal(0, 1, len(k)) * (1 - np.exp(-k / (0.0002 * RATE))) * np.exp(-k / (0.0006 * RATE))
+    crackle = bandpass(fftconvolve(cracks, burst)[:len(t)], 1500, 8000) * 0.7 * np.exp(-np.maximum(t - 0.6, 0) * 2)
+    moan = audible_low_end(moan, cutoff=130, amount=0.8)
     return fade(peak(reverb(moan + crackle, small_room(), 0.35), 0.75), 0, 0.2)
 
 
@@ -921,17 +1031,27 @@ def sting():
 
 
 def heartbeat():
-    """Lub-dub, one second: loops at 60 beats a minute."""
+    """Lub-dub, one second: loops at 60 beats a minute. A deep thump, and
+    in it the knock of the beat (a little body, a soft tick), so a laptop's
+    speaker, which can't play the thump, still has the beat."""
     t = time_axis(1.0)
+    rng = np.random.default_rng(27)
     out = np.zeros_like(t)
     for at, hz, level in [(0.0, 55, 1.0), (0.26, 48, 0.75)]:
         local = np.clip(t - at, 0, None)
-        out += np.sin(2 * np.pi * hz * local) * np.exp(-local / 0.06) * (t >= at) * level
-    return peak(lowpass(out, 180), 0.8)
+        on = t >= at
+        out += np.sin(2 * np.pi * hz * local) * np.exp(-local / 0.06) * on * level
+        knock = bandpass(rng.normal(0, 1, len(t)), 90, 700) * np.exp(-local / 0.018) * np.clip(local / 0.002, 0, 1)
+        out += knock * on * level * 0.35
+    out = lowpass(out, 900)
+    # Laid down three times and the middle kept, so the filters' memory
+    # runs round the loop and it repeats without a seam.
+    looped = audible_low_end(np.tile(out, 3), cutoff=140, amount=0.6)
+    return peak(looped[len(t):2 * len(t)], 0.8)
 
 
 def bell_dusk():
-    out = bell(note_hz("D2"), 7.0, seed=9)
+    out = audible_low_end(bell(note_hz("D2"), 7.0, seed=9), cutoff=140, amount=0.6)
     return fade(peak(reverb(out, room(4.0, 3.5, seed=9), 0.4), 0.7), 0, 0.5)
 
 
@@ -975,7 +1095,7 @@ def thunder():
     roll = np.exp(-t / 1.8) * (0.6 + 0.4 * np.sin(2 * np.pi * 0.9 * t + 1.0) ** 2) * np.clip(t / 0.15, 0, 1)
     left = crack * 0.6 + rumble * roll * 2.2
     right = crack * 0.45 + np.roll(rumble, int(0.03 * RATE)) * roll * 2.2
-    out = np.stack([left, right], axis=1)
+    out = audible_low_end(np.stack([left, right], axis=1), cutoff=150, amount=0.6)
     return fade(peak(reverb(out, room(4.0, 3.5, seed=43), 0.45), 0.9), 0, 0.8)
 
 
@@ -1029,33 +1149,45 @@ def joined():
 
 
 def breath():
-    """Someone breathing right behind you: two slow breaths and a whisper."""
-    out = whisper(2.4, seed=34) * 0.8
+    """Someone breathing right behind you: two slow breaths and a whisper.
+    One voice, heard by two ears: the far ear a tenth of a millisecond
+    later (more and it would cancel the near one on a phone's single
+    speaker) and a little quieter and duller, and each ear's breath noise a
+    little its own, so it's in the room, not inside your head."""
     rng = np.random.default_rng(35)
     t = time_axis(2.4)
-    for at in [0.1, 1.2]:
-        local = np.clip(t - at, 0, None)
-        shape = np.sin(np.pi * np.clip(local / 0.8, 0, 1)) ** 2 * (t >= at)
-        out += bandpass(rng.normal(0, 1, len(t)), 300, 1800) * shape * 0.6
-    return fade(peak(pan(out, 0.2), 0.5), 0.05, 0.2)
+    voice = whisper(2.4, seed=34) * 0.8
+    shared = bandpass(rng.normal(0, 1, len(t)), 300, 1800)
+    ears = []
+    for delay, level, own_seed in [(0, 1.0, 36), (int(0.00012 * RATE), 0.75, 37)]:
+        own = bandpass(np.random.default_rng(own_seed).normal(0, 1, len(t)), 300, 1800)
+        noise = 0.75 * shared + 0.45 * own
+        out = voice.copy()
+        for at in [0.1, 1.2]:
+            local = np.clip(t - at, 0, None)
+            shape = np.sin(np.pi * np.clip(local / 0.8, 0, 1)) ** 2 * (t >= at)
+            out += noise * shape * 0.6
+        if delay:
+            out = lowpass(out, 3500)  # round the head: duller
+        ears.append(np.concatenate([np.zeros(delay), out[:len(out) - delay]]) * level)
+    return fade(peak(np.stack(ears, axis=1), 0.5), 0.05, 0.2)
 
 
 def main():
     OUT.mkdir(exist_ok=True)
     print("music:")
-    write("music_day.wav", day_music(), 1)
-    write("music_night.wav", night_music(), 2)
-    write("music_title.wav", title_music(), 3)
-    write("wind.wav", wind_loop(), 4)
-    write("rain.wav", rain_loop(), 5)
-    write("static.wav", static_loop(), 6)
+    for i, (name, make) in enumerate([
+            ("music_day", day_music), ("music_night", night_music), ("music_title", title_music),
+            ("wind", wind_loop), ("rain", rain_loop), ("static", static_loop)]):
+        write(f"{name}.wav", master(make(), LOUDNESS[name], loop=True), 1 + i)
     print("effects:")
     for i, (name, make) in enumerate([
             ("groan", groan), ("groan_far", groan_far), ("hollow_hurt", hollow_hurt), ("hollow_die", hollow_die),
             ("sting", sting), ("heartbeat", heartbeat), ("bell_dusk", bell_dusk), ("bell_dawn", bell_dawn),
             ("thunder", thunder), ("scare", scare), ("glitch", glitch), ("joined", joined),
             ("breath", breath)]):
-        write(f"{name}.wav", make(), 10 + i)
+        write(f"{name}.wav", master(make(), LOUDNESS[name], loop=name in LOOPS), 10 + i)
+    print("check them by ear: python3 audio/ear.py assets")
 
 
 if __name__ == "__main__":
