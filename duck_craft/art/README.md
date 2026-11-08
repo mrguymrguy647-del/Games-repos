@@ -34,7 +34,7 @@ the Hollow:
 |---|---|
 | `music_day.wav` | "Still Water": a calm piano song on a warped tape that isn't calm: notes a quarter-tone flat, an out-of-tune music box lullaby, a far choir that sinks in pitch, a chord rising in backwards, and two moments where the song just stops and the room rings on; 64 s, stereo, loops with no seam |
 | `music_night.wav` | "Nothing Waits": a low drone and a throb under the ground, a tone that falls forever (a Shepard tone), whispers that move from ear to ear, strings piling up on wrong notes and cut off dead, bowed metal, a choir sinking on a tritone, a far bell; 64 s, stereo |
-| `music_title.wav` | "The Island Doesn't Remember": a music box lullaby on warped tape that sticks like a scratched record, then winds down slower and flatter into a backwards bell and a whisper; 32 s, stereo |
+| `music_title.wav` | "The Island Doesn't Remember", in the style of creepypasta music: an original children's tune on an old games-console chip, slowed down and played off a worn VHS tape (wobble, hiss, crinkles), a thin high note a half-step wrong, a skip, the tune backwards, then a broadcast tone; 32 s, stereo |
 | `wind.wav` | the island's wind, gusting, a little different in each ear; 24 s, stereo |
 | `groan.wav`, `groan_far.wav` | a Hollow, near and far (the engine plays a file at one loudness, so distance is a second file); panned toward it |
 | `hollow_hurt.wav`, `hollow_die.wav` | a Hollow hit, and coming apart into ash; panned toward it |

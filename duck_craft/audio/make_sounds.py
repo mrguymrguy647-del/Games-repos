@@ -13,9 +13,10 @@ so nothing is resampled when the game loads them):
   music_night.wav  "Nothing Waits": a low drone, a tone that falls
                    forever, whispers, strings that pile up and cut off,
                    bowed metal, a sinking choir, a far bell; 64 s, stereo
-  music_title.wav  "The Island Doesn't Remember": a music box lullaby that
-                   sticks, then winds down, into a backwards bell and a
-                   whisper; 32 s, stereo, loops
+  music_title.wav  "The Island Doesn't Remember": a creepypasta-style menu
+                   song: an old-console children's tune, slowed, off a
+                   worn VHS tape, that sticks, runs backwards, and ends on
+                   a broadcast tone; 32 s, stereo, loops
   wind.wav         the island's wind, 24 s, stereo, loops
   groan.wav        a Hollow, somewhere near (mono: the game pans it
                    toward the Hollow)
@@ -611,38 +612,138 @@ def night_music():
     return loudness(middle(highpass(track, 25), length), 0.130)
 
 
+def chip(hz, seconds, duty=0.5, decay=0.0, seed=0):
+    """An old games-console voice: a pulse wave (`duty` 0.5 is a square,
+    0.125 thin and nasal), built from its harmonics so nothing folds back
+    out of tune. With `decay` the note dies away; without, it holds."""
+    rng = stretch_rng(seed)
+    t = time_axis(seconds)
+    out = np.zeros_like(t)
+    phase = rng.uniform(0, 6.28)
+    k = 1
+    while hz * k < 11000 and k <= 40:
+        weight = np.sin(np.pi * k * duty) / k
+        if abs(weight) > 1e-3:
+            out += weight * np.sin(2 * np.pi * hz * k * t + phase * k)
+        k += 1
+    shape = np.clip(t / 0.004, 0, 1)
+    if decay:
+        shape = shape * np.exp(-t / decay)
+    return fade(out * shape, 0, 0.02)
+
+
+def triangle(hz, seconds, seed=0):
+    """The console's soft voice: a triangle wave, odd harmonics falling
+    fast. Slightly stepped (4-bit), as the old chips were."""
+    t = time_axis(seconds)
+    out = np.zeros_like(t)
+    for k in range(1, 30, 2):
+        if hz * k > 11000:
+            break
+        out += (-1) ** ((k - 1) // 2) * np.sin(2 * np.pi * hz * k * t) / k ** 2
+    out = np.round(out * 8) / 8  # 4-bit steps
+    return fade(out * np.clip(t / 0.004, 0, 1), 0, 0.03)
+
+
+def vhs(x, length, seed=0):
+    """An old tape on an old television: the top and bottom cut off, the
+    sound pushed a little hard, wobbling slowly (wow) and quickly
+    (flutter), hiss underneath, and now and then the tape crinkles."""
+    rng = stretch_rng(seed)
+    n = len(x)
+    t = np.arange(n) / RATE
+    x = bandpass(x, 140, 5500, order=2)
+    x = np.tanh(x * 1.6) / 1.6
+    # Flutter: about 6 times a second, a whole number of times a loop.
+    flutter_cycles = round(6.1 * length)
+    delay = 0.00012 * (1 + np.sin(2 * np.pi * flutter_cycles * t / length))
+    read = np.clip(t - delay, 0, t[-1])
+    x = np.stack([np.interp(read, t, x[:, c]) for c in range(2)], axis=1)
+    x = wow(x, length, cents=28, seed=seed)
+    level = np.sqrt(np.mean(x ** 2))
+    hiss = np.stack([looping_noise(n, 9000, rng, low=1500) for _ in range(2)], axis=1)
+    hiss = hiss[: n] * level * 0.06  # about 25 dB under the music
+    # Crinkles: a few spots a loop where the sound sags and crackles.
+    crinkle = np.ones(n)
+    local = t % length
+    for at in rng.uniform(1, length - 1, 3):
+        near = np.exp(-((local - at) / 0.08) ** 2)
+        crinkle -= 0.7 * near
+        hiss += lowpass((rng.random((n, 2)) < 0.02 * near[:, None]) * rng.normal(0, level * 1.5, (n, 2)), 4000)
+    return x * crinkle[:, None] + hiss
+
+
 def title_music():
-    """'The Island Doesn't Remember': a music box plays a falling lullaby
-    over the low drone, a piano doubling it softly. The record sticks for a
-    moment. Then the box winds down, slower and flatter, a sound rises in
-    backwards into the bell, and something whispers."""
+    """'The Island Doesn't Remember', a menu song in the style of a
+    creepypasta's: a children's game tune from an old console (an
+    original one), slowed down and played off a worn VHS tape. A thin
+    high note keeps ringing a half-step above where it should. Then the
+    tune runs backwards, and the tape ends on a broadcast tone and hiss
+    before it starts again. 32 s, loops."""
     length = 32.0
+    eighth = 0.36  # slow, like a tape played at the wrong speed
+    down = 2 ** (-1.4 / 12)  # and a little low, from the same wrong speed
+    chords = [["D5", "F5", "A5"], ["Bb4", "D5", "F5"], ["G4", "Bb4", "D5"], ["A4", "C#5", "E5"]]
+    tune = ["A5", None, "F5", "G5", "A5", None, "D6", None, "C6", "Bb5", "A5", None, "G5", None, None, None,
+            "F5", None, "G5", "A5", "Bb5", None, "A5", "G5", "E5", None, "F5", "E5", "C#5", None, "D5", None]
+
+    def arps_and_tune(start_bar=0, bars=8):
+        """The tune with its arpeggios, `bars` bars from `start_bar`, as a
+        stereo sound."""
+        n = int(bars * 8 * eighth * RATE) + int(2.0 * RATE)
+        out = np.zeros((n, 2))
+        for bar in range(start_bar, start_bar + bars):
+            chord = chords[(bar // 2) % 4]
+            local = (bar - start_bar) * 8 * eighth
+            for step in range(8):
+                name = chord[[0, 1, 2, 1][step % 4]]
+                note = chip(note_hz(name) * down, eighth * 1.6, duty=0.125, decay=0.18, seed=bar * 8 + step)
+                place(out, pan(note * 0.16, -0.35), local + step * eighth)
+            # The wrong high note: a half-step above the chord's top, held.
+            if bar % 2 == 1:
+                wrong = note_hz(chord[2]) * 2 * 2 ** (1 / 12) * down
+                place(out, pan(chip(wrong, eighth * 7, duty=0.25, seed=bar) * 0.05, 0.4), local + eighth)
+            for step in range(8):
+                name = tune[(bar % 4) * 8 + step]
+                if name:
+                    held = 1
+                    while (bar % 4) * 8 + step + held < len(tune) and tune[(bar % 4) * 8 + step + held] is None and held < 4:
+                        held += 1
+                    note = triangle(note_hz(name) * down, eighth * held + 0.05, seed=step)
+                    place(out, pan(note * 0.3, 0.15), local + step * eighth)
+            # A bass that thumps like a cardboard box.
+            if True:
+                root = note_hz(chord[0]) / 4 * down
+                place(out, pan(triangle(root, eighth * 3.5) * 0.35, 0), local)
+                place(out, pan(triangle(root, eighth * 3.5) * 0.25, 0), local + 4 * eighth)
+        return out
+
+    forwards = arps_and_tune(0, 8)  # 8 bars, 23 s
+    backwards = arps_and_tune(0, 2)[::-1].copy() * 0.8  # the first two bars, reversed
     t = time_axis(length)
-    drone = np.zeros((len(t), 2))
-    for name, level in [("D2", 0.5), ("A2", 0.22), ("Eb3", 0.05)]:
-        for detune, where in [(-0.06, -0.5), (0.06, 0.5)]:
-            f = snap(note_hz(name) + detune, length)
-            drone += pan(level * (np.sin(2 * np.pi * f * t) + 0.1 * np.sin(2 * np.pi * 2 * f * t)), where)
-    drone *= (0.7 + 0.3 * np.sin(2 * np.pi * t / length))[:, None]
-    figure = ["A5", "F5", "E5", "D5", "G5", "E5", "D5", "C#5", "F5", "D5", "C5", "Bb4", "A4", "D5"]
-    events = []
-    at = 1.0
-    for i, name in enumerate(figure):
-        wind_down = max(0, i - 9)  # the last notes: slower, flatter
-        at += 0.95 + 0.28 * wind_down ** 1.3
-        cents = np.random.default_rng(i).normal(0, 10) - 18 * wind_down
-        events.append((at, pan(music_box(note_hz(name), 3.5, seed=i, cents_off=cents) * 0.5, 0.25)))
-        events.append((at, piano(note_hz(name) / 2 * 2 ** (cents / 1200), 6.0, 0.35, seed=i) * 0.6))
-    bell_at = 22.5
-    events.append((bell_at, bell(note_hz("D2"), 9.0, seed=3) * 0.35))
-    backwards = reversed_swell(bell(note_hz("A2"), 2.5, seed=4), room(3.0, 2.8, seed=31)) * 0.25
-    events.append((bell_at - len(backwards) / RATE, backwards))
-    events.append((26.5, pan(whisper(2.4, seed=9) * 0.5, -0.7)))
-    track = seamless(events, length, beds=[drone])
-    track = wow(track, length, cents=10, seed=6)
-    track = reverb(track, room(5.0, 4.0, seed=3), wet=0.45)
-    music = middle(highpass(track, 25), length)
-    music = record_skip(music, 7.1, 0.23, 3)
+    bed = np.zeros((len(t), 2))
+    for name, level in [("D2", 0.25), ("Eb2", 0.06)]:
+        for detune, where in [(-0.05, -0.5), (0.05, 0.5)]:
+            f = snap(note_hz(name) * down + detune, length)
+            bed += pan(level * np.sin(2 * np.pi * f * t), where)
+
+    end_of_tune = 8 * 8 * eighth
+    events = [(0.0, fade(forwards[: int((end_of_tune + 0.4) * RATE)], 0, 0.25)),
+              (end_of_tune + 0.3, fade(backwards[int(1.6 * RATE):], 0.05, 0))]
+    # The tape runs out: a broadcast tone, not loud, a little off-pitch.
+    tone_at = end_of_tune + 0.3 + len(backwards) / RATE - 1.6 + 0.2
+    tone_len = max(0.5, length - tone_at - 1.4)
+    tt = time_axis(tone_len)
+    beep = (np.sin(2 * np.pi * 853 * tt) + np.sin(2 * np.pi * 960 * tt)) * 0.035
+    beep *= np.clip(tt / 0.01, 0, 1) * np.clip((tone_len - tt) / 0.01, 0, 1)
+    events.append((tone_at, pan(beep, 0)))
+    events.append((tone_at + 0.4, pan(whisper(min(2.0, tone_len), seed=9) * 0.5, -0.6)))
+
+    track = seamless(events, length, beds=[bed])
+    track = vhs(track, length, seed=6)
+    track = reverb(track, room(2.5, 1.6, seed=3), wet=0.25)
+    music = middle(highpass(track, 40), length)
+    music = record_skip(music, 9.5, 0.36, 3)
     return loudness(music, 0.145)
 
 
