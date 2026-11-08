@@ -95,9 +95,10 @@ pub struct Music {
     wind: LoopId,
     heart: LoopId,
     rain: LoopId,
+    noise: LoopId,
     /// The volume each was last set to: title, day, night, wind, heart,
-    /// rain.
-    volumes: [f32; 6],
+    /// rain, static.
+    volumes: [f32; 7],
 }
 
 const DUSK_LINES: [&str; 6] = [
@@ -365,7 +366,8 @@ impl DuckCraft {
             wind: ctx.play_loop(&art.wind, 0.0),
             heart: ctx.play_loop(&sounds.heartbeat, 0.0),
             rain: ctx.play_loop(&sounds.rain, 0.0),
-            volumes: [0.0; 6],
+            noise: ctx.play_loop(&sounds.static_noise, 0.0),
+            volumes: [0.0; 7],
         });
         let on = if self.music_on { 1.0 } else { 0.0 };
         let (title, playing, paused) = match &self.stage {
@@ -387,10 +389,19 @@ impl DuckCraft {
             (playing + title * 0.5) * WIND * hush,
             hurt * 0.8 * hush,
             playing * rain * hush,
+            playing * self.dread.powf(1.4) * 0.6 * hush,
         ];
-        let ids = [music.title, music.day, music.night, music.wind, music.heart, music.rain];
+        let ids = [
+            music.title,
+            music.day,
+            music.night,
+            music.wind,
+            music.heart,
+            music.rain,
+            music.noise,
+        ];
         let step = ctx.dt() / 2.0; // fades take about two seconds
-        for i in 0..6 {
+        for i in 0..7 {
             let now = music.volumes[i];
             let next = approach(now, targets[i], step.max(if i == 4 { 0.05 } else { 0.0 }));
             // Only tell the mixer when it really changed (keeps logs short).

@@ -2899,3 +2899,35 @@ fn a_torch_that_loses_its_floor_comes_back_to_you() {
     let played = PlayTest::new(config(), game).frames(3).run();
     assert_eq!(played.game().count(Item::Torch), 1);
 }
+
+// ---- Static ----
+
+#[test]
+fn static_rises_as_something_comes_near_and_gives_a_mimic_away() {
+    // A Hollow walking up: the dread (and the static, and the screen's
+    // fuzz) rise with it.
+    let game = night_arena(1, |_| {}, Hollow::new(vec3(8.5, FLOOR as f32, 24.0), PI));
+    let mut sim = Simulation::new(config(), game);
+    sim.run(30);
+    let far = sim.game().dread;
+    sim.run(300);
+    let near = sim.game().dread;
+    assert!(near > 0.6 && near > far + 0.2, "far {far}, near {near}");
+    assert!(sim.scene().labels_named("static").next().is_some(), "the screen fuzzes");
+    let loud = sim
+        .loops()
+        .iter()
+        .any(|l| l.name == "static" && l.volumes.last().is_some_and(|&(_, v)| v > 0.1));
+    assert!(loud, "and the static is loud");
+    // A "duckling" close by that's really a mimic: the static says so.
+    let mimic = Hollow::of_kind(night::Kind::Mimic { revealed: false }, vec3(8.5, FLOOR as f32, 13.5), PI);
+    let mut game = night_arena(3, |_| {}, mimic);
+    game.position = vec3(8.5, FLOOR as f32, 8.5);
+    let played = PlayTest::new(config(), game).frames(90).run();
+    assert!(played.game().dread > 0.4, "{}", played.game().dread);
+    // Nothing near (or creative): silence.
+    let mut game = night_arena(1, |_| {}, Hollow::new(vec3(8.5, FLOOR as f32, 8.0), PI));
+    game.hollows.clear();
+    let played = PlayTest::new(config(), game).frames(60).run();
+    assert_eq!(played.game().dread, 0.0);
+}

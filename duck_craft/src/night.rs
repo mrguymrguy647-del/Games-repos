@@ -676,6 +676,21 @@ impl DuckCraft {
                 );
             }
         }
+        // Dread: how near the nearest thing is. Anything that's up counts,
+        // a mimic still looking like a duckling too (its only tell); the
+        // Watcher, wherever it stands, a little.
+        let mut dread: f32 = 0.0;
+        if hunting {
+            for hollow in self.hollows.iter().filter(|h| h.fading.is_none()) {
+                let d = hollow.position.distance(duck);
+                dread = dread.max(((22.0 - d) / 18.0).clamp(0.0, 1.0));
+            }
+            if self.watcher.is_some() {
+                dread = dread.max(0.35);
+            }
+        }
+        self.dread = approach(self.dread, dread, 1.5 * dt);
+        ctx.report("dread", (self.dread * 10.0).round() / 10.0);
         ctx.report(
             "hollows",
             self.hollows.iter().filter(|h| h.fading.is_none()).count(),
@@ -960,6 +975,35 @@ impl DuckCraft {
                 self.ash_cloud(ctx, at);
             }
         }
+    }
+
+    /// The screen fuzzing with the static, as something comes near:
+    /// specks and torn lines, more the nearer it is.
+    pub fn draw_static(&self, canvas: &mut Canvas) {
+        let strength = ((self.dread - 0.2) / 0.8).clamp(0.0, 1.0);
+        if strength <= 0.0 || self.stage != Stage::Playing {
+            return;
+        }
+        let frame = (self.time * 30.0) as i32;
+        let specks = (strength * 140.0) as i32;
+        for i in 0..specks {
+            let x = random01(i, frame, 1, 91) * WIDTH;
+            let y = random01(i, frame, 2, 91) * HEIGHT;
+            let w = 1.0 + random01(i, frame, 3, 91) * 5.0;
+            let shade = (random01(i, frame, 4, 91) * 200.0) as u8 + 40;
+            let alpha = (40.0 + 90.0 * strength) as u8;
+            canvas.fill_rect(Rect::new(x, y, w, 1.0), Color::rgba(shade, shade, shade, alpha));
+        }
+        // Now and then a line torn across the screen.
+        if random01(frame, 0, 5, 91) < strength * 0.5 {
+            let y = random01(frame, 0, 6, 91) * HEIGHT;
+            let h = 1.0 + random01(frame, 0, 7, 91) * 3.0;
+            canvas.fill_rect(
+                Rect::new(0.0, y, WIDTH, h),
+                Color::rgba(200, 200, 205, (30.0 + 70.0 * strength) as u8),
+            );
+        }
+        canvas.label("static", Rect::new(0.0, 0.0, WIDTH, HEIGHT));
     }
 
     // ---- Drawing ----

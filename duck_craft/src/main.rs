@@ -907,6 +907,8 @@ struct Sounds {
     bell_dawn: Wav,
     rain: Wav,
     thunder: Wav,
+    /// Static, louder as Hollows come near (`DuckCraft::dread`).
+    static_noise: Wav,
 }
 
 impl Sounds {
@@ -914,6 +916,7 @@ impl Sounds {
         let wav = |name: &str| Wav::load(format!("{ASSETS}/{name}.wav"));
         Ok(Sounds {
             rain: wav("rain")?,
+            static_noise: wav("static")?,
             thunder: wav("thunder")?,
             music_day: wav("music_day")?,
             music_night: wav("music_night")?,
@@ -1629,6 +1632,9 @@ struct DuckCraft {
     sleeping: f32,
     /// The weather (see `weather.rs`).
     weather: weather::Sky,
+    /// How near something is (0 nothing; 1 right here): the static rises
+    /// with it, and the screen fuzzes. A mimic gives itself away by it.
+    dread: f32,
     /// The right click now held used a door, bed or chest (so holding it
     /// builds nothing till it's let go).
     used_block: bool,
@@ -1750,6 +1756,7 @@ impl DuckCraft {
             bed: None,
             sleeping: 0.0,
             weather: weather::Sky::default(),
+            dread: 0.0,
             used_block: false,
             walk_field: hunt::Field::new(false),
             climb_field: hunt::Field::new(true),
@@ -2789,6 +2796,7 @@ impl Game for DuckCraft {
             self.draw_hand(canvas, &camera);
         }
         self.draw_weather(canvas);
+        self.draw_static(canvas);
         self.draw_vignette(canvas);
         self.draw_hud(canvas);
         if self.mode == Mode::Survival {

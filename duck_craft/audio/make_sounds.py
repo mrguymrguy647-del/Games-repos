@@ -15,10 +15,13 @@ so nothing is resampled when the game loads them):
                    bowed metal, a sinking choir, a far bell; 64 s, stereo
   music_title.wav  "The Island Doesn't Remember": a creepypasta-style menu
                    song: an old-console children's tune, slowed, off a
-                   wobbling old tape (no hiss), that sticks, runs
-                   backwards, and ends on a broadcast tone; 32 s, stereo
+                   wobbling old tape that sticks (a burst of static),
+                   runs backwards under swelling static with a whisper in
+                   it, cut dead before a broadcast tone; 32 s, stereo
   wind.wav         the island's wind, 24 s, stereo, loops
   rain.wav         rain, 16 s, stereo, loops
+  static.wav       radio static with a whisper in it, 8 s, stereo, loops:
+                   the game turns it up as Hollows come near
   thunder.wav      a crack and a long roll (stereo)
   groan.wav        a Hollow, somewhere near (mono: the game pans it
                    toward the Hollow)
@@ -672,6 +675,54 @@ def vhs(x, length, seed=0):
     return x * sag[:, None]
 
 
+def radio_static(seconds, seed=0, crackle=0.004):
+    """Static, like a radio between stations: hiss in a narrow band that
+    flickers (comes and goes many times a second), and dry crackles.
+    Stereo, each ear its own."""
+    rng = stretch_rng(seed)
+    n = int(seconds * RATE)
+    ears = []
+    for _ in range(2):
+        hiss = bandpass(rng.normal(0, 1, n), 500, 5000)
+        flicker = 0.35 + 0.65 * np.clip(lowpass(rng.random(n), 18) * 2.2 - 0.4, 0, 1)
+        pops = (rng.random(n) < crackle) * rng.normal(0, 1, n)
+        pops = bandpass(pops, 1200, 7000) * 4.0
+        ears.append(hiss * flicker * 0.5 + pops)
+    return np.stack(ears, axis=1)
+
+
+def static_loop():
+    """The static that means something is near, 8 s, stereo, loops: radio
+    hiss that flickers, crackle, a low electric buzz, and very quietly in
+    it, a whisper. The game turns it up as Hollows come close."""
+    length = 8.0
+    t = time_axis(length)
+    rng = np.random.default_rng(44)
+    ears = []
+    for side in range(2):
+        hiss = looping_noise(len(t), 5200, rng, low=500)
+        flicker = 0.3 + 0.7 * loop_lfo(t, length, 37, side) * loop_lfo(t, length, 23, 1.0 + side) \
+            * loop_lfo(t, length, 11, 2.0)
+        buzz = np.sign(np.sin(2 * np.pi * snap(60.0, length) * t)) * 0.03
+        ears.append(hiss * flicker * 0.35 + buzz)
+    out = np.stack(ears, axis=1)
+    # Crackle, wrapped round the loop's end so the seam holds.
+    for at in rng.uniform(0, length, 70):
+        k = int(at * RATE)
+        n = int(0.004 * RATE)
+        pop = rng.normal(0, 1, n) * np.exp(-np.arange(n) / (0.0008 * RATE)) * rng.uniform(0.3, 1.0)
+        for i in range(n):
+            out[(k + i) % len(t), rng.integers(2)] += pop[i]
+    out = bandpass(out, 200, 8000)
+    # The whisper, hardly there.
+    whisper_at = int(3.0 * RATE)
+    voice = whisper(2.0, seed=12) * 0.25
+    for i, v in enumerate(voice):
+        out[(whisper_at + i) % len(t), 0] += v
+        out[(whisper_at + i) % len(t), 1] += v * 0.6
+    return loudness(out, 0.11)
+
+
 def title_music():
     """'The Island Doesn't Remember', a menu song in the style of a
     creepypasta's: a children's game tune from an old console (an
@@ -743,6 +794,20 @@ def title_music():
     track = reverb(track, room(2.5, 1.6, seed=3), wet=0.25)
     music = middle(highpass(track, 40), length)
     music = record_skip(music, 9.5, 0.36, 3)
+    # Static, not all the time: a burst as the tape skips, and then, under
+    # the tune running backwards, it swells and swells (a whisper in it)
+    # and stops dead before the broadcast tone.
+    level = np.sqrt(np.mean(music ** 2))
+    burst = radio_static(0.7, seed=21) * level * 0.9
+    burst *= np.sin(np.pi * np.linspace(0, 1, len(burst)))[:, None] ** 0.5
+    place(music, burst, 9.4)
+    swell_from, swell_to = end_of_tune + 0.2, tone_at - 0.05
+    swell = radio_static(swell_to - swell_from, seed=22, crackle=0.006) * level
+    ramp = np.linspace(0, 1, len(swell)) ** 1.6 * 1.4
+    swell *= ramp[:, None]
+    hidden = pan(whisper(1.6, seed=23), 0.4) * level * 0.5
+    place(swell, hidden, len(swell) / RATE - 2.0)
+    place(music, swell, swell_from)
     return loudness(music, 0.145)
 
 
@@ -922,6 +987,7 @@ def main():
     write("music_title.wav", title_music(), 3)
     write("wind.wav", wind_loop(), 4)
     write("rain.wav", rain_loop(), 5)
+    write("static.wav", static_loop(), 6)
     print("effects:")
     for i, (name, make) in enumerate([
             ("groan", groan), ("groan_far", groan_far), ("hollow_hurt", hollow_hurt), ("hollow_die", hollow_die),
