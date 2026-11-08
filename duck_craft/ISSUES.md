@@ -123,12 +123,12 @@ game copes; the tool still has the gap.
     game builds itself (`hunt.rs`, a breadth-first search over the
     blocks). Any block game needs one: a `BlockWorld::flow_field(goal,
     can_stand, can_step)` would save every game writing its own.
-45. **`BlockWorld::draw` draws every chunk, every frame.** No distance
-    or view culling: a world 192 blocks across is 144 chunks (most of
-    them sea), and the ones behind you or past the fog cost as much as
-    the ones in front. The game culls for itself (`draw_chunks`, with
-    `chunk_mesh`); `draw` could take a far distance and skip chunks
-    behind the camera.
+45. **`BlockWorld::draw` draws every chunk out to the horizon.**
+    `draw_mesh` skips a chunk that's off the screen, but not one past
+    the fog's far edge, where it would only be fog: a world 192 blocks
+    across is 144 chunks, most of them sea. The game culls by distance
+    itself (`draw_chunks`, with `chunk_mesh`); `draw` could skip chunks
+    past the fog (or a distance it's given).
 46. **A test can't call game code that needs a `Context`.** `Simulation`
     only steps the whole game, so the Other's tricks had to take a bare
     `Rng` instead of the `Context` they use in play, to be tested one
