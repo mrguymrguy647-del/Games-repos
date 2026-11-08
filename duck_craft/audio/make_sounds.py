@@ -15,8 +15,8 @@ so nothing is resampled when the game loads them):
                    bowed metal, a sinking choir, a far bell; 64 s, stereo
   music_title.wav  "The Island Doesn't Remember": a creepypasta-style menu
                    song: an old-console children's tune, slowed, off a
-                   worn VHS tape, that sticks, runs backwards, and ends on
-                   a broadcast tone; 32 s, stereo, loops
+                   wobbling old tape (no hiss), that sticks, runs
+                   backwards, and ends on a broadcast tone; 32 s, stereo
   wind.wav         the island's wind, 24 s, stereo, loops
   rain.wav         rain, 16 s, stereo, loops
   thunder.wav      a crack and a long roll (stereo)
@@ -650,29 +650,26 @@ def triangle(hz, seconds, seed=0):
 def vhs(x, length, seed=0):
     """An old tape on an old television: the top and bottom cut off, the
     sound pushed a little hard, wobbling slowly (wow) and quickly
-    (flutter), hiss underneath, and now and then the tape crinkles."""
-    rng = stretch_rng(seed)
+    (flutter), and now and then the tape sags. No hiss and no crackle:
+    they read as static and got in the way (the wobble is creepier)."""
     n = len(x)
     t = np.arange(n) / RATE
-    x = bandpass(x, 140, 5500, order=2)
+    x = bandpass(x, 140, 4500, order=2)
     x = np.tanh(x * 1.6) / 1.6
+    x = lowpass(x, 4800, order=4)  # no fizz from pushing it hard
     # Flutter: about 6 times a second, a whole number of times a loop.
     flutter_cycles = round(6.1 * length)
     delay = 0.00012 * (1 + np.sin(2 * np.pi * flutter_cycles * t / length))
     read = np.clip(t - delay, 0, t[-1])
     x = np.stack([np.interp(read, t, x[:, c]) for c in range(2)], axis=1)
     x = wow(x, length, cents=28, seed=seed)
-    level = np.sqrt(np.mean(x ** 2))
-    hiss = np.stack([looping_noise(n, 9000, rng, low=1500) for _ in range(2)], axis=1)
-    hiss = hiss[: n] * level * 0.06  # about 25 dB under the music
-    # Crinkles: a few spots a loop where the sound sags and crackles.
-    crinkle = np.ones(n)
+    # A few spots a loop where the tape sags (quieter for a moment).
+    rng = stretch_rng(seed)
+    sag = np.ones(n)
     local = t % length
     for at in rng.uniform(1, length - 1, 3):
-        near = np.exp(-((local - at) / 0.08) ** 2)
-        crinkle -= 0.7 * near
-        hiss += lowpass((rng.random((n, 2)) < 0.02 * near[:, None]) * rng.normal(0, level * 1.5, (n, 2)), 4000)
-    return x * crinkle[:, None] + hiss
+        sag -= 0.5 * np.exp(-((local - at) / 0.12) ** 2)
+    return x * sag[:, None]
 
 
 def title_music():
@@ -680,7 +677,7 @@ def title_music():
     creepypasta's: a children's game tune from an old console (an
     original one), slowed down and played off a worn VHS tape. A thin
     high note keeps ringing a half-step above where it should. Then the
-    tune runs backwards, and the tape ends on a broadcast tone and hiss
+    tune runs backwards, and the tape ends on a broadcast tone
     before it starts again. 32 s, loops."""
     length = 32.0
     eighth = 0.36  # slow, like a tape played at the wrong speed
