@@ -35,7 +35,7 @@
 //!   (`ducklings.rs`)
 //! - **F5** saves (it also saves every 30 seconds and when you quit, to
 //!   `duck_craft_save.dat`; delete that file for a new island: `save.rs`)
-//! - **V** first person / behind the duck, **H** hides the help, **Escape** twice quits
+//! - **V** first person / behind the duck, **Escape** pauses (the pause menu lists the controls)
 //!
 //! How it's made:
 //!
@@ -1336,7 +1336,6 @@ struct DuckCraft {
     in_water: bool,
     walking: bool,
     behind_view: bool,
-    show_help: bool,
     /// The left button took the pointer back: it doesn't dig until it's let go.
     left_click_locked: bool,
     /// Escape gave the pointer back: the picture says how to carry on.
@@ -1370,6 +1369,8 @@ struct DuckCraft {
     vitals: health::Vitals,
     /// Where the game is: the title, playing, or paused.
     stage: Stage,
+    /// The pause menu's page of controls is showing.
+    controls_open: bool,
     mode: Mode,
     /// The island came from a save file (the title offers to carry on).
     has_save: bool,
@@ -1459,7 +1460,6 @@ impl DuckCraft {
             in_water: false,
             walking: false,
             behind_view: false,
-            show_help: true,
             left_click_locked: false,
             pointer_free: false,
             orbit: None,
@@ -1471,6 +1471,7 @@ impl DuckCraft {
             eating_seconds: 0.0,
             vitals: health::Vitals::default(),
             stage: Stage::Playing,
+            controls_open: false,
             mode: Mode::Survival,
             has_save: false,
             music: None,
@@ -2110,12 +2111,6 @@ impl Game for DuckCraft {
         if ctx.input.was_pressed(Key::V) {
             self.behind_view = !self.behind_view;
         }
-        if ctx.input.was_pressed(Key::H) {
-            self.show_help = !self.show_help;
-        }
-        if self.time > 8.0 && self.show_help && self.dug + self.placed > 0 {
-            self.show_help = false; // they've got the idea
-        }
         self.day_and_night(ctx);
 
         let was_on_ground = self.on_ground;
@@ -2195,7 +2190,6 @@ impl Game for DuckCraft {
                 .map_or("nothing", |s| s.item.name()),
         );
         ctx.report("view", if self.behind_view { "behind" } else { "eyes" });
-        ctx.report("help", self.show_help);
         ctx.report(
             "message",
             if self.message_seconds > 0.0 {
@@ -2661,34 +2655,6 @@ impl DuckCraft {
             canvas.draw_text_centered(text, panel.y + 3.0, 1, Color::WHITE);
         }
 
-        let quiet = self.stage != Stage::Playing || self.vitals.fainted;
-        if self.show_help && self.screen.is_none() && !quiet {
-            let last = match self.mode {
-                Mode::Survival => "Lamps keep the dark away. Mostly.",
-                Mode::Creative => "Space twice: fly (Shift down)",
-            };
-            let lines = [
-                "DUCK CRAFT",
-                "WASD walk   Shift run   Space jump",
-                "Mouse or arrows: look   Esc: pause",
-                "Click / X: dig, hit   Right / C: build",
-                "1-9 or wheel: pick   E: bag and crafting",
-                "Hold right click with food: eat",
-                "Right click a duckling: it follows you",
-                "V: view   F5: save   H: hide this",
-                last,
-            ];
-            let panel = Rect::new(46.0, 26.0, 228.0, 107.0);
-            canvas.fill_rect(panel, Color::rgba(0, 0, 0, 160));
-            for (i, line) in lines.iter().enumerate() {
-                let color = if i == 0 {
-                    Color::from_hex(0xffd45a)
-                } else {
-                    Color::WHITE
-                };
-                canvas.draw_text_centered(line, panel.y + 6.0 + i as f32 * 11.0, 1, color);
-            }
-        }
     }
 }
 

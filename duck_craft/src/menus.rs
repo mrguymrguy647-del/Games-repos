@@ -52,14 +52,31 @@ pub enum PauseChoice {
     Resume,
     Mode,
     Music,
+    Controls,
     SaveAndQuit,
 }
 
-const PAUSE: [PauseChoice; 4] = [
+const PAUSE: [PauseChoice; 5] = [
     PauseChoice::Resume,
     PauseChoice::Mode,
     PauseChoice::Music,
+    PauseChoice::Controls,
     PauseChoice::SaveAndQuit,
+];
+
+/// The pause menu's page of controls: the keys, and what they do.
+const CONTROLS: [(&str, &str); 11] = [
+    ("WASD", "walk (Shift: run)"),
+    ("SPACE", "jump; twice in creative: fly"),
+    ("MOUSE", "look (or the arrow keys)"),
+    ("CLICK", "dig, hit (or X)"),
+    ("RIGHT", "build, eat (hold), duckling (or C)"),
+    ("1-9", "pick from the hotbar (or the wheel)"),
+    ("E", "bag and crafting"),
+    ("V", "first person / behind the duck"),
+    ("F5", "save"),
+    ("ESC", "pause"),
+    ("", "Lamps keep the dark away. Mostly."),
 ];
 
 /// Music volumes, at most.
@@ -217,7 +234,6 @@ impl DuckCraft {
             self.time = (start - DAY_START).rem_euclid(1.0) * DAY_SECONDS;
             self.last_time_of_day = self.time_of_day();
             self.announce("Day 1", "You are here. That's all anyone knows.");
-            self.show_help = true;
         }
     }
 
@@ -264,6 +280,19 @@ impl DuckCraft {
         let Stage::Paused { mut selected } = self.stage.clone() else {
             return;
         };
+        if self.controls_open {
+            // Any of the usual keys (or a click) goes back to the menu.
+            let input = &ctx.input;
+            let back = [Key::Escape, Key::Enter, Key::Space, Key::X, Key::E]
+                .iter()
+                .any(|&key| input.was_pressed(key))
+                || input.was_mouse_pressed(MouseButton::Left);
+            if back {
+                self.controls_open = false;
+                ctx.play(inventory::click(500.0));
+            }
+            return;
+        }
         if ctx.input.was_pressed(Key::Escape) {
             self.resume(ctx);
             return;
@@ -288,6 +317,7 @@ impl DuckCraft {
                 self.set_mode(other);
             }
             PauseChoice::Music => self.music_on = !self.music_on,
+            PauseChoice::Controls => self.controls_open = true,
             PauseChoice::SaveAndQuit => {
                 if let Err(error) = self.save() {
                     eprintln!("duck_craft: couldn't save: {error}");
@@ -464,6 +494,10 @@ impl DuckCraft {
             Rect::new(0.0, 0.0, WIDTH, HEIGHT),
             Color::rgba(0, 0, 0, 150),
         );
+        if self.controls_open {
+            self.draw_controls(canvas);
+            return;
+        }
         canvas.draw_text_centered("Paused", 44.0, 2, Color::rgb(232, 226, 210));
         let day = format!(
             "Day {}. The island waits. It's good at that.",
@@ -477,6 +511,7 @@ impl DuckCraft {
                 PauseChoice::Music => {
                     format!("Music: {}", if self.music_on { "on" } else { "off" })
                 }
+                PauseChoice::Controls => String::from("Controls"),
                 PauseChoice::SaveAndQuit => String::from(if self.save_path.is_some() {
                     "Save and quit"
                 } else {
@@ -493,8 +528,30 @@ impl DuckCraft {
         }
         canvas.label(
             "pause_menu",
-            Rect::new(WIDTH / 2.0 - 75.0, PAUSE_TOP, 150.0, 86.0),
+            Rect::new(WIDTH / 2.0 - 75.0, PAUSE_TOP, 150.0, PAUSE.len() as f32 * 22.0 - 4.0),
         );
+        self.draw_menu_pointer(canvas);
+    }
+
+    /// The page of controls, in the inventory's panels: each key as a key
+    /// cap, then what it does.
+    fn draw_controls(&self, canvas: &mut Canvas) {
+        use inventory::{BLOOD, DIM, INK, bevel_box, ps_panel, shadowed_text};
+        let r = Rect::new(20.0, 22.0, WIDTH - 40.0, 182.0);
+        ps_panel(canvas, r, Some(("CONTROLS", "ANY KEY: BACK")));
+        canvas.label("controls", r);
+        for (i, (key, what)) in CONTROLS.iter().enumerate() {
+            let y = r.y + 22.0 + i as f32 * 14.0;
+            if key.is_empty() {
+                canvas.fill_rect(Rect::new(r.x + 10.0, y - 3.0, r.w - 20.0, 1.0), BLOOD);
+                shadowed_text(canvas, what, vec2(r.x + 12.0, y + 2.0), DIM);
+                continue;
+            }
+            let w = Canvas::text_width(key, 1) + 6.0;
+            bevel_box(canvas, Rect::new(r.x + 46.0 - w, y, w, 10.0), Color::rgb(64, 64, 76));
+            canvas.draw_text(key, vec2(r.x + 49.0 - w, y + 2.0), 1, INK);
+            canvas.draw_text(what, vec2(r.x + 54.0, y + 2.0), 1, DIM);
+        }
         self.draw_menu_pointer(canvas);
     }
 
@@ -517,12 +574,7 @@ impl DuckCraft {
         };
         let alpha =
             (seconds.min(1.0) * (5.0 - seconds).min(0.6) / 0.6 * 255.0).clamp(0.0, 255.0) as u8;
-        // Below the middle while the help is up (it fills the top).
-        let top = if self.show_help && self.screen.is_none() {
-            140.0
-        } else {
-            46.0
-        };
+        let top = 46.0;
         canvas.draw_text_centered(title, top + 1.0, 2, Color::rgba(0, 0, 0, alpha / 2));
         canvas.draw_text_centered(title, top, 2, Color::rgba(236, 230, 214, alpha));
         canvas.draw_text_centered(line, top + 20.0, 1, Color::rgba(0, 0, 0, alpha / 2));
@@ -573,27 +625,23 @@ impl DuckCraft {
 
 /// A grey button, lit when picked; reddish when it's asking to be sure.
 fn draw_button(canvas: &mut Canvas, r: Rect, label: &str, selected: bool, warning: bool) {
+    // In the inventory's style: dark slate key caps, the chosen one lit,
+    // with a red bar on its left.
     let fill = match (selected, warning) {
-        (_, true) => Color::rgba(120, 40, 36, 230),
-        (true, false) => Color::rgba(110, 108, 104, 230),
-        (false, false) => Color::rgba(46, 45, 44, 210),
+        (_, true) => Color::rgba(110, 30, 28, 235),
+        (true, false) => Color::rgba(70, 70, 82, 235),
+        (false, false) => Color::rgba(30, 30, 36, 220),
     };
-    canvas.fill_rect(r, fill);
-    canvas.draw_rect(
-        r,
-        if selected {
-            Color::rgb(230, 224, 210)
-        } else {
-            Color::rgb(16, 16, 16)
-        },
-    );
-    let color = if selected {
-        Color::WHITE
-    } else {
-        Color::rgb(190, 186, 178)
-    };
+    canvas.fill_rect(Rect::new(r.x + 2.0, r.y + 2.0, r.w, r.h), Color::rgba(0, 0, 0, 100));
+    inventory::bevel_box(canvas, r, fill);
+    canvas.draw_rect(r, Color::BLACK);
+    if selected {
+        canvas.fill_rect(Rect::new(r.x + 2.0, r.y + 2.0, 3.0, r.h - 4.0), inventory::BLOOD);
+    }
+    let color = if selected { inventory::INK } else { inventory::DIM };
     let w = Canvas::text_width(label, 1);
-    canvas.draw_text(label, vec2(r.x + (r.w - w) / 2.0, r.y + 5.0), 1, color);
+    let at = vec2((r.x + (r.w - w) / 2.0).floor(), r.y + 5.0);
+    inventory::shadowed_text(canvas, label, at, color);
     canvas.label("button", r);
 }
 

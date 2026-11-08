@@ -3,7 +3,7 @@
   "seed": 1,
   "updates_per_second": 60,
   "frames": 797,
-  "expect": {"air": 15, "coal": 0, "crafted": 0, "day": 1, "ducklings_following": 0, "dug": 2, "eaten": 0, "fainted": false, "flying": false, "food": 20, "gold": 0, "health": 20, "held": "nothing", "help": false, "holding": "Planks", "hollows": 0, "in_water": false, "inventory_open": false, "kills": 0, "looking_at": "Leaves", "message": "", "mode": "Survival", "on_ground": true, "picked": 0, "placed": 7, "stage": "playing", "view": "behind", "x": 27.6, "y": 19, "yaw": 4.3, "z": 24.9},
+  "expect": {"air": 15, "coal": 0, "crafted": 0, "day": 1, "ducklings_following": 0, "dug": 2, "eaten": 0, "fainted": false, "flying": false, "food": 20, "gold": 0, "health": 20, "held": "nothing", "holding": "Planks", "hollows": 0, "in_water": false, "inventory_open": false, "kills": 0, "looking_at": "Leaves", "message": "", "mode": "Survival", "on_ground": true, "picked": 0, "placed": 7, "stage": "playing", "view": "behind", "x": 27.6, "y": 19, "yaw": 4.3, "z": 24.9},
   "tune": {"start_time_of_day": 0.05},
   "events": [
     {"frame": 31, "press": "Enter"},

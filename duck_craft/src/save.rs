@@ -329,7 +329,6 @@ impl DuckCraft {
             }
         }
         game.update_chunks();
-        game.show_help = false;
         game.last_save = game.time;
         Ok(game)
     }

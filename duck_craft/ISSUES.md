@@ -98,6 +98,17 @@ game copes; the tool still has the gap.
     nearly all music, where `.ogg` would be about 2 MB. Reading Ogg
     Vorbis (or FLAC, lossless at about half) in `Wav::load` would keep
     repos and downloads small.
+38. **No gradient or pattern fill.** The inventory's PlayStation-style
+    panels are shaded in bands that meet in a dithered checkerboard, which
+    takes hundreds of one-pixel `fill_rect`s a frame. A
+    `fill_rect_gradient(rect, top, bottom, dither: bool)` (or an ordered
+    dither option on `fill_rect`) would do it in one call, and look more
+    like the real thing.
+39. **No clipping rectangle.** The duck drawn in the inventory's window
+    (`draw_mesh_in_view`) can't be clipped to the window, so it had to be
+    made small enough never to poke out. A `canvas.clip(rect)` / push and
+    pop for 2D and 3D drawing would let UI windows hold models, and
+    scrolling lists.
 
 ## Duck Quill
 

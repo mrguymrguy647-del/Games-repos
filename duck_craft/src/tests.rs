@@ -263,8 +263,8 @@ fn the_mouse_looks_round_while_the_window_holds_the_pointer() {
     sim.release_mouse(MouseButton::Left);
     assert_eq!(sim.game().world.get(8, FLOOR + 1, 10), Block::Air);
 
-    // Escape, then the last button (quit).
-    for key in [Key::Escape, Key::S, Key::S, Key::S, Key::Enter] {
+    // Escape, then up from the first button wraps to the last (quit).
+    for key in [Key::Escape, Key::W, Key::Enter] {
         sim.press(key);
         sim.step();
         sim.release(key);
@@ -451,7 +451,6 @@ fn views() {
         game.behind_view = true;
         game.orbit = Some(orbit);
         game.pitch = pitch;
-        game.show_help = false;
         game.time = 0.17; // arms and legs mid-swing
         game.velocity = vec3(0.0, 0.0, WALK_SPEED);
         let mut sim = Simulation::new(config(), game);
@@ -477,7 +476,6 @@ fn views() {
             ducklings::Duckling::new(vec3(10.5, FLOOR as f32 - 0.6, 11.5), 1.2),
         ];
         game.pitch = -0.45;
-        game.show_help = false;
         let mut sim = Simulation::new(config(), game);
         sim.run(20);
         sim.picture().save_png("out/views/ducklings.png").unwrap();
@@ -487,7 +485,6 @@ fn views() {
             d.follows = Some(i as u32 + 1);
         }
         game.behind_view = true;
-        game.show_help = false;
         let mut sim = Simulation::new(config(), game);
         sim.press(Key::W);
         sim.run(150);
@@ -520,7 +517,6 @@ fn views() {
         game.world
             .set(lamp.x as i32, lamp.y as i32, lamp.z as i32, Block::Lamp);
         game.update_chunks();
-        game.show_help = false;
         game.pitch = -0.05;
         let mut sim = Simulation::new(config(), game);
         sim.step();
@@ -531,7 +527,6 @@ fn views() {
         game.hollows[0].chasing = true;
         game.world.set(6, FLOOR, 10, Block::Lamp);
         game.update_chunks();
-        game.show_help = false;
         game.orbit = Some(2.5);
         let mut sim = Simulation::new(config(), game);
         sim.step();
@@ -544,7 +539,6 @@ fn views() {
         game.last_time_of_day = game.time_of_day();
         game.spawn_wait = 1000.0;
         game.watcher_night = game.day_number();
-        game.show_help = false;
         let mut sim = Simulation::new(config(), game);
         sim.step();
         let mut ctx_game = sim.game().clone();
@@ -562,6 +556,11 @@ fn views() {
         let mut sim = Simulation::new(config(), game);
         sim.step();
         sim.picture().save_png("out/views/pause.png").unwrap();
+        let mut game = sim.into_game();
+        game.controls_open = true;
+        let mut sim = Simulation::new(config(), game);
+        sim.step();
+        sim.picture().save_png("out/views/controls.png").unwrap();
         let mut game = arena(|_| {});
         game.vitals.health = 0;
         game.vitals.fainted = true;
@@ -573,9 +572,9 @@ fn views() {
         let mut game = creative(|_| {});
         game.screen = Some(inventory::Screen {
             book_open: true,
+            opened: 1.0, // past the opening wipe
             ..Default::default()
         });
-        game.show_help = false;
         let mut sim = Simulation::new(config(), game);
         sim.step();
         sim.picture()
@@ -586,7 +585,6 @@ fn views() {
         game.time = night;
         game.last_time_of_day = game.time_of_day();
         game.vitals.health = 3;
-        game.show_help = false;
         let mut sim = Simulation::new(config(), game);
         sim.step();
         sim.picture().save_png("out/views/hurt_night.png").unwrap();
@@ -606,8 +604,8 @@ fn views() {
         screen.grid[0] = Some(Stack::new(Item::Block(Block::Log), 1));
         screen.held = (!book).then(|| Stack::new(Item::Block(Block::Sand), 3));
         screen.book_open = book;
+        screen.opened = 1.0; // past the opening wipe
         game.screen = Some(screen);
-        game.show_help = false;
         let mut sim = Simulation::new(config(), game);
         let mouse = inventory::spot_rect(inventory::Spot::Slot(20), book);
         sim.move_mouse(vec2(mouse.x + 9.0, mouse.y + 9.0));
@@ -620,7 +618,6 @@ fn views() {
     for (name, pitch) in [("hand_level", 0.0), ("hand_down", -0.8)] {
         let mut game = arena(|_| {});
         game.pitch = pitch;
-        game.show_help = false;
         let mut sim = Simulation::new(config(), game);
         sim.step();
         sim.picture()
@@ -635,7 +632,6 @@ fn views() {
         w.set(9, FLOOR, 12, Block::Planks);
     });
     game.pitch = -0.35;
-    game.show_help = false;
     game.time = 0.7 * DAY_SECONDS;
     let mut sim = Simulation::new(config(), game);
     sim.step();
@@ -650,7 +646,6 @@ fn views() {
         }
         game.pitch = pitch;
         game.behind_view = behind;
-        game.show_help = false;
         game.time = time;
         let mut sim = Simulation::new(config(), game);
         sim.run(40);
@@ -951,7 +946,6 @@ fn showcase() {
     game.inventory.set(Item::Coal, 4);
     game.inventory.set(Item::Gold, 2);
     game.inventory.set(Item::Seeds, 3);
-    game.show_help = false;
     game.draw_pointer = true;
     game.vitals.food = 13;
     game.vitals.health = 16;
@@ -2214,4 +2208,98 @@ fn the_music_and_wind_are_stereo_at_the_engines_rate() {
         let rate = u32::from_le_bytes(bytes[24..28].try_into().unwrap());
         assert_eq!(rate, 44_100, "{name} is at the engine's rate, so nothing is resampled");
     }
+}
+
+#[test]
+fn the_arrow_keys_work_the_inventory_like_a_console() {
+    use inventory::Spot;
+    let mut game = new_game().unwrap();
+    game.inventory = Inventory::empty();
+    game.inventory.slots[0] = Some(Stack::new(Item::Block(Block::Log), 3));
+    game.slot = 0;
+    let mut sim = Simulation::new(config(), game);
+    sim.step();
+    let tap = |sim: &mut Simulation<DuckCraft>, key: Key| {
+        sim.press(key);
+        sim.step();
+        sim.release(key);
+        sim.step();
+    };
+    tap(&mut sim, Key::E);
+    assert!(sim.game().screen.is_some());
+    // The first arrow shows the cursor on the slot in hand.
+    tap(&mut sim, Key::Right);
+    assert_eq!(sim.game().screen.as_ref().unwrap().cursor, Some(Spot::Slot(0)));
+    // X takes the logs; up through the bag to the crafting grid; X puts
+    // them in.
+    tap(&mut sim, Key::X);
+    assert_eq!(sim.game().screen.as_ref().unwrap().held.map(|s| s.count), Some(3));
+    for _ in 0..4 {
+        tap(&mut sim, Key::Up);
+    }
+    let cursor = sim.game().screen.as_ref().unwrap().cursor;
+    assert!(matches!(cursor, Some(Spot::Grid(_))), "up from the hotbar reaches the grid, got {cursor:?}");
+    tap(&mut sim, Key::X);
+    assert!(sim.game().screen.as_ref().unwrap().held.is_none());
+    // Right past the grid's other square to the result; X makes planks.
+    for _ in 0..2 {
+        tap(&mut sim, Key::Right);
+    }
+    assert_eq!(sim.game().screen.as_ref().unwrap().cursor, Some(Spot::Result));
+    tap(&mut sim, Key::X);
+    let held = sim.game().screen.as_ref().unwrap().held;
+    assert_eq!(held.map(|s| s.item), Some(Item::Block(Block::Planks)));
+    // E closes, and nothing is lost.
+    tap(&mut sim, Key::E);
+    assert!(sim.game().screen.is_none());
+    assert_eq!(sim.game().inventory.count(Item::Block(Block::Planks)), 4);
+    assert_eq!(sim.game().inventory.count(Item::Block(Block::Log)), 2);
+}
+
+#[test]
+fn creatives_panel_has_tabs_and_q_and_r_turn_them() {
+    use inventory::{Spot, TABS, tab_of};
+    let mut game = creative(|_| {});
+    game.screen = Some(inventory::Screen {
+        book_open: true,
+        ..Default::default()
+    });
+    // Everything is under exactly one tab, and every tab has something.
+    for t in 0..TABS.len() {
+        assert!(Item::all().iter().any(|&item| tab_of(item) == t), "tab {t} is empty");
+    }
+    let mut sim = Simulation::new(config(), game);
+    sim.step();
+    for (key, tab) in [(Key::R, 1), (Key::R, 2), (Key::R, 0), (Key::Q, 2)] {
+        sim.press(key);
+        sim.step();
+        sim.release(key);
+        sim.step();
+        assert_eq!(sim.game().screen.as_ref().unwrap().tab, tab);
+    }
+    // Clicking a tab picks it too.
+    let mut game = sim.into_game();
+    game.click_spot(Spot::Tab(1), true, false);
+    assert_eq!(game.screen.as_ref().unwrap().tab, 1);
+}
+
+#[test]
+fn the_pause_menu_shows_the_controls() {
+    let mut game = new_game().unwrap();
+    game.stage = Stage::Paused { selected: 3 };
+    let mut sim = Simulation::new(config(), game);
+    sim.step();
+    sim.press(Key::Enter);
+    sim.step();
+    sim.release(Key::Enter);
+    sim.step();
+    assert!(sim.game().controls_open);
+    assert!(sim.scene().labels_named("controls").next().is_some());
+    // Escape goes back to the menu, not to the island.
+    sim.press(Key::Escape);
+    sim.step();
+    sim.release(Key::Escape);
+    sim.step();
+    assert!(!sim.game().controls_open);
+    assert!(matches!(sim.game().stage, Stage::Paused { .. }));
 }
