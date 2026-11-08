@@ -15,7 +15,7 @@
 
 use super::*;
 use ducklings::ray_box;
-use menus::{Mode, Stage, sky_at};
+use menus::{Mode, Stage};
 
 pub const HOLLOW: Body = Body {
     half_width: 0.3,
@@ -249,7 +249,7 @@ impl DuckCraft {
     /// of it: night under the open sky, or no sky at all (a cave), and no
     /// lamp near.
     pub fn dark_at(&self, x: i32, y: i32, z: i32) -> bool {
-        let daylight = sky_at(self.time_of_day()).daylight;
+        let daylight = self.sky().daylight;
         let sky = self.world.sky[z as usize * SIZE + x as usize];
         let open = y >= sky;
         let dark = if open {
@@ -327,7 +327,7 @@ impl DuckCraft {
     pub fn update_hollows(&mut self, ctx: &mut Context) {
         let dt = ctx.dt();
         let art = self.art.clone();
-        let daylight = sky_at(self.time_of_day()).daylight;
+        let daylight = self.sky().daylight;
 
         let night = self.day_number();
         self.spawn_wait -= dt;
@@ -807,7 +807,7 @@ impl DuckCraft {
     /// to it, and it's gone.
     pub fn update_watcher(&mut self, ctx: &mut Context) {
         let dt = ctx.dt();
-        let daylight = sky_at(self.time_of_day()).daylight;
+        let daylight = self.sky().daylight;
         let night = self.day_number();
         if self.watcher.is_none() && daylight < 0.05 && self.watcher_night != night {
             self.watcher_night = night;

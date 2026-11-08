@@ -93,8 +93,10 @@ pub struct Music {
     night: LoopId,
     wind: LoopId,
     heart: LoopId,
-    /// The volume each was last set to: title, day, night, wind, heart.
-    volumes: [f32; 5],
+    rain: LoopId,
+    /// The volume each was last set to: title, day, night, wind, heart,
+    /// rain.
+    volumes: [f32; 6],
 }
 
 const DUSK_LINES: [&str; 6] = [
@@ -349,7 +351,10 @@ impl DuckCraft {
     /// the title's on the title screen, day and night by the light, the
     /// heartbeat when hurt.
     pub fn update_music(&mut self, ctx: &mut Context) {
-        let daylight = sky_at(self.time_of_day()).daylight;
+        let daylight = self.sky().daylight;
+        // Rain: loud outside, a patter under a roof.
+        let shelter = if self.outdoors() { 0.55 } else { 0.18 };
+        let rain = self.weather.rain().min(1.0) * shelter;
         let art = self.art.clone();
         let sounds = &art.sounds;
         self.music.get_or_insert_with(|| Music {
@@ -358,7 +363,8 @@ impl DuckCraft {
             night: ctx.play_loop(&sounds.music_night, 0.0),
             wind: ctx.play_loop(&art.wind, 0.0),
             heart: ctx.play_loop(&sounds.heartbeat, 0.0),
-            volumes: [0.0; 5],
+            rain: ctx.play_loop(&sounds.rain, 0.0),
+            volumes: [0.0; 6],
         });
         let on = if self.music_on { 1.0 } else { 0.0 };
         let (title, playing, paused) = match &self.stage {
@@ -379,10 +385,11 @@ impl DuckCraft {
             playing * (1.0 - daylight) * NIGHT_MUSIC * on * hush,
             (playing + title * 0.5) * WIND * hush,
             hurt * 0.8 * hush,
+            playing * rain * hush,
         ];
-        let ids = [music.title, music.day, music.night, music.wind, music.heart];
+        let ids = [music.title, music.day, music.night, music.wind, music.heart, music.rain];
         let step = ctx.dt() / 2.0; // fades take about two seconds
-        for i in 0..5 {
+        for i in 0..6 {
             let now = music.volumes[i];
             let next = approach(now, targets[i], step.max(if i == 4 { 0.05 } else { 0.0 }));
             // Only tell the mixer when it really changed (keeps logs short).
@@ -584,7 +591,7 @@ impl DuckCraft {
 
     /// Dark edges: faint at night, closing in and going red when hurt.
     pub fn draw_vignette(&self, canvas: &mut Canvas) {
-        let night = 1.0 - sky_at(self.time_of_day()).daylight;
+        let night = 1.0 - self.sky().daylight;
         let hurt = if self.mode == Mode::Survival {
             ((8.0 - self.vitals.health as f32) / 8.0).clamp(0.0, 1.0)
         } else {

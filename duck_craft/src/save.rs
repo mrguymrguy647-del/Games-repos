@@ -14,11 +14,12 @@ use menus::Mode;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
-/// The file's first bytes. Version 4 adds the bed and what the chests
-/// hold; version 3 the island's seed, the mode and the music setting;
+/// The file's first bytes. Version 5 adds the weather; version 4 the bed
+/// and what the chests hold; version 3 the island's seed, the mode and the music setting;
 /// version 2 keeps stacks in slots; version 1 (a count of each block, gold
 /// and coal). All of them still load.
-const MAGIC: &[u8; 10] = b"DUCKCRAFT4";
+const MAGIC: &[u8; 10] = b"DUCKCRAFT5";
+const MAGIC_V4: &[u8; 10] = b"DUCKCRAFT4";
 const MAGIC_V3: &[u8; 10] = b"DUCKCRAFT3";
 const MAGIC_V2: &[u8; 10] = b"DUCKCRAFT2";
 const MAGIC_V1: &[u8; 10] = b"DUCKCRAFT1";
@@ -203,6 +204,11 @@ impl DuckCraft {
                 }
             }
         }
+        // Version 5: the weather.
+        let kind = |k: weather::Weather| weather::Weather::ALL.iter().position(|&w| w == k).unwrap_or(0) as u8;
+        w.u8(kind(self.weather.now));
+        w.f32(self.weather.left);
+        w.u32(self.weather.turns);
         w.0
     }
 
@@ -210,7 +216,8 @@ impl DuckCraft {
     pub fn from_bytes(art: Rc<Art>, bytes: &[u8]) -> io::Result<DuckCraft> {
         let mut r = Reader(bytes);
         let version = match r.take(MAGIC.len())? {
-            m if m == MAGIC => 4,
+            m if m == MAGIC => 5,
+            m if m == MAGIC_V4 => 4,
             m if m == MAGIC_V3 => 3,
             m if m == MAGIC_V2 => 2,
             m if m == MAGIC_V1 => 1,
@@ -364,6 +371,18 @@ impl DuckCraft {
                     game.world.chests.insert(cell, slots);
                 }
             }
+        }
+        game.weather = weather::Sky::default();
+        if version >= 5 {
+            let now = weather::Weather::ALL
+                .get(r.u8()? as usize)
+                .copied()
+                .unwrap_or_default();
+            let left = r.f32()?;
+            game.weather.now = now;
+            game.weather.before = now;
+            game.weather.left = if left.is_finite() { left.clamp(0.0, 600.0) } else { 60.0 };
+            game.weather.turns = r.u32()?;
         }
         // Somewhere impossible (an odd file): the spawn. Inside a block:
         // the nearest place you fit.

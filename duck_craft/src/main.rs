@@ -899,12 +899,16 @@ struct Sounds {
     heartbeat: Wav,
     bell_dusk: Wav,
     bell_dawn: Wav,
+    rain: Wav,
+    thunder: Wav,
 }
 
 impl Sounds {
     fn load() -> Result<Sounds, LoadError> {
         let wav = |name: &str| Wav::load(format!("{ASSETS}/{name}.wav"));
         Ok(Sounds {
+            rain: wav("rain")?,
+            thunder: wav("thunder")?,
             music_day: wav("music_day")?,
             music_night: wav("music_night")?,
             music_title: wav("music_title")?,
@@ -1613,6 +1617,8 @@ struct DuckCraft {
     bed: Option<[i32; 3]>,
     /// Seconds of sleep left (the screen is dark; then it's morning).
     sleeping: f32,
+    /// The weather (see `weather.rs`).
+    weather: weather::Sky,
     /// The Hollows' maps of the way to the duck (walkers, crawlers).
     walk_field: hunt::Field,
     climb_field: hunt::Field,
@@ -1730,6 +1736,7 @@ impl DuckCraft {
             controls_open: false,
             bed: None,
             sleeping: 0.0,
+            weather: weather::Sky::default(),
             walk_field: hunt::Field::new(false),
             climb_field: hunt::Field::new(true),
             hunt_wait: 0.0,
@@ -2402,6 +2409,7 @@ impl Game for DuckCraft {
             self.behind_view = !self.behind_view;
         }
         self.day_and_night(ctx);
+        self.update_weather(ctx);
         if self.sleeping > 0.0 {
             self.update_sleep(ctx);
             self.update_chunks();
@@ -2520,10 +2528,14 @@ impl Game for DuckCraft {
             sun,
             daylight,
             dusk,
-        } = sky_at(self.time_of_day());
+        } = self.sky();
         let night_sky = Color::from_hex(0x03040a);
         let day_sky = Color::from_hex(0x86c4f2);
-        let sky = night_sky.lerp(day_sky, daylight);
+        // Weather greys the sky over.
+        let grey = self.weather.grey();
+        let cloud = night_sky.lerp(Color::from_hex(0x7c8590), daylight);
+        let sky = night_sky.lerp(day_sky, daylight).lerp(cloud, grey);
+        let dusk = dusk * (1.0 - grey);
         let horizon_glow = Color::from_hex(0xd8703a);
         canvas.clear(sky);
         // A lighter band down to the horizon (red at sunrise and sunset).
@@ -2552,7 +2564,11 @@ impl Game for DuckCraft {
         let (near, far) = if underground {
             (3.0, 22.0)
         } else {
-            (6.0 + 34.0 * daylight, 30.0 + 90.0 * daylight)
+            let sight = self.weather.sight();
+            (
+                (6.0 + 34.0 * daylight) * sight,
+                ((30.0 + 90.0 * daylight) * sight).max(12.0),
+            )
         };
         let fog_color = if underground {
             Color::from_hex(0x050506)
@@ -2564,8 +2580,8 @@ impl Game for DuckCraft {
             near,
             far,
         }));
-        if daylight < 0.9 {
-            let alpha = ((1.0 - daylight) * 170.0) as u8;
+        if daylight < 0.9 && grey < 0.5 {
+            let alpha = ((1.0 - daylight) * 170.0 * (1.0 - grey)) as u8;
             for i in 0..60 {
                 let a = random01(i, 0, 0, 77) * TAU;
                 let h = random01(i, 1, 0, 77) * 0.9 + 0.08;
@@ -2582,14 +2598,20 @@ impl Game for DuckCraft {
                 }
             }
         }
-        if let Some(p) = camera.world_to_screen(camera.position + sun * 100.0, canvas) {
+        if let Some(p) = camera
+            .world_to_screen(camera.position + sun * 100.0, canvas)
+            .filter(|_| grey < 0.5)
+        {
             canvas.fill_rect(
                 Rect::from_center(p, 18.0, 18.0),
                 Color::from_hex(0xfff2a0).with_alpha(120),
             );
             canvas.fill_rect(Rect::from_center(p, 12.0, 12.0), Color::from_hex(0xfffbe0));
         }
-        if let Some(p) = camera.world_to_screen(camera.position - sun * 100.0, canvas) {
+        if let Some(p) = camera
+            .world_to_screen(camera.position - sun * 100.0, canvas)
+            .filter(|_| grey < 0.5)
+        {
             // A pale moon, with a dark bite out of it.
             canvas.fill_rect(Rect::from_center(p, 9.0, 9.0), Color::from_hex(0xc8ccd4));
             canvas.fill_rect(
@@ -2742,6 +2764,7 @@ impl Game for DuckCraft {
         if !self.behind_view {
             self.draw_hand(canvas, &camera);
         }
+        self.draw_weather(canvas);
         self.draw_vignette(canvas);
         self.draw_hud(canvas);
         if self.mode == Mode::Survival {
@@ -2943,7 +2966,8 @@ impl DuckCraft {
 
     /// A word for the weather, after the clock ("" when it's clear).
     fn weather_note(&self) -> &'static str {
-        ""
+        let w = &self.weather;
+        if w.blend > 0.5 { w.now.note() } else { w.before.note() }
     }
 
     fn draw_hud(&self, canvas: &mut Canvas) {
@@ -3126,10 +3150,11 @@ mod night;
 mod plants;
 mod ruins;
 mod save;
+mod weather;
 
 use ducklings::{Duckling, DucklingModel};
 use items::{HOTBAR_SLOTS, Inventory, Item, SLOTS, Stack};
-use menus::{Mode, Stage, sky_at};
+use menus::{Mode, Stage};
 use night::{Hollow, Watcher};
 use plants::Plant;
 

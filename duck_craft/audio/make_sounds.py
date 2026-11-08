@@ -18,6 +18,8 @@ so nothing is resampled when the game loads them):
                    worn VHS tape, that sticks, runs backwards, and ends on
                    a broadcast tone; 32 s, stereo, loops
   wind.wav         the island's wind, 24 s, stereo, loops
+  rain.wav         rain, 16 s, stereo, loops
+  thunder.wav      a crack and a long roll (stereo)
   groan.wav        a Hollow, somewhere near (mono: the game pans it
                    toward the Hollow)
   groan_far.wav    the same, further off: quieter and muffled (the engine
@@ -879,6 +881,42 @@ def bell_dawn():
     return fade(peak(reverb(out, room(3.0, 2.2, seed=10), 0.35), 0.6), 0, 0.5)
 
 
+def rain_loop():
+    """Rain, 16 s, stereo, loops: a hiss of many drops, a little different
+    in each ear, and now and then a nearer drop. Played louder outside
+    than under a roof."""
+    length = 16.0
+    t = time_axis(length)
+    rng = np.random.default_rng(41)
+    ears = []
+    common = looping_noise(len(t), 7000, rng, low=500)
+    for side in range(2):
+        hiss = 0.7 * common + 0.3 * looping_noise(len(t), 7000, rng, low=500)
+        swell = 0.85 + 0.15 * loop_lfo(t, length, 3, side * 1.3)
+        drops = np.zeros(len(t))
+        for at in rng.uniform(0, length - 0.05, 260):
+            k = int(at * RATE)
+            n = int(0.012 * RATE)
+            drops[k:k + n] += rng.normal(0, 1, n) * np.exp(-np.arange(n) / (0.002 * RATE)) * rng.uniform(0.3, 1.0)
+        drops = bandpass(drops, 1800, 6500)
+        ears.append(hiss * swell * 0.5 + drops * 0.9)
+    return loudness(np.stack(ears, axis=1), 0.08)
+
+
+def thunder():
+    """A crack, and then the long roll, rumbling off into the distance."""
+    rng = np.random.default_rng(42)
+    t = time_axis(6.0)
+    crack = highpass(rng.normal(0, 1, len(t)), 900) * envelope(len(t), 0.002, 0.08)
+    rumble = lowpass(rng.normal(0, 1, len(t)), 160)
+    rumble = rumble / (np.max(np.abs(rumble)) + 1e-9)
+    roll = np.exp(-t / 1.8) * (0.6 + 0.4 * np.sin(2 * np.pi * 0.9 * t + 1.0) ** 2) * np.clip(t / 0.15, 0, 1)
+    left = crack * 0.6 + rumble * roll * 2.2
+    right = crack * 0.45 + np.roll(rumble, int(0.03 * RATE)) * roll * 2.2
+    out = np.stack([left, right], axis=1)
+    return fade(peak(reverb(out, room(4.0, 3.5, seed=43), 0.45), 0.9), 0, 0.8)
+
+
 def main():
     OUT.mkdir(exist_ok=True)
     print("music:")
@@ -886,10 +924,12 @@ def main():
     write("music_night.wav", night_music(), 2)
     write("music_title.wav", title_music(), 3)
     write("wind.wav", wind_loop(), 4)
+    write("rain.wav", rain_loop(), 5)
     print("effects:")
     for i, (name, make) in enumerate([
             ("groan", groan), ("groan_far", groan_far), ("hollow_hurt", hollow_hurt), ("hollow_die", hollow_die),
-            ("sting", sting), ("heartbeat", heartbeat), ("bell_dusk", bell_dusk), ("bell_dawn", bell_dawn)]):
+            ("sting", sting), ("heartbeat", heartbeat), ("bell_dusk", bell_dusk), ("bell_dawn", bell_dawn),
+            ("thunder", thunder)]):
         write(f"{name}.wav", make(), 10 + i)
 
 

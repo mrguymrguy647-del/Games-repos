@@ -2725,3 +2725,83 @@ fn caves_wind_through_the_rock_with_ore_along_them() {
         }
     }
 }
+
+// ---- Weather ----
+
+#[test]
+fn the_weather_turns_and_the_same_island_has_the_same_weather() {
+    let kinds = |seed: u32| -> Vec<weather::Weather> {
+        (1..40).map(|turn| weather::Sky::pick(seed, turn, turn % 2 == 0).0).collect()
+    };
+    assert_eq!(kinds(SEED), kinds(SEED));
+    let all = kinds(SEED);
+    for kind in weather::Weather::ALL {
+        assert!(all.contains(&kind), "{kind:?} comes sometimes");
+    }
+    // The first morning is clear, and then it turns.
+    let mut game = new_game().unwrap();
+    assert_eq!(game.weather.now, weather::Weather::Clear);
+    game.weather.left = 0.05;
+    let played = PlayTest::new(config(), game).frames(30).run();
+    assert!(played.game().weather.turns >= 1);
+}
+
+#[test]
+fn a_storm_darkens_the_day_and_rains_on_you_but_not_indoors() {
+    let mut game = arena(|_| {});
+    game.time = at_time_of_day(0.25); // noon
+    game.last_time_of_day = game.time_of_day();
+    let clear = game.sky().daylight;
+    game.weather.now = weather::Weather::Storm;
+    game.weather.before = weather::Weather::Storm;
+    game.weather.left = 500.0;
+    assert!(game.sky().daylight < clear * 0.6, "darker in a storm");
+    let mut sim = Simulation::new(config(), game.clone());
+    sim.step();
+    assert!(sim.scene().labels_named("rain").next().is_some(), "rain falls on you outside");
+    // Under a roof, no rain in your eyes.
+    for x in 6..12 {
+        for z in 6..12 {
+            game.world.set(x, FLOOR + 3, z, Block::Stone);
+        }
+    }
+    let mut sim = Simulation::new(config(), game);
+    sim.step();
+    assert!(sim.scene().labels_named("rain").next().is_none());
+}
+
+#[test]
+fn storms_bring_lightning_and_thunder() {
+    let mut game = arena(|_| {});
+    game.weather.now = weather::Weather::Storm;
+    game.weather.before = weather::Weather::Storm;
+    game.weather.left = 500.0;
+    game.weather.strike_wait = 0.1;
+    let played = PlayTest::new(config(), game).frames(240).run();
+    assert!(!played.sound_frames("thunder").is_empty());
+}
+
+#[test]
+fn a_stormy_evening_brings_the_dark_and_the_hollows_early() {
+    // Sunset: clear, still too light for Hollows; a storm, dark enough.
+    let mut game = arena(|_| {});
+    game.time = at_time_of_day(0.505);
+    game.last_time_of_day = game.time_of_day();
+    let clear = game.sky().daylight;
+    game.weather.now = weather::Weather::Storm;
+    game.weather.before = weather::Weather::Storm;
+    let stormy = game.sky().daylight;
+    assert!(clear >= 0.15 && stormy < 0.15, "clear {clear}, storm {stormy}");
+}
+
+#[test]
+fn the_weather_is_saved() {
+    let mut game = new_game().unwrap();
+    game.weather.now = weather::Weather::Fog;
+    game.weather.left = 77.0;
+    game.weather.turns = 5;
+    let loaded = DuckCraft::from_bytes(game.art.clone(), &game.to_bytes()).unwrap();
+    assert_eq!(loaded.weather.now, weather::Weather::Fog);
+    assert_eq!(loaded.weather.left, 77.0);
+    assert_eq!(loaded.weather.turns, 5);
+}
