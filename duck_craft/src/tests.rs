@@ -2288,3 +2288,25 @@ fn the_pause_menu_shows_the_controls() {
     assert!(!sim.game().controls_open);
     assert!(matches!(sim.game().stage, Stage::Paused { .. }));
 }
+
+#[test]
+fn items_in_slots_spin_about_up_then_tip_towards_you() {
+    for (spin, tip) in [(0.0, 0.5), (0.7, 0.52), (2.4, 0.3), (4.0, 0.12), (5.9, 0.5)] {
+        let turn = Transform::default().rotated(spin_then_tip(spin, tip));
+        for p in [vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.3, -0.2, 0.9)] {
+            let want = p.rotate_y(spin).rotate_x(tip);
+            assert!((turn.apply(p) - want).length() < 1e-4, "spin {spin}, tip {tip}");
+        }
+    }
+}
+
+#[test]
+fn the_bread_is_a_photo_and_other_things_are_solid() {
+    let game = new_game().unwrap();
+    // A solid picture has edges as well as its two faces; the photo is
+    // one paper-thin card.
+    let blade = &game.art.item_cards[&Item::Blade];
+    let bread = &game.art.item_cards[&Item::Bread];
+    assert!(blade.triangles.len() > 8, "the blade has edges");
+    assert_eq!(bread.triangles.len(), 4, "the bread is a flat print, both sides");
+}

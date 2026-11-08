@@ -711,9 +711,9 @@ struct Art {
     cubes: Vec<Option<Mesh>>,
     /// The four stages of cracks, drawn over a block being dug.
     cracks: Vec<Mesh>,
-    /// Each item's picture, for the hotbar and the inventory.
-    item_icons: std::collections::HashMap<Item, Sprite>,
-    /// Items that aren't blocks, as flat pictures to hold in the hand.
+    /// Items that aren't blocks, as small solid things (their picture
+    /// with a thin edge, as Minecraft holds them), for the hand, the
+    /// hotbar and the inventory. Bread is different: a photo.
     item_cards: std::collections::HashMap<Item, Mesh>,
     /// Hearts, bread and bubbles over the hotbar.
     hud: Tileset,
@@ -775,23 +775,18 @@ impl Art {
             Item::Bread,
             Item::Blade,
         ];
-        let carried_blocks = Block::ALL
-            .into_iter()
-            .filter(|b| *b != Block::Air)
-            .map(Item::Block);
-        let item_icons = carried_blocks
-            .chain(others)
-            .map(|item| (item, atlas.tile(item.tile())))
-            .collect();
+        let bread = photo_card(Sprite::load_png(format!("{ASSETS}/bread_photo.png"))?);
         let item_cards = others
             .into_iter()
-            .map(|item| (item, item_card(atlas.tile(item.tile()))))
+            .map(|item| match item {
+                Item::Bread => (item, bread.clone()),
+                _ => (item, item_model(atlas.tile(item.tile()))),
+            })
             .collect();
         Ok(Art {
             palette: BlockPalette::new(&atlas, &kinds),
             cubes,
             cracks,
-            item_icons,
             item_cards,
             hud: Tileset::load(format!("{ASSETS}/hud.json"))?,
             plant_uvs: Plant::ALL.iter().map(|p| atlas.uv_rect(p.tile())).collect(),
@@ -843,36 +838,108 @@ impl Sounds {
     }
 }
 
-/// An item that isn't a block, as a flat picture a block across (both
-/// sides), standing up round its middle: for holding in the hand.
-fn item_card(picture: Sprite) -> Mesh {
-    let mut mesh = Mesh::new().with_texture(picture);
-    let h = 0.5;
-    let i: Vec<usize> = [
-        vec3(-h, -h, 0.0),
-        vec3(-h, h, 0.0),
-        vec3(h, h, 0.0),
-        vec3(h, -h, 0.0),
-    ]
-    .into_iter()
-    .map(|c| mesh.add_vertex(c))
-    .collect();
-    let uv = [
-        vec2(0.0, 1.0),
-        vec2(0.0, 0.0),
-        vec2(1.0, 0.0),
-        vec2(1.0, 1.0),
-    ];
+/// A quad seen from both sides (the second side with `back_uv`, read the
+/// right way round from behind).
+fn two_sided(mesh: &mut Mesh, corners: [Vec3; 4], uv: [Vec2; 4], back_uv: [Vec2; 4]) {
+    let i: Vec<usize> = corners.iter().map(|&c| mesh.add_vertex(c)).collect();
     mesh.add_quad_uv(i[0], i[1], i[2], i[3], uv, Color::WHITE);
     mesh.add_quad_uv(
         i[3],
         i[2],
         i[1],
         i[0],
-        [uv[3], uv[2], uv[1], uv[0]],
+        [back_uv[3], back_uv[2], back_uv[1], back_uv[0]],
         Color::WHITE,
     );
+}
+
+/// A flat picture made solid, as Minecraft holds things: its front and
+/// back, and a thin edge round every pixel that shows, each bit of edge the
+/// colour of its pixel. One unit across, a pixel thick, centred.
+fn item_model(picture: Sprite) -> Mesh {
+    let (w, h) = (picture.width() as i32, picture.height() as i32);
+    let solid = |x: i32, y: i32| {
+        x >= 0
+            && y >= 0
+            && x < w
+            && y < h
+            && picture
+                .get_pixel(x as usize, y as usize)
+                .is_some_and(|c| c.a > 128)
+    };
+    let mut mesh = Mesh::new().with_texture(picture.clone());
+    let half = 0.5;
+    let (front, back) = (-0.5 / w as f32, 0.5 / w as f32);
+    let x_at = |x: i32| -half + x as f32 / w as f32;
+    let y_at = |y: i32| half - y as f32 / h as f32;
+    let full = [vec2(0.0, 1.0), vec2(0.0, 0.0), vec2(1.0, 0.0), vec2(1.0, 1.0)];
+    for z in [front, back] {
+        let corners = [
+            vec3(-half, -half, z),
+            vec3(-half, half, z),
+            vec3(half, half, z),
+            vec3(half, -half, z),
+        ];
+        two_sided(&mut mesh, corners, full, full);
+    }
+    for y in 0..h {
+        for x in 0..w {
+            if !solid(x, y) {
+                continue;
+            }
+            // Every corner of an edge takes the pixel's middle: one colour.
+            let uv = [vec2((x as f32 + 0.5) / w as f32, (y as f32 + 0.5) / h as f32); 4];
+            let (x0, x1, top, bottom) = (x_at(x), x_at(x + 1), y_at(y), y_at(y + 1));
+            let edges = [
+                (!solid(x - 1, y), [vec3(x0, bottom, front), vec3(x0, top, front), vec3(x0, top, back), vec3(x0, bottom, back)]),
+                (!solid(x + 1, y), [vec3(x1, bottom, back), vec3(x1, top, back), vec3(x1, top, front), vec3(x1, bottom, front)]),
+                (!solid(x, y - 1), [vec3(x0, top, front), vec3(x0, top, back), vec3(x1, top, back), vec3(x1, top, front)]),
+                (!solid(x, y + 1), [vec3(x0, bottom, back), vec3(x0, bottom, front), vec3(x1, bottom, front), vec3(x1, bottom, back)]),
+            ];
+            for (open, corners) in edges {
+                if open {
+                    two_sided(&mut mesh, corners, uv, uv);
+                }
+            }
+        }
+    }
     mesh
+}
+
+/// The bread: a photo print, paper-thin, the photo on its front and the
+/// print's back on its back (`print` holds both, side by side).
+fn photo_card(print: Sprite) -> Mesh {
+    let mut mesh = Mesh::new().with_texture(print);
+    let h = 0.5;
+    let corners = [vec3(-h, -h, 0.0), vec3(-h, h, 0.0), vec3(h, h, 0.0), vec3(h, -h, 0.0)];
+    let front = [vec2(0.0, 1.0), vec2(0.0, 0.0), vec2(0.5, 0.0), vec2(0.5, 1.0)];
+    let back = [vec2(1.0, 1.0), vec2(1.0, 0.0), vec2(0.5, 0.0), vec2(0.5, 1.0)];
+    two_sided(&mut mesh, corners, front, back);
+    mesh
+}
+
+/// Spin `spin` about the up axis, then tip the top `tip` towards the
+/// viewer, as the angles `Transform::rotated` takes (it turns about x,
+/// then y, then z, so the two can't simply be given in that order).
+fn spin_then_tip(spin: f32, tip: f32) -> Vec3 {
+    let (ss, cs) = spin.sin_cos();
+    let (st, ct) = tip.sin_cos();
+    vec3(
+        st.atan2(ct * cs),
+        (ct * ss).clamp(-1.0, 1.0).asin(),
+        (-st * ss).atan2(cs),
+    )
+}
+
+/// The view the items in slots are drawn in: a camera at the middle,
+/// level, so the light set for them stays put whatever the duck looks at.
+fn item_view() -> Camera3D {
+    Camera3D {
+        position: Vec3::ZERO,
+        yaw: 0.0,
+        pitch: 0.0,
+        fov: 70f32.to_radians(),
+    }
 }
 
 /// A flat square, both sides, from `low` to `high` (x and z) at height
@@ -2555,15 +2622,14 @@ impl DuckCraft {
         }
     }
 
-    /// A stack's picture with its count in the corner (none for one),
-    /// the picture's top left at `at`.
+    /// A stack, its top left at `at` (a 16 x 16 space): the thing itself,
+    /// small and solid and slowly turning, and its count in the corner
+    /// (none for one).
     fn draw_stack(&self, canvas: &mut Canvas, stack: Option<Stack>, at: Vec2) {
         let Some(stack) = stack else {
             return;
         };
-        if let Some(icon) = self.art.item_icons.get(&stack.item) {
-            canvas.blit_sprite(icon, at, Blit::default());
-        }
+        self.draw_item_model(canvas, stack.item, at + vec2(8.0, 8.0));
         if stack.count > 1 {
             let text = stack.count.to_string();
             let w = Canvas::text_width(&text, 1);
@@ -2571,6 +2637,70 @@ impl DuckCraft {
             canvas.draw_text(&text, corner + vec2(1.0, 1.0), 1, Color::rgb(40, 40, 40));
             canvas.draw_text(&text, corner, 1, Color::WHITE);
         }
+    }
+
+    /// `item` in 3D, centred on the screen point `center`, about 15 pixels
+    /// across, turning: blocks as cubes seen a little from above, other
+    /// things as solid pictures, and the bread as what it is, a photo,
+    /// turning slowly and a little crooked, edge-on now and then.
+    fn draw_item_model(&self, canvas: &mut Canvas, item: Item, center: Vec2) {
+        let view = item_view();
+        let depth = 5.0;
+        let per_pixel = 2.0 * depth * (view.fov / 2.0).tan() / HEIGHT;
+        let at = vec3(
+            (center.x - WIDTH / 2.0) * per_pixel,
+            (HEIGHT / 2.0 - center.y) * per_pixel,
+            depth,
+        );
+        canvas.set_lighting(Lighting {
+            sun_direction: vec3(-0.45, 0.8, -0.5).normalized(),
+            sun_color: Color::WHITE,
+            sun_strength: 0.7,
+            ambient: 0.5,
+        });
+        let spin = self.time * 1.2;
+        let (mesh, place) = match item {
+            Item::Block(block) => match &self.art.cubes[block as usize] {
+                Some(cube) => (
+                    cube,
+                    Transform::at(at)
+                        .rotated(spin_then_tip(spin + 0.785, 0.52))
+                        .sized(11.0 * per_pixel),
+                ),
+                None => return,
+            },
+            Item::Bread => match self.art.item_cards.get(&item) {
+                Some(card) => {
+                    let mut turn = spin_then_tip(spin * 0.55, 0.12);
+                    turn.z += 0.14; // not quite straight, never
+                    (card, Transform::at(at).rotated(turn).sized(15.0 * per_pixel))
+                }
+                None => return,
+            },
+            _ => match self.art.item_cards.get(&item) {
+                Some(model) => (
+                    model,
+                    Transform::at(at)
+                        .rotated(spin_then_tip(spin, 0.3))
+                        .sized(15.0 * per_pixel),
+                ),
+                None => return,
+            },
+        };
+        canvas.draw_mesh_in_view(mesh, &place, &view);
+    }
+
+    /// Makes the next 3D drawn in view start on a clean depth buffer, so
+    /// the hand (or anything else) drawn before can't hide the items in
+    /// the slots drawn over it. Duck Forge has no call for that; any world
+    /// draw does it, so this draws nothing, see-through (ISSUES.md 40).
+    pub fn fresh_depth(&self, canvas: &mut Canvas) {
+        canvas.draw_mesh_tinted(
+            &self.art.highlight,
+            &Transform::default(),
+            &item_view(),
+            Color::rgba(0, 0, 0, 0),
+        );
     }
 
     fn draw_hud(&self, canvas: &mut Canvas) {
@@ -2603,6 +2733,7 @@ impl DuckCraft {
             ),
             Color::rgba(0, 0, 0, 140),
         );
+        self.fresh_depth(canvas);
         for i in 0..HOTBAR_SLOTS {
             let x = left + i as f32 * slot_size;
             let slot = Rect::new(x + 1.0, top + 1.0, slot_size - 2.0, slot_size - 2.0);

@@ -540,6 +540,7 @@ impl DuckCraft {
         };
         ps_panel(canvas, p, Some(("INVENTORY", &corner)));
         canvas.label("inventory", p);
+        self.fresh_depth(canvas);
 
         // The duck's window: a spotlight on black, a shadow on the floor.
         let window = preview_rect(book);
@@ -626,6 +627,7 @@ impl DuckCraft {
             None => mouse.map(|m| m - vec2(8.0, 8.0)),
         };
         if let (Some(at), Some(held)) = (hold_at, screen.held) {
+            self.fresh_depth(canvas); // on top of everything
             self.draw_stack(canvas, Some(held), at);
         }
         if let (Some(m), true, None) = (mouse, self.draw_pointer, screen.cursor) {

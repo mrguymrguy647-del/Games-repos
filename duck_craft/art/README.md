@@ -48,3 +48,19 @@ strings, dither). The music is about 30 MB of `.wav`: big, but the engine
 reads only `.wav` (see ISSUES.md).
 The game fades the loops itself: the title's on the title screen, day and
 night by the light, the heartbeat by how hurt you are.
+
+## The bread
+
+The bread isn't drawn like everything else: it's a real photo of a loaf,
+crushed small, saved as a bad JPEG twice, faded yellow, date-stamped and
+printed on old photo paper, with "BREAD?" pencilled on the back, as if
+someone forced it into the game. `make_bread_photo.py path/to/photo.jpg`
+makes `../assets/bread_photo.png` (front and back side by side); the
+source photo isn't kept here, only the crushed print. In the game it's a
+paper-thin card: it turns slowly in its slot, a little crooked, and goes
+edge-on; in the hand you hold up the print.
+
+Every other item is drawn in 3D too: blocks as small turning cubes seen
+from a little above, and things like the apple and the blade as their
+picture made solid, with a one-pixel edge (`item_model` in `main.rs`).
+

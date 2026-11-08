@@ -109,6 +109,12 @@ game copes; the tool still has the gap.
     made small enough never to poke out. A `canvas.clip(rect)` / push and
     pop for 2D and 3D drawing would let UI windows hold models, and
     scrolling lists.
+40. **No way to start a fresh depth buffer for 3D drawn over 2D.** The
+    items in the hotbar are small 3D models drawn in view; the hand, drawn
+    in view just before, left its depths behind, so it hid the items it
+    overlapped. Only a world draw makes the next in-view draw forget old
+    depths, so the game draws an invisible mesh to get one
+    (`fresh_depth`). A `canvas.clear_depth()` would say what it means.
 
 ## Duck Quill
 
