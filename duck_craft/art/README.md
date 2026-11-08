@@ -53,13 +53,14 @@ night by the light, the heartbeat by how hurt you are.
 
 The bread isn't drawn like everything else: it's a real photo of a loaf,
 unedited, just put in the game as it is, as if someone forced it in. It
-doesn't turn like the other things: in a slot it's the photo, shrunk
+isn't solid like the other things: in a slot it's the photo, shrunk
 smoothly, sitting still; in the hand you hold up the photo, flat.
 `make_bread_photo.py path/to/photo.jpg` makes `../assets/bread_photo.png`
 (256 wide) and `bread_icon.png` (16 wide) by only making it smaller; the
 full-size source isn't kept here.
 
-Every other item is drawn in 3D: blocks as small turning cubes seen from
-a little above, the apple as a round ball of little cubes with a stem
+Every other item is drawn in 3D, still and facing you: blocks as small
+cubes turned to show a corner, seen from a little above (as Minecraft's
+inventory shows them), the apple as a round ball of little cubes with a stem
 and a leaf (`apple_model` in `main.rs`), and things like the blade as
 their picture made solid with a one-pixel edge (`item_model`).

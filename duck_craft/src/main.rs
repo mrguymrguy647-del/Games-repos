@@ -2712,7 +2712,7 @@ impl DuckCraft {
     }
 
     /// A stack, its top left at `at` (a 16 x 16 space): the thing itself,
-    /// small and solid and slowly turning, and its count in the corner
+    /// small and solid and facing you, and its count in the corner
     /// (none for one).
     fn draw_stack(&self, canvas: &mut Canvas, stack: Option<Stack>, at: Vec2) {
         let Some(stack) = stack else {
@@ -2729,9 +2729,10 @@ impl DuckCraft {
     }
 
     /// `item` in 3D, centred on the screen point `center`, about 15 pixels
-    /// across, turning: blocks as cubes seen a little from above, the apple
-    /// round, other things as solid pictures. Except the bread: a flat
-    /// photo that just sits there.
+    /// across, still and facing you: blocks as cubes turned to show a
+    /// corner, seen a little from above (as Minecraft's inventory shows
+    /// them), the apple round, other things as solid pictures face on.
+    /// Except the bread: a flat photo.
     fn draw_item_model(&self, canvas: &mut Canvas, item: Item, center: Vec2) {
         if item == Item::Bread {
             let icon = &self.art.bread_icon;
@@ -2753,13 +2754,12 @@ impl DuckCraft {
             sun_strength: 0.7,
             ambient: 0.5,
         });
-        let spin = self.time * 1.2;
         let (mesh, place) = match item {
             Item::Block(block) => match &self.art.cubes[block as usize] {
                 Some(cube) => (
                     cube,
                     Transform::at(at)
-                        .rotated(spin_then_tip(spin + 0.785, 0.52))
+                        .rotated(spin_then_tip(std::f32::consts::FRAC_PI_4, 0.52))
                         .sized(11.0 * per_pixel),
                 ),
                 None => return,
@@ -2768,7 +2768,7 @@ impl DuckCraft {
                 Some(apple) => (
                     apple,
                     Transform::at(at)
-                        .rotated(spin_then_tip(spin, 0.45))
+                        .rotated(spin_then_tip(-0.5, 0.35))
                         .sized(13.0 * per_pixel),
                 ),
                 None => return,
@@ -2776,9 +2776,7 @@ impl DuckCraft {
             _ => match self.art.item_cards.get(&item) {
                 Some(model) => (
                     model,
-                    Transform::at(at)
-                        .rotated(spin_then_tip(spin, 0.3))
-                        .sized(15.0 * per_pixel),
+                    Transform::at(at).sized(15.0 * per_pixel),
                 ),
                 None => return,
             },
