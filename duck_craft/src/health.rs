@@ -262,6 +262,12 @@ impl DuckCraft {
             1 => "half",
             _ => "full",
         };
+        // Each row on a dark plate, so it reads over snow-bright sand or
+        // the dark alike.
+        for x in [left - 2.0, right - 83.0] {
+            canvas.fill_rect(Rect::new(x, y - 2.0, 85.0, 13.0), Color::rgba(10, 10, 14, 150));
+            canvas.fill_rect(Rect::new(x, y + 10.0, 85.0, 1.0), inventory::BLOOD.with_alpha(160));
+        }
         for i in 0..10 {
             let shake = if shaky {
                 ((self.time * 30.0 + i as f32 * 1.7).sin() * 1.2).round()

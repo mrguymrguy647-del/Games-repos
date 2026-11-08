@@ -840,10 +840,10 @@ pub(crate) const FAINT: Color = Color::rgb(84, 82, 88);
 /// The panels, light at the top to dark at the bottom.
 const SLATE: Color = Color::rgb(44, 44, 52);
 const SLATE_DEEP: Color = Color::rgb(25, 25, 31);
-const LIGHT_EDGE: Color = Color::rgb(92, 92, 106);
-const DARK_EDGE: Color = Color::rgb(10, 10, 13);
+pub(crate) const LIGHT_EDGE: Color = Color::rgb(92, 92, 106);
+pub(crate) const DARK_EDGE: Color = Color::rgb(10, 10, 13);
 /// Inside a slot.
-const WELL: Color = Color::rgb(16, 16, 20);
+pub(crate) const WELL: Color = Color::rgb(16, 16, 20);
 pub(crate) const BLOOD: Color = Color::rgb(150, 30, 28);
 
 /// A panel: a drop shadow, slate shaded in six bands that meet in a
@@ -894,7 +894,7 @@ pub(crate) fn bevel_box(canvas: &mut Canvas, r: Rect, fill: Color) {
 }
 
 /// A sunken edge: dark top left, lit bottom right.
-fn well_edges(canvas: &mut Canvas, r: Rect) {
+pub(crate) fn well_edges(canvas: &mut Canvas, r: Rect) {
     canvas.fill_rect(Rect::new(r.x, r.y, r.w, 1.0), Color::rgb(4, 4, 6));
     canvas.fill_rect(Rect::new(r.x, r.y, 1.0, r.h), Color::rgb(4, 4, 6));
     canvas.fill_rect(Rect::new(r.x, r.y + r.h - 1.0, r.w, 1.0), Color::rgb(66, 66, 78));
@@ -903,7 +903,7 @@ fn well_edges(canvas: &mut Canvas, r: Rect) {
 
 /// The cursor: four corner brackets just outside `r`, pulsing between bone
 /// and old gold, over a faint light.
-fn selection(canvas: &mut Canvas, r: Rect, time: f32) {
+pub(crate) fn selection(canvas: &mut Canvas, r: Rect, time: f32) {
     canvas.fill_rect(
         Rect::new(r.x + 1.0, r.y + 1.0, r.w - 2.0, r.h - 2.0),
         Color::rgba(255, 240, 210, 40),

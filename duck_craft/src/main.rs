@@ -2805,6 +2805,11 @@ impl DuckCraft {
         );
     }
 
+    /// A word for the weather, after the clock ("" when it's clear).
+    fn weather_note(&self) -> &'static str {
+        ""
+    }
+
     fn draw_hud(&self, canvas: &mut Canvas) {
         let shadow = Color::rgba(0, 0, 0, 160);
 
@@ -2822,32 +2827,26 @@ impl DuckCraft {
         // (In first person the arm and the block in hand are drawn in 3D,
         // see `draw_hand`.)
 
-        // The hotbar: nine framed slots, the one in hand outlined.
+        // The hotbar, in the inventory's style: a slate bar of sunken
+        // slots; the one in hand framed in red, with the cursor's brackets.
         let slot_size = HOTBAR_SLOT;
         let left = (WIDTH - slot_size * 9.0) / 2.0;
         let top = HEIGHT - slot_size - 3.0;
-        canvas.fill_rect(
-            Rect::new(
-                left - 2.0,
-                top - 2.0,
-                slot_size * 9.0 + 4.0,
-                slot_size + 4.0,
-            ),
-            Color::rgba(0, 0, 0, 140),
+        inventory::ps_panel(
+            canvas,
+            Rect::new(left - 3.0, top - 3.0, slot_size * 9.0 + 6.0, slot_size + 6.0),
+            None,
         );
         self.fresh_depth(canvas);
         for i in 0..HOTBAR_SLOTS {
             let x = left + i as f32 * slot_size;
             let slot = Rect::new(x + 1.0, top + 1.0, slot_size - 2.0, slot_size - 2.0);
-            canvas.fill_rect(slot, Color::rgba(110, 110, 120, 140));
-            canvas.draw_rect(slot, Color::rgba(40, 40, 46, 200));
+            canvas.fill_rect(slot, inventory::WELL);
+            inventory::well_edges(canvas, slot);
             self.draw_stack(canvas, self.inventory.slots[i], vec2(x + 3.0, top + 3.0));
             if i == self.slot {
-                canvas.draw_rect(
-                    Rect::new(x - 1.0, top - 1.0, slot_size + 2.0, slot_size + 2.0),
-                    Color::WHITE,
-                );
-                canvas.draw_rect(Rect::new(x, top, slot_size, slot_size), Color::WHITE);
+                canvas.draw_rect(slot, inventory::BLOOD);
+                inventory::selection(canvas, slot, self.time);
             }
         }
         canvas.label("hotbar", Rect::new(left, top, slot_size * 9.0, slot_size));
@@ -2859,9 +2858,11 @@ impl DuckCraft {
             hours as u32,
             ((hours.fract()) * 60.0) as u32 / 10 * 10
         );
-        let status = format!("Day {}  {clock}", self.day_number());
-        canvas.draw_text(&status, vec2(5.0, 5.0), 1, Color::BLACK);
-        canvas.draw_text(&status, vec2(4.0, 4.0), 1, Color::from_hex(0xfff2a0));
+        let status = format!("DAY {}  {clock}{}", self.day_number(), self.weather_note());
+        let plate = Rect::new(2.0, 2.0, Canvas::text_width(&status, 1) + 10.0, 13.0);
+        inventory::bevel_box(canvas, plate, Color::rgba(22, 22, 28, 210));
+        canvas.fill_rect(Rect::new(plate.x + 1.0, plate.y + plate.h - 2.0, plate.w - 2.0, 1.0), inventory::BLOOD);
+        inventory::shadowed_text(canvas, &status, vec2(7.0, 5.0), inventory::INK);
 
         // A message over the hotbar.
         if self.message_seconds > 0.0 {
@@ -2869,14 +2870,18 @@ impl DuckCraft {
             let y = top - 36.0; // above the hearts, bread and bubbles
             let w = Canvas::text_width(&self.message, 1);
             canvas.fill_rect(
-                Rect::new((WIDTH - w) / 2.0 - 3.0, y - 2.0, w + 6.0, 11.0),
-                Color::rgba(0, 0, 0, alpha / 2),
+                Rect::new((WIDTH - w) / 2.0 - 4.0, y - 3.0, w + 8.0, 13.0),
+                Color::rgba(14, 14, 18, (alpha as f32 * 0.8) as u8),
+            );
+            canvas.fill_rect(
+                Rect::new((WIDTH - w) / 2.0 - 4.0, y + 9.0, w + 8.0, 1.0),
+                inventory::BLOOD.with_alpha(alpha),
             );
             canvas.draw_text(
                 &self.message,
                 vec2((WIDTH - w) / 2.0, y),
                 1,
-                Color::WHITE.with_alpha(alpha),
+                inventory::INK.with_alpha(alpha),
             );
         }
 
