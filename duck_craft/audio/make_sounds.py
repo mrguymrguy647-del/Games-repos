@@ -979,6 +979,67 @@ def thunder():
     return fade(peak(reverb(out, room(4.0, 3.5, seed=43), 0.45), 0.9), 0, 0.8)
 
 
+# ---- Past the island: the Other, the Nothing, the moon, the glitches ----
+
+def scare():
+    """The jump: a shriek that isn't a voice, torn by distortion, over a
+    slam, cut dead after a second and a half."""
+    rng = np.random.default_rng(31)
+    t = time_axis(1.5)
+    slam = lowpass(rng.normal(0, 1, len(t)), 300) * envelope(len(t), 0.001, 0.25) * 3
+    slam += np.sin(2 * np.pi * (70 * np.exp(-t * 6) + 35) * t) * envelope(len(t), 0.001, 0.4) * 1.5
+    out = pan(slam, 0)
+    for i, base in enumerate([880, 1245, 1661]):
+        f = base * (1 + 0.04 * np.sin(2 * np.pi * 9 * t + i)) * (1 - 0.15 * t)
+        shriek = voice(f, [((700, 1400), 1.0), ((2300, 3300), 0.8), ((3800, 5200), 0.4)], rng, breath=0.6)
+        shriek = np.tanh(shriek * 6) * envelope(len(t), 0.004, 0.7)
+        out += pan(bandpass(shriek, 400, 9000) * 0.5, -0.7 + 0.7 * i)
+    crush = np.round(out * 12) / 12  # a cheap speaker, too loud
+    return peak(crush * (t < 1.42)[:, None], 0.95)
+
+
+def glitch():
+    """The game falling over: a slice of static stuck, repeating, a
+    digital squeal, then nothing."""
+    rng = np.random.default_rng(32)
+    n = int(0.9 * RATE)
+    burst = radio_static(0.06, seed=33, crackle=0.02)
+    piece = int(0.031 * RATE)
+    out = np.zeros((n, 2))
+    at = 0
+    while at + piece < n:
+        out[at:at + piece] = burst[:piece] * rng.uniform(0.6, 1.0)
+        at += piece
+    t = time_axis(0.9)
+    squeal = np.sign(np.sin(2 * np.pi * (2400 + 900 * np.sin(2 * np.pi * 13 * t)) * t)) * 0.25
+    out += pan(squeal * (rng.random(n) < 0.97), 0.0)
+    out = np.round(out * 6) / 6  # bit-crushed
+    out *= (t < 0.82)[:, None]
+    return peak(out, 0.8)
+
+
+def joined():
+    """A chat chime, two soft notes, the second a little flat."""
+    t = time_axis(0.7)
+    out = np.zeros_like(t)
+    for at, hz in [(0.0, 1046.5), (0.12, 1318.5 * 0.985)]:
+        local = np.clip(t - at, 0, None)
+        out += np.sin(2 * np.pi * hz * local) * np.exp(-local / 0.12) * (t >= at)
+    return fade(peak(out, 0.45), 0, 0.05)
+
+
+def breath():
+    """Someone breathing right behind you: two slow breaths and a whisper."""
+    out = whisper(2.4, seed=34) * 0.8
+    rng = np.random.default_rng(35)
+    t = time_axis(2.4)
+    for at in [0.1, 1.2]:
+        local = np.clip(t - at, 0, None)
+        shape = np.sin(np.pi * np.clip(local / 0.8, 0, 1)) ** 2 * (t >= at)
+        out += bandpass(rng.normal(0, 1, len(t)), 300, 1800) * shape * 0.6
+    return fade(peak(pan(out, 0.2), 0.5), 0.05, 0.2)
+
+
 def main():
     OUT.mkdir(exist_ok=True)
     print("music:")
@@ -992,7 +1053,8 @@ def main():
     for i, (name, make) in enumerate([
             ("groan", groan), ("groan_far", groan_far), ("hollow_hurt", hollow_hurt), ("hollow_die", hollow_die),
             ("sting", sting), ("heartbeat", heartbeat), ("bell_dusk", bell_dusk), ("bell_dawn", bell_dawn),
-            ("thunder", thunder)]):
+            ("thunder", thunder), ("scare", scare), ("glitch", glitch), ("joined", joined),
+            ("breath", breath)]):
         write(f"{name}.wav", make(), 10 + i)
 
 

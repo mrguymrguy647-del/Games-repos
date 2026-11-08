@@ -237,8 +237,19 @@ impl DuckCraft {
             // for testing the night).
             let start = ctx.tune("start_time_of_day", DAY_START);
             self.time = (start - DAY_START).rem_euclid(1.0) * DAY_SECONDS;
+            // (`--set start_day=4` starts on a later day, everything
+            // that comes with it; `--set haunt_soon=1` brings the Other,
+            // its tricks and the glitches in seconds, not minutes.)
+            let first = ctx.tune("start_day", 1.0).max(1.0) as u32;
+            self.time += (first - 1) as f32 * DAY_SECONDS;
+            if ctx.tune("haunt_soon", 0.0) > 0.0 {
+                self.haunt.other_at = 4.0;
+                self.haunt.prank_at = 6.0;
+                self.haunt.glitch_at = 9.0;
+            }
             self.last_time_of_day = self.time_of_day();
-            self.announce("Day 1", "You are here. That's all anyone knows.");
+            self.watcher_night = self.day_number().saturating_sub(1);
+            self.announce(format!("Day {first}"), "You are here. That's all anyone knows.");
         }
     }
 
@@ -375,7 +386,14 @@ impl DuckCraft {
             Stage::Playing => (0.0, 1.0, false),
             Stage::Paused { .. } => (0.0, 1.0, true),
         };
-        let hush = if paused { 0.35 } else { 1.0 };
+        // Paused, quieter; frozen ("not responding"), silent.
+        let hush = if self.haunt.freeze > 0.0 {
+            0.0
+        } else if paused {
+            0.35
+        } else {
+            1.0
+        };
         let hurt = if self.mode == Mode::Survival && !self.vitals.fainted && playing > 0.0 {
             ((7.0 - self.vitals.health as f32) / 6.0).clamp(0.0, 1.0)
         } else {
@@ -476,13 +494,33 @@ impl DuckCraft {
                 Color::rgba(0, 0, 0, a),
             );
         }
-        let title = "DUCK CRAFT";
+        // Once you've met the Other, the title isn't right any more: now
+        // and then it tears, says the wrong thing, and the line under it
+        // isn't the one it was.
+        let wrong = self.haunt.met > 0;
+        let beat = (self.title_spin * 1.7) as i32;
+        let torn = wrong && random01(beat, 0, 0, 61) < 0.3;
+        let title = if torn {
+            ["DUCK CR4FT", "DUCK  RAFT", "DUCK CRAFT", "DUCK ERROR", "TWO DUCKS"][(random01(beat, 1, 0, 61) * 5.0) as usize % 5]
+        } else {
+            "DUCK CRAFT"
+        };
         let w = Canvas::text_width(title, 3);
-        let at = vec2((WIDTH - w) / 2.0, 34.0);
+        let shake = if torn { (random01(beat, 2, 0, 61) - 0.5) * 8.0 } else { 0.0 };
+        let at = vec2(((WIDTH - w) / 2.0 + shake).round(), 34.0);
         canvas.draw_text(title, at + vec2(2.0, 2.0), 3, Color::rgb(20, 10, 10));
+        if torn {
+            // Split into colour, a pixel or two apart.
+            canvas.draw_text(title, at + vec2(-2.0, 0.0), 3, Color::rgba(255, 30, 230, 170));
+            canvas.draw_text(title, at + vec2(2.0, 0.0), 3, Color::rgba(30, 240, 255, 170));
+        }
         canvas.draw_text(title, at, 3, Color::rgb(232, 226, 210));
+        if torn {
+            let y = at.y + random01(beat, 3, 0, 61) * 21.0;
+            canvas.fill_rect(Rect::new(0.0, y.floor(), WIDTH, 2.0), Color::rgba(0, 0, 0, 220));
+        }
         canvas.label("title", Rect::new(at.x, at.y, w, 21.0));
-        let line = "nothing lasts. build anyway.";
+        let line = if wrong { "it is still here. build anyway." } else { "nothing lasts. build anyway." };
         canvas.draw_text_centered(line, 65.0, 1, Color::rgba(0, 0, 0, 200));
         canvas.draw_text_centered(line, 64.0, 1, Color::rgb(200, 186, 170));
         let choices = self.title_choices();

@@ -233,7 +233,9 @@ impl DuckCraft {
                 hollow.fading.get_or_insert(0.0);
             }
             self.watcher = None;
+            self.haunt.nothings.clear();
             self.say("You slept. Nothing remembers it");
+            self.at_the_foot_of_the_bed(ctx);
         }
     }
 

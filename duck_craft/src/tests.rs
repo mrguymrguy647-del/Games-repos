@@ -10,12 +10,13 @@ use std::f32::consts::PI;
 /// The top of the arena's floor: the duck's feet stand at this height.
 const FLOOR: i32 = 20;
 
-/// The island with its first chunk (x and z 0 to 15) cleared to a flat
-/// stone floor, the duck in its middle looking along +z, level.
+/// The world with its corner (x and z 0 to 31, out at sea) cleared to a
+/// flat stone floor, the duck in its first chunk's middle looking along
+/// +z, level.
 fn arena(change: impl FnOnce(&mut World)) -> DuckCraft {
     let mut world = World::generate(SEED);
-    for z in 0..CHUNK as i32 {
-        for x in 0..CHUNK as i32 {
+    for z in 0..2 * CHUNK as i32 {
+        for x in 0..2 * CHUNK as i32 {
             for y in 1..TALL as i32 {
                 world.set(x, y, z, if y < FLOOR { Block::Stone } else { Block::Air });
             }
@@ -27,6 +28,7 @@ fn arena(change: impl FnOnce(&mut World)) -> DuckCraft {
     game.yaw = 0.0;
     game.pitch = 0.0;
     game.ducklings.clear(); // tests that want ducklings add them
+    game.haunt.calm = true; // tests about it say so
     game
 }
 
@@ -102,8 +104,8 @@ fn chunks_keep_only_faces_you_can_see() {
         }
     }
     // Every block drawn whole would be millions of triangles; the faces
-    // next to air are a few tens of thousands.
-    assert!(triangles < 120_000, "{triangles} triangles");
+    // next to air are a couple of hundred thousand (a lot of them sea).
+    assert!(triangles < 300_000, "{triangles} triangles");
     // A buried block adds nothing: the arena's floor is one layer of faces.
     let flat = arena(|_| {});
     let floor = flat.world.grid.chunk_mesh(0, 0);
@@ -589,9 +591,9 @@ fn views() {
         sim.step();
         sim.picture().save_png("out/views/hurt_night.png").unwrap();
     }
-    // The inventory: with a log in the grid, a stack on the pointer, and
-    // the recipe book open.
-    for (name, book) in [("inventory", false)] {
+    // The inventory: with a log in the grid and a stack on the pointer.
+    {
+        let (name, book) = ("inventory", false);
         let mut game = arena(|_| {});
         game.inventory.set(Item::Block(Block::Log), 3);
         game.inventory.set(Item::Block(Block::Sand), 6);
@@ -856,6 +858,62 @@ fn sand_landing_on_the_duck_is_caught() {
     assert_eq!(game.world.get(8, FLOOR + 1, 8), Block::Air);
 }
 
+/// A version 5 save (the world was only the 64-block island then): flat
+/// stone ten high, a plank on top at (5, 10, 5), the duck at (20, 10, 30).
+fn old_save() -> Vec<u8> {
+    let mut b = b"DUCKCRAFT5".to_vec();
+    let u32s = |b: &mut Vec<u8>, v: u32| b.extend_from_slice(&v.to_le_bytes());
+    let f32s = |b: &mut Vec<u8>, v: f32| b.extend_from_slice(&v.to_le_bytes());
+    u32s(&mut b, SEED);
+    b.extend([0, 1]); // survival, music on
+    u32s(&mut b, 0); // kills
+    let side = 64u32;
+    let layer = side * side;
+    let plank = 10 * layer + 5 * side + 5;
+    for (run, block) in [
+        (10 * layer, Block::Stone),
+        (plank - 10 * layer, Block::Air),
+        (1, Block::Planks),
+        (TALL as u32 * layer - plank - 1, Block::Air),
+    ] {
+        u32s(&mut b, run);
+        b.push(block as u8);
+    }
+    for _ in 0..SLOTS {
+        b.push(0);
+        u32s(&mut b, 0);
+    }
+    for v in [0, 0, 0, 0, 20, 20] {
+        u32s(&mut b, v); // dug, placed, crafted, imprints, health, food
+    }
+    f32s(&mut b, 10.0); // air
+    u32s(&mut b, 0); // plants
+    for v in [20.5, 10.0, 30.5, 0.0, 0.0, 50.0] {
+        f32s(&mut b, v); // where, yaw, pitch, time
+    }
+    b.extend([0, 0, 0, 0]); // slot, behind, ducklings, no bed
+    u32s(&mut b, 0); // chests
+    b.push(0);
+    f32s(&mut b, 100.0);
+    u32s(&mut b, 0); // the weather
+    b
+}
+
+#[test]
+fn an_island_saved_before_the_sea_goes_in_the_middle_of_the_new_world() {
+    let game = DuckCraft::from_bytes(Rc::new(Art::load().unwrap()), &old_save()).unwrap();
+    let s = lands::SHIFT;
+    assert_eq!(game.world.get(s + 5, 10, s + 5), Block::Planks);
+    assert_eq!(game.world.get(s + 6, 10, s + 5), Block::Air, "the old island, not the new one");
+    assert_eq!(game.world.get(s + 6, 9, s + 5), Block::Stone);
+    assert_eq!(game.position, vec3(s as f32 + 20.5, 10.0, s as f32 + 30.5));
+    // The lands round it grew as new: the village's chests are there.
+    assert!(game.world.chests.len() >= 6, "{}", game.world.chests.len());
+    assert!(game.world.chests.keys().all(|&[x, _, z]| !(s..s + 64).contains(&x) || !(s..s + 64).contains(&z)));
+    // And it saves as the new kind.
+    assert!(game.to_bytes().starts_with(b"DUCKCRAFT6"));
+}
+
 #[test]
 fn a_saved_island_loads_back_the_same() {
     let mut game = new_game().unwrap();
@@ -874,7 +932,7 @@ fn a_saved_island_loads_back_the_same() {
     game.slot = 6;
     let bytes = game.to_bytes();
     assert!(
-        bytes.len() < 60_000,
+        bytes.len() < 250_000,
         "runs keep it small: {} bytes",
         bytes.len()
     );
@@ -2930,4 +2988,432 @@ fn static_rises_as_something_comes_near_and_gives_a_mimic_away() {
     game.hollows.clear();
     let played = PlayTest::new(config(), game).frames(60).run();
     assert_eq!(played.game().dread, 0.0);
+}
+
+/// Writes the world's top blocks and heights, for a map picture:
+/// `cargo test -p duck_craft -- --ignored dump_map`.
+#[test]
+#[ignore]
+fn dump_map() {
+    let world = World::generate(SEED);
+    let mut out = String::new();
+    for z in 0..SIZE as i32 {
+        for x in 0..SIZE as i32 {
+            let mut top = TALL as i32 - 1;
+            while top > 0 && world.get(x, top, z) == Block::Air {
+                top -= 1;
+            }
+            out += &format!("{} {} ", world.get(x, top, z) as u8, top);
+        }
+        out += "\n";
+    }
+    out += &format!("{} {}\n", world.spawn.x, world.spawn.z);
+    std::fs::create_dir_all("out").unwrap();
+    std::fs::write("out/map.txt", out).unwrap();
+}
+
+/// Pictures of the lands across the sea into out/views:
+/// `cargo test -p duck_craft -- --ignored land_views`.
+#[test]
+#[ignore]
+fn land_views() {
+    std::fs::create_dir_all("out/views").unwrap();
+    let middles = lands::middles(SEED);
+    let island = vec2(SIZE as f32 / 2.0, SIZE as f32 / 2.0);
+    for (i, name) in ["village", "forest", "broken"].into_iter().enumerate() {
+        for (when, time) in [("day", 0.3 * DAY_SECONDS), ("night", 0.62 * DAY_SECONDS)] {
+            // On the shore that faces the island, looking in.
+            let m = middles[i];
+            let toward = (m - island).normalized();
+            let spot = m - toward * if i == 0 { 7.0 } else { 13.0 };
+            let mut game = new_game().unwrap();
+            let [x, z] = [spot.x as i32, spot.y as i32];
+            let mut y = TALL as i32 - 1;
+            while y > 0 && !game.world.get(x, y, z).solid() {
+                y -= 1;
+            }
+            game.position = vec3(x as f32 + 0.5, y as f32 + 1.0, z as f32 + 0.5);
+            game.yaw = toward.x.atan2(toward.y);
+            game.pitch = 0.05;
+            game.time = time;
+            game.ducklings.clear();
+            let mut sim = Simulation::new(config(), game);
+            sim.run(40);
+            sim.picture()
+                .save_png(format!("out/views/{name}_{when}.png"))
+                .unwrap();
+        }
+    }
+    // The sea from the island's shore, looking out at the village.
+    let mut game = new_game().unwrap();
+    let toward = (middles[0] - island).normalized();
+    let spot = island + toward * 27.0;
+    game.position = vec3(spot.x, SEA as f32 + 1.0, spot.y);
+    game.position = game.free_spot(game.position);
+    game.yaw = toward.x.atan2(toward.y);
+    game.time = 0.3 * DAY_SECONDS;
+    let mut sim = Simulation::new(config(), game);
+    sim.run(40);
+    sim.picture().save_png("out/views/across_the_sea.png").unwrap();
+}
+
+// ---- Past the island: the lands, the Other, the Nothing, the moon ----
+
+/// The arena at `tod` on `day`, with the haunting on (nothing due yet).
+fn haunted(day: u32, tod: f32) -> DuckCraft {
+    let mut game = arena(|_| {});
+    game.time = at_time_of_day(tod) + (day - 1) as f32 * DAY_SECONDS;
+    game.last_time_of_day = game.time_of_day();
+    game.watcher_night = day + 1;
+    game.spawn_wait = 1e9;
+    game.haunt.calm = false;
+    let h = &mut game.haunt;
+    for at in [&mut h.other_at, &mut h.prank_at, &mut h.glitch_at, &mut h.nothing_at] {
+        *at = 1e9;
+    }
+    game
+}
+
+#[test]
+fn the_lands_across_the_sea_each_have_their_own_ground() {
+    let world = World::generate(SEED);
+    let m = lands::middles(SEED);
+    let near = |i: usize, kind: Block| {
+        let [mx, mz] = [m[i].x as i32, m[i].y as i32];
+        (mz - 24..mz + 24).any(|z| (mx - 24..mx + 24).any(|x| (0..TALL as i32).any(|y| world.get(x, y, z) == kind)))
+    };
+    // The village: open doors, beds, chests, a well; the forest: dead
+    // trees on grey ground; the broken land: blocks that aren't anything.
+    for kind in [Block::DoorLowOpen, Block::Bed, Block::Chest, Block::Water, Block::Cobblestone] {
+        assert!(near(0, kind), "the village has {kind:?}");
+    }
+    assert!(near(1, Block::DeadLog) && near(1, Block::DeadGrass));
+    assert!(near(2, Block::Glitch));
+    assert!(!near(0, Block::Glitch) && !near(1, Block::Glitch));
+    // Sea between them and the island: you swim to each.
+    let island = vec2(SIZE as f32 / 2.0, SIZE as f32 / 2.0);
+    for middle in m {
+        let wet = (30..45).any(|d| {
+            let p = island + (middle - island).normalized() * d as f32;
+            world.get(p.x as i32, SEA, p.y as i32) == Block::Water
+        });
+        assert!(wet, "sea between the island and {middle:?}");
+    }
+    // A hole in the broken land goes down to the bottom of the world.
+    let [bx, bz] = [m[2].x as i32, m[2].y as i32];
+    let hole = (bz - 20..bz + 20).any(|z| (bx - 20..bx + 20).any(|x| (1..TALL as i32).all(|y| world.get(x, y, z) == Block::Air)));
+    assert!(hole, "a hole to bedrock");
+}
+
+#[test]
+fn setting_foot_on_a_land_names_it_and_its_fog_closes_in() {
+    let mut game = haunted(1, 0.3);
+    let m = lands::middles(SEED)[1];
+    let [x, z] = [m.x as i32, m.y as i32];
+    let spot = game.standing_spot(x, z).or_else(|| game.standing_spot(x + 2, z)).unwrap();
+    game.position = spot;
+    let island = game.sight_distance();
+    let played = PlayTest::new(config(), game).frames(5).run();
+    let (title, line, _) = played.game().announcement.clone().unwrap();
+    assert_eq!(title, "The grey forest");
+    assert!(line.contains("fog"));
+    assert!(played.game().sight_distance() < 40.0, "{}", played.game().sight_distance());
+    let mut home = haunted(1, 0.3);
+    home.position = home.world.spawn;
+    assert!(home.sight_distance() > 100.0 && island > 0.0);
+}
+
+#[test]
+fn the_other_watches_from_the_fog_and_is_gone_when_you_go_to_it() {
+    let mut game = haunted(1, 0.75); // night: the fog's edge is near
+    game.haunt.other_at = 0.0;
+    let mut played = PlayTest::new(config(), game).frames(10).run();
+    assert_eq!(played.text("other"), "watching");
+    assert!(played.scene().labels_named("other").next().is_some(), "on screen");
+    let game = played.game();
+    let other = game.haunt.other.clone().unwrap();
+    assert!(game.haunt.chat.iter().any(|(l, _)| l == "Someone joined the island."));
+    assert_eq!(played.sound_frames("joined").len(), 1);
+    // Far off, in front, off to one side.
+    let d = other.position.distance(game.position);
+    assert!((12.0..40.0).contains(&d), "{d}");
+    // Walk up to it: gone.
+    let mut game = game.clone();
+    game.position = other.position + vec3(0.0, 0.0, -3.0);
+    let played = PlayTest::new(config(), game).frames(3).run();
+    assert_eq!(played.text("other"), "none");
+    assert!(played.game().haunt.chat.iter().any(|(l, _)| l == "Someone left the island."));
+    assert_eq!(played.game().haunt.met, 1);
+}
+
+#[test]
+fn something_behind_you_is_there_when_you_turn_round() {
+    let mut game = haunted(3, 0.75);
+    game.haunt.other = Some(haunt::Other::new(vec3(8.5, FLOOR as f32, 6.2), haunt::Visit::Behind));
+    // Not turning round: it stays, and says so.
+    let played = PlayTest::new(config(), game).frames(240).run();
+    assert_eq!(played.text("other"), "behind");
+    assert!(played.game().haunt.chat.iter().any(|(l, _)| l == "<???> turn around"));
+    assert!(played.game().dread > 0.3);
+    // Turning round: the scare, and it's gone.
+    let mut game = played.game().clone();
+    game.yaw = PI;
+    let played = PlayTest::new(config(), game).frames(3).run();
+    assert_eq!(played.text("other"), "none");
+    assert_eq!(played.sound_frames("scare").len(), 1);
+    assert!(played.game().scare > 0.5);
+}
+
+#[test]
+fn waking_from_the_second_day_it_can_be_at_the_foot_of_the_bed() {
+    // Over enough mornings, it's there for some and not all.
+    let mut there = 0;
+    for seed in 0..12 {
+        let mut game = haunted(2, 0.8);
+        game.sleeping = 0.05;
+        let mut config = config();
+        config.seed = Some(seed);
+        let mut sim = Simulation::new(config, game);
+        sim.run(3);
+        if let Some(other) = &sim.game().haunt.other {
+            assert_eq!(other.visit, haunt::Visit::Bed);
+            assert!(other.position.distance(sim.game().position) < 3.5);
+            there += 1;
+            // It goes once you look at it.
+            sim.run(90);
+            assert!(sim.game().haunt.other.is_none());
+        }
+    }
+    assert!((2..12).contains(&there), "{there} of 12 mornings");
+}
+
+#[test]
+fn while_you_are_away_it_opens_doors_and_puts_out_torches() {
+    let mut game = haunted(2, 0.3);
+    // A door and a torch behind the duck, out of sight.
+    game.world.set(8, FLOOR, 30, Block::Air);
+    game.world.set(8, FLOOR, 0, Block::DoorLow);
+    game.world.set(8, FLOOR + 1, 0, Block::DoorHigh);
+    game.world.put_torch(20, FLOOR, 20);
+    game.yaw = 0.0; // looking away from the door, 12 behind
+    game.position = vec3(8.5, FLOOR as f32, 12.5);
+    assert!(game.open_a_door());
+    assert_eq!(game.world.get(8, FLOOR, 0), Block::DoorLowOpen);
+    game.yaw = 0.0 - 2.2; // looking away from the torch
+    assert!(game.snuff_a_torch());
+    assert!(!game.world.plants.contains_key(&[20, FLOOR, 20]));
+    // A door you're looking at stays shut.
+    let mut game = haunted(2, 0.3);
+    game.world.set(8, FLOOR, 24, Block::DoorLow);
+    game.world.set(8, FLOOR + 1, 24, Block::DoorHigh);
+    game.position = vec3(8.5, FLOOR as f32, 12.5);
+    game.yaw = 0.0;
+    assert!(!game.open_a_door());
+}
+
+#[test]
+fn it_builds_things_that_mean_nothing_where_you_are_not_looking() {
+    let mut game = haunted(2, 0.3);
+    for z in 0..32 {
+        for x in 0..32 {
+            game.world.set(x, FLOOR - 1, z, Block::Grass);
+        }
+    }
+    game.position = vec3(16.5, FLOOR as f32, 30.5);
+    let mut done = 0;
+    let mut config = config();
+    for seed in 0..8 {
+        config.seed = Some(seed);
+        let mut sim = Simulation::new(config.clone(), game.clone());
+        sim.game_mut().haunt.prank_at = 0.0;
+        sim.run(2);
+        done += sim.game().haunt.pranks;
+    }
+    assert!(done >= 4, "{done} tricks in 8 tries");
+    // A pyramid of sand.
+    let built = (0..20).any(|seed| {
+        let mut game = game.clone();
+        game.sand_pyramid(&mut Rng::new(seed))
+            && game.world.grid.blocks().iter().filter(|&&b| b == Block::Sand as BlockId).count() >= 35
+    });
+    assert!(built, "a sand pyramid somewhere on the floor");
+}
+
+#[test]
+fn the_nothing_only_moves_while_you_cannot_see_it() {
+    let at = vec3(8.5, FLOOR as f32, 24.5);
+    // Looking at it: it stays where it is.
+    let mut game = haunted(3, 0.75);
+    game.haunt.nothings = vec![haunt::Nothing { position: at, yaw: PI, seen: false }];
+    let mut played = PlayTest::new(config(), game).frames(120).run();
+    assert_eq!(played.game().haunt.nothings[0].position, at);
+    assert!(played.scene().labels_named("nothing").next().is_some());
+    // Looking away: it comes, and it hurts.
+    let mut game = haunted(3, 0.75);
+    game.haunt.nothings = vec![haunt::Nothing { position: at, yaw: PI, seen: false }];
+    game.yaw = PI;
+    let played = PlayTest::new(config(), game).frames(300).run();
+    assert!(played.game().haunt.nothings.iter().all(|n| n.position != at));
+    assert_eq!(played.game().vitals.health, 20 - haunt::NOTHING_HURTS);
+    assert_eq!(played.sound_frames("scare").len(), 1);
+}
+
+#[test]
+fn the_moon_has_a_face_from_the_fourth_night_and_should_not_be_stared_at() {
+    let moon_up = |game: &DuckCraft| game.sky().sun * -1.0;
+    // Night 3: an ordinary moon.
+    let game = haunted(3, 0.75);
+    assert!(game.moon_face().is_none());
+    // Night 4: a face. Look at it and it grows, then comes.
+    let mut game = haunted(4, 0.75);
+    assert_eq!(game.moon_face(), Some(true));
+    let m = moon_up(&game);
+    game.yaw = m.x.atan2(m.z);
+    game.pitch = m.y.asin();
+    let mut sim = Simulation::new(config(), game);
+    sim.run(120);
+    let stare = sim.game().haunt.moon_stare;
+    assert!(stare > 1.5, "{stare}");
+    let small = sim.scene().labels_named("moon").next().unwrap().screen.w;
+    sim.run(60);
+    let big = sim.scene().labels_named("moon").next().unwrap().screen.w;
+    assert!(big > small, "{small} then {big}");
+    sim.run(200);
+    let game = sim.game();
+    assert_eq!(game.vitals.health, 20 - haunt::MOON_HURTS);
+    assert_eq!(game.moon_face(), Some(false), "its eyes shut till tomorrow night");
+    assert!(game.haunt.chat.iter().any(|(l, _)| l.contains("moon")) || game.haunt.chat.is_empty());
+}
+
+#[test]
+fn the_game_freezes_and_comes_back_wrong() {
+    let mut game = haunted(2, 0.3);
+    game.haunt.freeze = 1.0;
+    // Frozen: walking does nothing.
+    let mut played = PlayTest::new(config(), game).script(&hold(&["W"], 50)).frames(50).run();
+    assert_eq!(played.game().position.z, 8.5);
+    assert!(played.scene().labels_named("not responding").next().is_some());
+    // Then it's back, with an error.
+    let mut played = PlayTest::new(config(), played.game().clone()).frames(20).run();
+    assert!(played.game().haunt.freeze == 0.0);
+    assert_eq!(played.sound_frames("glitch").len(), 1);
+    assert!(played.scene().labels_named("error").next().is_some());
+}
+
+#[test]
+fn after_meeting_it_the_title_is_never_quite_right_again() {
+    let mut game = title_game(None).unwrap();
+    game.haunt.met = 1;
+    let bytes = game.to_bytes();
+    let back = DuckCraft::from_bytes(Rc::new(Art::load().unwrap()), &bytes).unwrap();
+    assert_eq!(back.haunt.met, 1);
+    // On the title it stands on the island, and the title tears.
+    let mut sim = Simulation::new(config(), game);
+    let mut torn = false;
+    let mut seen = false;
+    for _ in 0..120 {
+        sim.run(5);
+        let straight = ((WIDTH - Canvas::text_width("DUCK CRAFT", 3)) / 2.0).round();
+        torn |= sim.scene().labels_named("title").next().is_some_and(|l| l.screen.x != straight);
+        seen |= sim.picture().pixels().iter().any(|&c| c == Color::rgb(244, 244, 255).to_u32());
+    }
+    assert!(torn, "the title tore");
+    assert!(seen, "white eyes on the island");
+}
+
+#[test]
+#[ignore]
+fn title_picture() {
+    let mut game = title_game(None).unwrap();
+    game.haunt.met = 1;
+    let mut sim = Simulation::new(config(), game);
+    sim.run(30);
+    sim.picture().save_png("out/views/title_haunted.png").unwrap();
+}
+
+
+/// Pictures of the haunting into out/views:
+/// `cargo test -p duck_craft -- --ignored haunt_views`.
+#[test]
+#[ignore]
+fn haunt_views() {
+    std::fs::create_dir_all("out/views").unwrap();
+    let shot = |name: &str, game: DuckCraft, frames: u64| {
+        let mut sim = Simulation::new(config(), game);
+        sim.run(frames);
+        sim.picture().save_png(format!("out/views/{name}.png")).unwrap();
+    };
+    let island = |day: u32, tod: f32| {
+        let mut game = new_game().unwrap();
+        game.time = at_time_of_day(tod) + (day - 1) as f32 * DAY_SECONDS;
+        game.last_time_of_day = game.time_of_day();
+        game.watcher_night = day + 1;
+        game.spawn_wait = 1e9;
+        game.ducklings.clear();
+        let h = &mut game.haunt;
+        for at in [&mut h.other_at, &mut h.prank_at, &mut h.glitch_at, &mut h.nothing_at] {
+            *at = 1e9;
+        }
+        game
+    };
+    // The Other at the fog's edge, by day and at dusk.
+    for (name, tod) in [("other_day", 0.3), ("other_dusk", 0.53)] {
+        let mut game = island(2, tod);
+        let s = game.world.spawn;
+        let ahead = vec3(game.yaw.sin(), 0.0, game.yaw.cos());
+        let eye = game.eye();
+        let at = (10..30)
+            .rev()
+            .filter_map(|d| game.standing_spot((s.x + ahead.x * d as f32) as i32, (s.z + ahead.z * d as f32) as i32))
+            .filter(|&at| hunt::clear_line(&game.world, eye, at + vec3(0.0, 1.6, 0.0)))
+            .find(|&at| (at.y - game.position.y).abs() < 3.0)
+            .unwrap();
+        game.haunt.other = Some(haunt::Other::new(at, haunt::Visit::Watching));
+        game.haunt.calm = true;
+        shot(name, game, 10);
+    }
+    // At the foot of the bed.
+    let mut game = island(3, 0.27);
+    let s = game.world.spawn;
+    let ahead = vec3(game.yaw.sin(), 0.0, game.yaw.cos());
+    let at = game.standing_spot((s.x + ahead.x * 2.4) as i32, (s.z + ahead.z * 2.4) as i32).unwrap();
+    game.haunt.other = Some(haunt::Other::new(at, haunt::Visit::Bed));
+    game.pitch = 0.1;
+    shot("other_bed", game, 3);
+    // Turning round to it, at night.
+    let mut game = island(3, 0.75);
+    let at = game.standing_spot((s.x + ahead.x * 2.3) as i32, (s.z + ahead.z * 2.3) as i32).unwrap();
+    game.haunt.other = Some(haunt::Other::new(at, haunt::Visit::Behind));
+    game.haunt.calm = true; // hold it there for the picture
+    shot("other_behind", game, 3);
+    // The Nothing, three of them, at night.
+    let mut game = island(4, 0.75);
+    game.haunt.calm = true;
+    for (k, d) in [(-0.4f32, 9.0f32), (0.1, 14.0), (0.5, 20.0)] {
+        let a = game.yaw + k;
+        if let Some(at) = game.standing_spot((s.x + a.sin() * d) as i32, (s.z + a.cos() * d) as i32) {
+            game.haunt.nothings.push(haunt::Nothing { position: at, yaw: game.yaw + PI, seen: true });
+        }
+    }
+    shot("nothing", game, 3);
+    // The moon, looked at.
+    for (name, stare) in [("moon", 0.0), ("moon_stare", 4.2)] {
+        let mut game = island(4, 0.66);
+        game.haunt.calm = true;
+        let m = game.sky().sun * -1.0;
+        game.yaw = m.x.atan2(m.z);
+        game.pitch = m.y.asin() - 0.2;
+        game.haunt.moon_stare = stare;
+        shot(name, game, 2);
+    }
+    // Frozen, and the words after.
+    let mut game = island(2, 0.3);
+    game.haunt.freeze = 2.0;
+    game.haunt.say("Someone joined the island.");
+    game.haunt.say("<???> i see you");
+    shot("freeze", game, 3);
+    let mut game = island(2, 0.3);
+    game.haunt.calm = true;
+    game.haunt.flash = Some((String::from("ERROR 422: duck not found"), 0.6));
+    shot("error", game, 2);
 }

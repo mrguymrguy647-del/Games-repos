@@ -2,7 +2,7 @@
   "image": "blocks.png",
   "frame": { "width": 16, "height": 16 },
   "columns": 1,
-  "rows": 42,
+  "rows": 47,
   "scale": 1,
   "pivot": [8.0,16.0],
   "animations": {
@@ -47,6 +47,11 @@
     "bed_side": {"row":38,"frames":[38],"fps":1.0,"loop":false},
     "chest_top": {"row":39,"frames":[39],"fps":1.0,"loop":false},
     "chest_side": {"row":40,"frames":[40],"fps":1.0,"loop":false},
-    "door_item": {"row":41,"frames":[41],"fps":1.0,"loop":false}
+    "door_item": {"row":41,"frames":[41],"fps":1.0,"loop":false},
+    "dead_log_top": {"row":42,"frames":[42],"fps":1.0,"loop":false},
+    "dead_log_side": {"row":43,"frames":[43],"fps":1.0,"loop":false},
+    "dead_grass_top": {"row":44,"frames":[44],"fps":1.0,"loop":false},
+    "dead_grass_side": {"row":45,"frames":[45],"fps":1.0,"loop":false},
+    "glitch": {"row":46,"frames":[46],"fps":1.0,"loop":false}
   }
 }

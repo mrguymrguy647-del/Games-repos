@@ -14,11 +14,14 @@ use menus::Mode;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
-/// The file's first bytes. Version 5 adds the weather; version 4 the bed
+/// The file's first bytes. Version 6 is the world past the island (192
+/// blocks across, not 64: an older save's island goes in the middle of a
+/// new world, the lands round it fresh). Version 5 adds the weather; version 4 the bed
 /// and what the chests hold; version 3 the island's seed, the mode and the music setting;
 /// version 2 keeps stacks in slots; version 1 (a count of each block, gold
 /// and coal). All of them still load.
-const MAGIC: &[u8; 10] = b"DUCKCRAFT5";
+const MAGIC: &[u8; 10] = b"DUCKCRAFT6";
+const MAGIC_V5: &[u8; 10] = b"DUCKCRAFT5";
 const MAGIC_V4: &[u8; 10] = b"DUCKCRAFT4";
 const MAGIC_V3: &[u8; 10] = b"DUCKCRAFT3";
 const MAGIC_V2: &[u8; 10] = b"DUCKCRAFT2";
@@ -209,6 +212,8 @@ impl DuckCraft {
         w.u8(kind(self.weather.now));
         w.f32(self.weather.left);
         w.u32(self.weather.turns);
+        // Version 6: how many times the Other has come.
+        w.u32(self.haunt.met);
         w.0
     }
 
@@ -216,7 +221,8 @@ impl DuckCraft {
     pub fn from_bytes(art: Rc<Art>, bytes: &[u8]) -> io::Result<DuckCraft> {
         let mut r = Reader(bytes);
         let version = match r.take(MAGIC.len())? {
-            m if m == MAGIC => 5,
+            m if m == MAGIC => 6,
+            m if m == MAGIC_V5 => 5,
             m if m == MAGIC_V4 => 4,
             m if m == MAGIC_V3 => 3,
             m if m == MAGIC_V2 => 2,
@@ -235,8 +241,20 @@ impl DuckCraft {
             (SEED, Mode::Survival, true, 0)
         };
         // The island's blocks, over a freshly grown one (for its spawn).
+        // Before version 6 the world was only the island: it goes in the
+        // middle (where the island grows anyway), moved by `shift`.
         let mut world = World::generate(seed);
-        let total = SIZE * TALL * SIZE;
+        let (side, shift) = if version >= 6 {
+            (SIZE, 0)
+        } else {
+            (lands::ISLAND as usize, lands::SHIFT)
+        };
+        let moved = |[x, y, z]: [i32; 3]| [x + shift, y, z + shift];
+        let old_island = move |[x, _, z]: [i32; 3]| {
+            let on = shift..shift + lands::ISLAND;
+            shift > 0 && on.contains(&x) && on.contains(&z)
+        };
+        let total = side * TALL * side;
         let mut cells = Vec::with_capacity(total);
         while cells.len() < total {
             let run = r.u32()? as usize;
@@ -248,15 +266,22 @@ impl DuckCraft {
         }
         world.lamps.clear();
         for y in 0..TALL as i32 {
-            for z in 0..SIZE as i32 {
-                for x in 0..SIZE as i32 {
-                    let block = cells[(y as usize * SIZE + z as usize) * SIZE + x as usize];
+            for z in 0..side as i32 {
+                for x in 0..side as i32 {
+                    let block = cells[(y as usize * side + z as usize) * side + x as usize];
+                    let [x, y, z] = moved([x, y, z]);
                     world.grid.set(x, y, z, block);
                     if block == Block::Lamp as BlockId {
                         world.lamps.push([x, y, z]);
                     }
                 }
             }
+        }
+        // (An old island's chests and plants replace the new one's; the
+        // lands' stay.)
+        world.chests.retain(|&cell, _| !old_island(cell) && shift > 0);
+        if version >= 2 {
+            world.plants.retain(|&cell, _| !old_island(cell) && shift > 0);
         }
         for z in 0..SIZE as i32 {
             for x in 0..SIZE as i32 {
@@ -297,9 +322,10 @@ impl DuckCraft {
             game.vitals.food = r.u32()?.min(health::MAX_FOOD);
             game.vitals.air = r.f32()?.clamp(0.0, health::MAX_AIR);
             let count = r.u32()?;
-            game.world.plants.clear();
             for _ in 0..count {
-                let (x, y, z, id) = (r.u8()? as i32, r.u8()? as i32, r.u8()? as i32, r.u8()?);
+                let cell = [r.u8()? as i32, r.u8()? as i32, r.u8()? as i32];
+                let id = r.u8()?;
+                let [x, y, z] = moved(cell);
                 if let Some(plant) = Plant::from_id(id) {
                     game.world.plants.insert([x, y, z], plant);
                     if plant == Plant::Torch {
@@ -329,7 +355,8 @@ impl DuckCraft {
             }
         }
         game.world.plants_changed = true;
-        game.position = r.vec3()?;
+        let to_middle = vec3(shift as f32, 0.0, shift as f32);
+        game.position = r.vec3()? + to_middle;
         game.yaw = r.f32()?;
         game.pitch = r.f32()?;
         game.time = r.f32()?;
@@ -338,7 +365,7 @@ impl DuckCraft {
         let count = r.u8()? as usize;
         game.ducklings.clear();
         for _ in 0..count {
-            let position = r.vec3()?;
+            let position = r.vec3()? + to_middle;
             let yaw = r.f32()?;
             let follows = r.u32()?;
             let mut duckling = ducklings::Duckling::new(position, yaw);
@@ -346,18 +373,17 @@ impl DuckCraft {
             game.ducklings.push(duckling);
         }
         game.bed = None;
-        game.world.chests.clear();
         if version >= 4 {
             if r.u8()? == 1 {
                 let cell = [r.u8()? as i32, r.u8()? as i32, r.u8()? as i32];
-                game.bed = Some(cell);
+                game.bed = Some(moved(cell));
             }
             let count = r.u32()? as usize;
             if count > SIZE * SIZE * TALL {
                 return Err(bad("the save has more chests than the island has room for"));
             }
             for _ in 0..count {
-                let cell = [r.u8()? as i32, r.u8()? as i32, r.u8()? as i32];
+                let cell = moved([r.u8()? as i32, r.u8()? as i32, r.u8()? as i32]);
                 let mut slots = vec![None; furniture::CHEST_SLOTS];
                 for slot in slots.iter_mut() {
                     let id = r.u8()?;
@@ -383,6 +409,9 @@ impl DuckCraft {
             game.weather.before = now;
             game.weather.left = if left.is_finite() { left.clamp(0.0, 600.0) } else { 60.0 };
             game.weather.turns = r.u32()?;
+        }
+        if version >= 6 {
+            game.haunt.met = r.u32()?;
         }
         // Somewhere impossible (an odd file): the spawn. Inside a block:
         // the nearest place you fit.

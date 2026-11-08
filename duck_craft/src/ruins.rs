@@ -22,7 +22,8 @@ impl World {
         let seed = self.seed;
         for worm in 0..9 {
             let r = |k: i32| roll(worm, k, 0, seed, 50);
-            let mut at = vec3(8.0 + r(1) * 48.0, 5.0 + r(2) * 16.0, 8.0 + r(3) * 48.0);
+            let corner = lands::SHIFT as f32;
+            let mut at = vec3(corner + 8.0 + r(1) * 48.0, 5.0 + r(2) * 16.0, corner + 8.0 + r(3) * 48.0);
             let mut yaw = r(4) * TAU;
             let mut pitch = (r(5) - 0.5) * 0.5;
             let mouth = worm < 2;
@@ -50,8 +51,9 @@ impl World {
     pub fn hollow_out_cavern(&mut self, height: &dyn Fn(i32, i32) -> i32) -> Option<[i32; 3]> {
         // Under the highest ground near the middle (it has the most rock).
         let mut best: Option<(i32, i32, i32)> = None;
-        for z in (16..48).step_by(2) {
-            for x in (16..48).step_by(2) {
+        let corner = lands::SHIFT;
+        for z in (corner + 16..corner + 48).step_by(2) {
+            for x in (corner + 16..corner + 48).step_by(2) {
                 let h = height(x, z);
                 if best.is_none_or(|(b, _, _)| h > b) {
                     best = Some((h, x, z));
@@ -150,8 +152,9 @@ impl World {
         let mut tries = 0;
         while chests.len() < HOUSES && tries < 400 {
             tries += 1;
-            let x0 = 4 + (roll(tries, 0, 0, seed, 60) * (SIZE as f32 - 14.0)) as i32;
-            let z0 = 4 + (roll(tries, 1, 0, seed, 60) * (SIZE as f32 - 14.0)) as i32;
+            let room = (lands::ISLAND - 14) as f32;
+            let x0 = lands::SHIFT + 4 + (roll(tries, 0, 0, seed, 60) * room) as i32;
+            let z0 = lands::SHIFT + 4 + (roll(tries, 1, 0, seed, 60) * room) as i32;
             let (w, d) = (6, 5);
             // Not right on top of the start, nor another house.
             let (sx, sz) = spawn_near;
@@ -245,7 +248,7 @@ impl World {
 
     /// What someone left: food, coal, torches, a little gold; deep down,
     /// more gold, and a blade.
-    fn fill_chest(&mut self, cell: [i32; 3], deep: bool) {
+    pub fn fill_chest(&mut self, cell: [i32; 3], deep: bool) {
         let seed = self.seed;
         let [x, y, z] = cell;
         let r = |k: i32| roll(x + k * 7, y, z, seed, 70);

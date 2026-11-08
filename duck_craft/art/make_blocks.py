@@ -41,11 +41,13 @@ PALETTE = {
     "flame": "#FF8A24", "flame_core": "#FFF2A8", "door": "#7E5630", "door_dark": "#4E321A",
     "blanket": "#8E1C20", "blanket_dark": "#5E1014", "pillow": "#E4DECE",
     "chest": "#6E4A24", "chest_dark": "#3E2810", "iron": "#8C8C94",
+    "dead": "#77786C", "dead_dark": "#5C5D53", "dead_light": "#8E8F82",
+    "glitch_pink": "#FF1EE6", "glitch_cyan": "#1EF0FF", "glitch_green": "#3CFF4A",
 }
 
 # One letter per palette colour, for the pixel rows.
 LETTERS = {}
-for name, letter in zip(PALETTE, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&*+"):
+for name, letter in zip(PALETTE, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&*+=?@^~<>!"):
     LETTERS[name] = letter
 
 
@@ -600,6 +602,79 @@ TILES += [
 ]
 
 
+# ---- Past the island (after everything else again) ----
+
+def dead_grass_top():
+    return noise("dead", [("dead_dark", 0.3), ("dead_light", 0.1), ("dirt_dark", 0.04)])
+
+
+def dead_grass_side():
+    grid = dirt()
+    for x in range(N):
+        depth = 2 + (rng.random() < 0.5) + (rng.random() < 0.25)
+        for y in range(depth):
+            grid[y][x] = "dead_dark" if rng.random() < 0.35 else "dead"
+    return grid
+
+
+def glitch():
+    """Not a block: rows of colour torn sideways, like a picture that
+    failed to load."""
+    grid = blank("coal")
+    colours = ["glitch_pink", "glitch_cyan", "glitch_green", "shine", "coal", "coal"]
+    y = 0
+    while y < N:
+        band = rng.randrange(1, 4)
+        colour = rng.choice(colours)
+        start = rng.randrange(N)
+        length = rng.randrange(3, N + 1)
+        for dy in range(band):
+            if y + dy >= N:
+                break
+            for i in range(length):
+                grid[y + dy][(start + i) % N] = colour
+            # A few dead pixels in each band.
+            for _ in range(2):
+                grid[y + dy][rng.randrange(N)] = rng.choice(colours)
+        y += band
+    # The checks a missing texture shows, in one corner.
+    for yy in range(4):
+        for xx in range(4):
+            grid[yy][xx] = "glitch_pink" if (xx // 2 + yy // 2) % 2 == 0 else "coal"
+    return grid
+
+
+def dead_log_side():
+    grid = noise("dead_light", [("dead", 0.3), ("shine", 0.05)])
+    for x in range(N):
+        if rng.random() < 0.3:  # long cracks down the bark
+            top = rng.randrange(N)
+            for y in range(top, min(N, top + rng.randrange(4, 12))):
+                grid[y][x] = "dead_dark"
+    return grid
+
+
+def dead_log_top():
+    grid = noise("dead_light", [("dead", 0.15)])
+    for y in range(N):
+        for x in range(N):
+            r = max(abs(x - 7.5), abs(y - 7.5))
+            if r > 6.5:
+                grid[y][x] = "dead_dark"
+            elif int(r) % 3 == 0:
+                grid[y][x] = "dead"
+    return grid
+
+
+TILES += [
+    ("dead_log_top", dead_log_top()),
+    ("dead_log_side", dead_log_side()),
+    ("dead_grass_top", dead_grass_top()),
+    ("dead_grass_side", dead_grass_side()),
+    ("glitch", glitch()),
+]
+
+
 def rows(grid):
     return ["".join("." if c == "." else LETTERS[c] for c in row) for row in grid]
 
@@ -634,3 +709,5 @@ script = {
 out = Path(__file__).with_name("blocks.json")
 out.write_text(json.dumps(script, indent=1) + "\n")
 print(f"wrote {out} ({len(TILES)} tiles)")
+
+

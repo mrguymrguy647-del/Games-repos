@@ -123,6 +123,20 @@ game copes; the tool still has the gap.
     game builds itself (`hunt.rs`, a breadth-first search over the
     blocks). Any block game needs one: a `BlockWorld::flow_field(goal,
     can_stand, can_step)` would save every game writing its own.
+45. **`BlockWorld::draw` draws every chunk, every frame.** No distance
+    or view culling: a world 192 blocks across is 144 chunks (most of
+    them sea), and the ones behind you or past the fog cost as much as
+    the ones in front. The game culls for itself (`draw_chunks`, with
+    `chunk_mesh`); `draw` could take a far distance and skip chunks
+    behind the camera.
+46. **A test can't call game code that needs a `Context`.** `Simulation`
+    only steps the whole game, so the Other's tricks had to take a bare
+    `Rng` instead of the `Context` they use in play, to be tested one
+    by one. Something like `sim.with_context(|game, ctx| ..)` would do.
+47. **`verify` only replays `<game>.json` and `<game>-*.json`.** The
+    night showcase (`duck_craft_night.json`, an underscore) is never
+    replayed, so it went stale unnoticed; and it needs a tune value
+    (`start_time_of_day`) that a replay can't carry (see 31).
 
 ## Duck Quill
 
@@ -146,7 +160,7 @@ game copes; the tool still has the gap.
 5. **`check` warned that ~26 palette colours were "never used"** though
    they are used inside `define`d symbols (via `pixels` `colors`). Worth
    a look: either a false warning or symbols aren't scanned.
-6. **More than 52 colours in one pixel script.** The atlas has 64
+6. **More than 52 colours in one pixel script.** The atlas has 70
    colours, and `pixels` rows use one character a colour, so
    `make_blocks.py` ran out of letters and uses digits and symbols too.
    A `colors` map of short names (two characters) would read better.

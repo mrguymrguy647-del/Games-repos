@@ -14,6 +14,15 @@
 //! creative (fly, every block, nothing hurts), from the title screen
 //! (`menus.rs`). The island is saved as you play.
 //!
+//! Past the island there's a dark sea, and three lands across it
+//! (`lands.rs`): a village with every door open and no one in it, a grey
+//! forest that never comes out of its fog, and a land that has come apart.
+//! And something came back with you (`haunt.rs`): a duck in your own skin
+//! with white eyes, that watches from the fog, plays with your doors and
+//! torches, and stands behind you; black shapes that only move when you
+//! aren't looking; a moon with a face; and a game that sometimes stops
+//! answering, and comes back saying things it shouldn't.
+//!
 //!     cargo run --release -p duck_craft
 //!
 //! - **W A S D** walk, **Shift** run, **Space** jump (and swim up)
@@ -39,8 +48,10 @@
 //!
 //! How it's made:
 //!
-//! - The world is a grid of blocks (`World`), 64 x 44 x 64, grown by
-//!   `World::generate` from value noise with a fixed seed.
+//! - The world is a grid of blocks (`World`), 192 x 44 x 192, grown by
+//!   `World::generate` from value noise with a fixed seed: the island (64
+//!   across) in the middle, the sea and the other lands round it. Only
+//!   the chunks inside the fog and in front of you are drawn.
 //! - The pictures are one Duck Quill atlas (`art/blocks.json`, written by
 //!   `art/make_blocks.py`). The engine's `BlockWorld` holds the blocks and
 //!   draws each 16 x 16 column of the world as one mesh (one draw), built
@@ -82,8 +93,9 @@ use std::rc::Rc;
 
 const WIDTH: f32 = 320.0; // the screen, in pixels
 const HEIGHT: f32 = 240.0;
-/// The world: SIZE x TALL x SIZE blocks.
-const SIZE: usize = 64;
+/// The world: SIZE x TALL x SIZE blocks (the island in the middle, the
+/// sea and the other lands round it).
+const SIZE: usize = 192;
 const TALL: usize = 44;
 const CHUNK: usize = 16; // chunks are 16 x 16 columns, the world's full height
 const SEA: i32 = 12; // the top of the sea is the top of this layer
@@ -142,9 +154,16 @@ enum Block {
     Bed,
     /// Holds 27 stacks (`World::chests`).
     Chest,
+    /// Grass gone grey: the forest's ground, and the broken land's.
+    DeadGrass,
+    /// A block that isn't anything: the broken land is full of them. It
+    /// shimmers in the dark, and digging it gives you nothing.
+    Glitch,
+    /// A dead tree's bark, bleached grey. Gives you a log.
+    DeadLog,
 }
 
-const BLOCK_KINDS: usize = 22;
+const BLOCK_KINDS: usize = 25;
 
 impl Block {
     const ALL: [Block; BLOCK_KINDS] = [
@@ -170,6 +189,9 @@ impl Block {
         Block::DoorHighOpen,
         Block::Bed,
         Block::Chest,
+        Block::DeadGrass,
+        Block::Glitch,
+        Block::DeadLog,
     ];
 
     /// You bump into it, stand on it, and can dig it.
@@ -235,6 +257,9 @@ impl Block {
             Block::DoorHighOpen => ["door_open_high"; 3],
             Block::Bed => ["bed_top", "bed_side", "planks"],
             Block::Chest => ["chest_top", "chest_side", "chest_top"],
+            Block::DeadGrass => ["dead_grass_top", "dead_grass_side", "dirt"],
+            Block::Glitch => ["glitch"; 3],
+            Block::DeadLog => ["dead_log_top", "dead_log_side", "dead_log_top"],
         })
     }
 
@@ -252,13 +277,18 @@ impl Block {
             Block::Bed => 0.4,
             Block::DoorLow | Block::DoorHigh | Block::DoorLowOpen | Block::DoorHighOpen => 0.6,
             Block::Chest => 0.8,
+            Block::DeadGrass => 0.45,
+            Block::Glitch => 0.3,
+            Block::DeadLog => 0.7,
         })
     }
 
     /// What digging it gives you (ores are counted on their own).
     fn drop(self) -> Option<Block> {
         match self {
-            Block::Grass => Some(Block::Dirt),
+            Block::Grass | Block::DeadGrass => Some(Block::Dirt),
+            Block::Glitch => None,
+            Block::DeadLog => Some(Block::Log),
             Block::Stone => Some(Block::Cobblestone),
             Block::CoalOre | Block::GoldOre | Block::Air | Block::Water | Block::Bedrock => None,
             door if door.is_door() => None, // a whole door comes back instead
@@ -291,6 +321,9 @@ impl Block {
             Block::DoorHighOpen => "Open door (top)",
             Block::Bed => "Bed",
             Block::Chest => "Chest",
+            Block::DeadGrass => "Dead grass",
+            Block::Glitch => "Glitch",
+            Block::DeadLog => "Dead log",
         }
     }
 }
@@ -472,18 +505,7 @@ impl World {
 
     /// The height of the ground at column (x, z), before trees.
     fn ground_height(x: i32, z: i32, seed: u32) -> i32 {
-        let (fx, fz) = (x as f32, z as f32);
-        let base = 0.5 * noise2(fx / 22.0, fz / 22.0, seed)
-            + 0.3 * noise2(fx / 11.0, fz / 11.0, seed + 1)
-            + 0.2 * noise2(fx / 5.0, fz / 5.0, seed + 2);
-        let hills = (noise2(fx / 16.0, fz / 16.0, seed + 3) - 0.55).max(0.0) * 34.0;
-        let mut h = 6.5 + base * 17.0 + hills;
-        // An island: the land sinks under the sea near the edges.
-        let edge = x.min(z).min(SIZE as i32 - 1 - x).min(SIZE as i32 - 1 - z) as f32;
-        if edge < 12.0 {
-            h = lerp(5.0, h, smooth(edge / 12.0));
-        }
-        (h.round() as i32).clamp(2, TALL as i32 - 12)
+        lands::ground_height(x, z, seed)
     }
 
     /// Grows the island.
@@ -507,17 +529,19 @@ impl World {
             .map(|i| World::ground_height((i % SIZE) as i32, (i / SIZE) as i32, seed))
             .collect();
         let height = |x: i32, z: i32| heights[z as usize * SIZE + x as usize];
+        let land = |x: i32, z: i32| lands::land_at(x, z, seed).0;
 
         // Rock, dirt and grass (sand by the sea), then the sea.
         for z in 0..SIZE as i32 {
             for x in 0..SIZE as i32 {
                 let h = height(x, z);
                 let beach = h <= SEA + 1;
+                let top = lands::surface(land(x, z), x, z, seed);
                 for y in 0..=h {
                     let block = if y == 0 {
                         Block::Bedrock
                     } else if y == h {
-                        if beach { Block::Sand } else { Block::Grass }
+                        if beach { Block::Sand } else { top }
                     } else if y >= h - 3 {
                         if beach { Block::Sand } else { Block::Dirt }
                     } else {
@@ -542,7 +566,7 @@ impl World {
         for z in 0..SIZE as i32 {
             for x in 0..SIZE as i32 {
                 let h = height(x, z);
-                if h <= SEA + 3 {
+                if h <= SEA + 3 || land(x, z) != lands::Land::Island {
                     continue;
                 }
                 for y in 2..=h - 2 {
@@ -559,7 +583,10 @@ impl World {
         world.hollow_out_cavern(&height);
         world.lay_ore_veins();
 
-        // Trees, on grass, not too close to each other.
+        // The lands across the sea.
+        world.build_lands(&height);
+
+        // Trees, on grass, not too close to each other (few in the village).
         let mut trees: Vec<(i32, i32)> = Vec::new();
         for z in 3..SIZE as i32 - 3 {
             for x in 3..SIZE as i32 - 3 {
@@ -568,7 +595,8 @@ impl World {
                 let room = trees
                     .iter()
                     .all(|&(tx, tz)| (tx - x).abs().max((tz - z).abs()) > 4);
-                if on_grass && room && random01(x, 0, z, seed + 6) < 0.014 {
+                let chance = if land(x, z) == lands::Land::Island { 0.014 } else { 0.004 };
+                if on_grass && room && random01(x, 0, z, seed + 6) < chance {
                     trees.push((x, z));
                     world.grow_tree(x, h + 1, z, random01(x, 1, z, seed + 6));
                 }
@@ -588,9 +616,13 @@ impl World {
         // Start on grass as near the middle as there is, not under a tree.
         let middle = SIZE as i32 / 2;
         let mut best = (i32::MAX, middle, middle);
-        for z in 0..SIZE as i32 {
-            for x in 0..SIZE as i32 {
+        for z in lands::SHIFT..lands::SHIFT + lands::ISLAND {
+            for x in lands::SHIFT..lands::SHIFT + lands::ISLAND {
                 let h = height(x, z);
+                let distance = (x - middle).pow(2) + (z - middle).pow(2);
+                if distance >= best.0 || world.get(x, h, z) != Block::Grass {
+                    continue;
+                }
                 // No tree within three blocks, so the first view isn't leaves.
                 let clear = (-3..=3).all(|dz| {
                     (-3..=3).all(|dx| {
@@ -602,8 +634,7 @@ impl World {
                         })
                     })
                 });
-                let distance = (x - middle).pow(2) + (z - middle).pow(2);
-                if world.get(x, h, z) == Block::Grass && clear && distance < best.0 {
+                if clear {
                     best = (distance, x, z);
                 }
             }
@@ -833,11 +864,11 @@ impl Art {
                         Block::Water | Block::Glass => kind.see_through(),
                         Block::DoorLowOpen | Block::DoorHighOpen => kind.see_through(),
                         Block::Leaves => kind.inner_faces(),
-                        Block::Lamp => kind.glowing(),
+                        Block::Lamp | Block::Glitch => kind.glowing(),
                         _ => kind,
                     });
                     let mut cube = Mesh::block(&atlas, tiles);
-                    if block == Block::Lamp {
+                    if matches!(block, Block::Lamp | Block::Glitch) {
                         cube = cube.glowing();
                     }
                     cubes.push(Some(cube));
@@ -909,6 +940,12 @@ struct Sounds {
     thunder: Wav,
     /// Static, louder as Hollows come near (`DuckCraft::dread`).
     static_noise: Wav,
+    /// The Other and the rest (`haunt.rs`): a jump scare, the game falling
+    /// over, a chat chime, breathing right behind you.
+    scare: Wav,
+    glitch: Wav,
+    joined: Wav,
+    breath: Wav,
 }
 
 impl Sounds {
@@ -929,6 +966,10 @@ impl Sounds {
             heartbeat: wav("heartbeat")?,
             bell_dusk: wav("bell_dusk")?,
             bell_dawn: wav("bell_dawn")?,
+            scare: wav("scare")?,
+            glitch: wav("glitch")?,
+            joined: wav("joined")?,
+            breath: wav("breath")?,
         })
     }
 }
@@ -1680,6 +1721,8 @@ struct DuckCraft {
     aimed_hollow_now: Option<usize>,
     /// Seconds left of the Watcher's scare (a jolt and a flash).
     scare: f32,
+    /// The Other, the Nothing, the moon, the glitches (`haunt.rs`).
+    haunt: haunt::Haunt,
     /// Seconds on the title screen (it turns the view).
     title_spin: f32,
     /// What made the duck faint last (for the faint screen).
@@ -1716,6 +1759,35 @@ struct DuckCraft {
 }
 
 impl DuckCraft {
+    /// The world's chunks near enough to see (inside the fog) and not
+    /// behind you. Out past the fog they'd only be fog, and drawing all
+    /// of the world's every frame is slow.
+    fn draw_chunks(&self, canvas: &mut Canvas, camera: &Camera3D, far: f32) {
+        let eye = vec2(camera.position.x, camera.position.z);
+        let ahead = vec2(camera.yaw.sin(), camera.yaw.cos());
+        let (across, deep) = self.world.grid.chunks();
+        let size = CHUNK as f32;
+        for cz in 0..deep {
+            for cx in 0..across {
+                let low = vec2(cx as f32 * size, cz as f32 * size);
+                let nearest = vec2(
+                    eye.x.clamp(low.x, low.x + size),
+                    eye.y.clamp(low.y, low.y + size),
+                );
+                if nearest.distance(eye) > far + 1.0 {
+                    continue;
+                }
+                let behind = [(0.0, 0.0), (size, 0.0), (0.0, size), (size, size)]
+                    .iter()
+                    .all(|&(dx, dz)| (low + vec2(dx, dz) - eye).dot(ahead) < -2.0);
+                let mesh = self.world.grid.chunk_mesh(cx, cz);
+                if !behind && !mesh.triangles.is_empty() {
+                    canvas.draw_mesh(mesh, &Transform::default(), camera);
+                }
+            }
+        }
+    }
+
     fn new(art: Rc<Art>, mut world: World) -> DuckCraft {
         world.update_chunks(&art.palette);
         let ducklings = ducklings::hatch(&world);
@@ -1782,6 +1854,7 @@ impl DuckCraft {
             swing: 0.0,
             aimed_hollow_now: None,
             scare: 0.0,
+            haunt: Default::default(),
             title_spin: 0.0,
             fainted_because: String::new(),
             eaten: 0,
@@ -2331,15 +2404,20 @@ impl DuckCraft {
         });
     }
 
+    /// The title's camera, `spin` seconds in: slowly round the island,
+    /// looking at where you'll start.
+    fn title_camera(&self, spin: f32) -> Camera3D {
+        let middle = self.world.spawn + vec3(0.0, 2.0, 0.0);
+        let angle = spin * 0.04 + self.world.spawn_yaw + std::f32::consts::PI;
+        let from = middle + vec3(angle.sin() * 26.0, 11.0, angle.cos() * 26.0);
+        let mut camera = Camera3D::looking_at(from, middle);
+        camera.fov = 70f32.to_radians();
+        camera
+    }
+
     fn camera(&self) -> Camera3D {
         if matches!(self.stage, Stage::Title { .. }) {
-            // Slowly round the island, looking at where you'll start.
-            let middle = self.world.spawn + vec3(0.0, 2.0, 0.0);
-            let angle = self.title_spin * 0.04 + self.world.spawn_yaw + std::f32::consts::PI;
-            let from = middle + vec3(angle.sin() * 26.0, 11.0, angle.cos() * 26.0);
-            let mut camera = Camera3D::looking_at(from, middle);
-            camera.fov = 70f32.to_radians();
-            return camera;
+            return self.title_camera(self.title_spin);
         }
         let eye = self.eye();
         let mut camera = Camera3D::new(eye);
@@ -2411,6 +2489,12 @@ impl Game for DuckCraft {
         if ctx.frame() == 1 {
             ctx.lock_pointer(true); // a game that starts straight in play
         }
+        // "Not responding": nothing you do does anything till it's over.
+        if self.haunt.freeze > 0.0 {
+            self.update_frozen(ctx);
+            self.report_stage(ctx);
+            return;
+        }
         let screen_was_open = self.screen.is_some();
         self.inventory_screen(ctx);
         if screen_was_open || self.screen.is_some() {
@@ -2473,6 +2557,7 @@ impl Game for DuckCraft {
         self.update_ducklings(ctx);
         self.update_hollows(ctx);
         self.update_watcher(ctx);
+        self.update_haunt(ctx);
         self.maybe_save(ctx);
         self.settle_sand();
         self.drop_falling(ctx);
@@ -2562,10 +2647,15 @@ impl Game for DuckCraft {
         } = self.sky();
         let night_sky = Color::from_hex(0x03040a);
         let day_sky = Color::from_hex(0x86c4f2);
-        // Weather greys the sky over.
-        let grey = self.weather.grey();
+        // Weather greys the sky over; so does the fog of the lands across
+        // the sea. Over the broken land the sky is the colour of a bruise.
+        let (land, haze) = lands::haze(self.position.x, self.position.z, self.world.seed);
+        let grey = self.weather.grey().max(haze * (1.0 - land.sight()));
         let cloud = night_sky.lerp(Color::from_hex(0x7c8590), daylight);
-        let sky = night_sky.lerp(day_sky, daylight).lerp(cloud, grey);
+        let mut sky = night_sky.lerp(day_sky, daylight).lerp(cloud, grey);
+        if land == lands::Land::Broken {
+            sky = sky.lerp(Color::from_hex(0x3a1418), haze * 0.75);
+        }
         let dusk = dusk * (1.0 - grey);
         let horizon_glow = Color::from_hex(0xd8703a);
         canvas.clear(sky);
@@ -2595,7 +2685,7 @@ impl Game for DuckCraft {
         let (near, far) = if underground {
             (3.0, 22.0)
         } else {
-            let sight = self.weather.sight();
+            let sight = self.weather.sight() * lerp(1.0, land.sight(), haze);
             (
                 (6.0 + 34.0 * daylight) * sight,
                 ((30.0 + 90.0 * daylight) * sight).max(12.0),
@@ -2639,16 +2729,8 @@ impl Game for DuckCraft {
             );
             canvas.fill_rect(Rect::from_center(p, 12.0, 12.0), Color::from_hex(0xfffbe0));
         }
-        if let Some(p) = camera
-            .world_to_screen(camera.position - sun * 100.0, canvas)
-            .filter(|_| grey < 0.5)
-        {
-            // A pale moon, with a dark bite out of it.
-            canvas.fill_rect(Rect::from_center(p, 9.0, 9.0), Color::from_hex(0xc8ccd4));
-            canvas.fill_rect(
-                Rect::new(p.x - 4.5, p.y - 4.5, 4.0, 9.0),
-                sky.lerp(Color::from_hex(0xc8ccd4), 0.15),
-            );
+        if grey < 0.5 {
+            self.draw_moon(canvas, &camera, sky, sun * -1.0);
         }
         // The light: the sun by day, the moon (weak and cold) by night.
         let (direction, color) = if sun.y > -0.1 {
@@ -2667,7 +2749,7 @@ impl Game for DuckCraft {
         });
         let still = Transform::default();
         canvas.draw_mesh(&art.ocean, &still, &camera);
-        self.world.grid.draw(canvas, &camera);
+        self.draw_chunks(canvas, &camera, far);
         canvas.draw_mesh(&self.plant_mesh, &Transform::default(), &camera);
         // Clouds glow (so their undersides aren't grey), dimmed for the night.
         let drift = (self.time * 0.8).rem_euclid(CLOUD_PERIOD);
@@ -2753,6 +2835,7 @@ impl Game for DuckCraft {
         }
         self.draw_ducklings(canvas, &camera);
         self.draw_night(canvas, &camera);
+        self.draw_haunt(canvas, &camera);
         if let Some(hit) = self.target.filter(|t| t.plant.is_none()) {
             let [x, y, z] = hit.cell.map(|v| v as f32);
             let place = Transform::at(vec3(x + 0.5, y + 0.5, z + 0.5)).sized(1.006);
@@ -2804,6 +2887,7 @@ impl Game for DuckCraft {
         }
         self.draw_announcement(canvas);
         self.draw_inventory(canvas, &camera, self.mouse);
+        self.draw_haunt_screen(canvas);
         if self.scare > 0.0 {
             // The Watcher, seen: a white flash, gone almost at once.
             let alpha = ((self.scare - 0.45).max(0.0) / 0.15 * 200.0) as u8;
@@ -3173,10 +3257,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 // playthroughs/duck_craft.json: `cargo test -p duck_craft -- --ignored`.
 mod ducklings;
 mod furniture;
+mod haunt;
 mod health;
 mod hunt;
 mod inventory;
 mod items;
+mod lands;
 mod menus;
 mod night;
 mod plants;

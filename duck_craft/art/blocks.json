@@ -64,7 +64,13 @@
   "pillow": "#E4DECE",
   "chest": "#6E4A24",
   "chest_dark": "#3E2810",
-  "iron": "#8C8C94"
+  "iron": "#8C8C94",
+  "dead": "#77786C",
+  "dead_dark": "#5C5D53",
+  "dead_light": "#8E8F82",
+  "glitch_pink": "#FF1EE6",
+  "glitch_cyan": "#1EF0FF",
+  "glitch_green": "#3CFF4A"
  },
  "commands": [
   {
@@ -147,7 +153,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "acabbcabaacacaba",
@@ -244,7 +256,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "aaabbbababaaaabb",
@@ -341,7 +359,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "ededddededdefddd",
@@ -438,7 +462,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "gihiggiggggggggh",
@@ -535,7 +565,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "jjjjhhgighjhgggj",
@@ -632,7 +668,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "llkkkkkkkmklkkkk",
@@ -729,7 +771,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "oooooonoonoonooo",
@@ -826,7 +874,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "oooooooooooooooo",
@@ -923,7 +977,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "r.r.sr.tr.rsrrtr",
@@ -1020,7 +1080,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "wuuuuvuuuuuwuuuw",
@@ -1117,7 +1183,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "zxxxxzxxxxzxxxxz",
@@ -1214,7 +1286,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "AAABAAACBAABAAAC",
@@ -1311,7 +1389,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "gghghgggiggggggg",
@@ -1408,7 +1492,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "ggghghgggggggggg",
@@ -1505,7 +1595,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "GGGGGIIGGGHHGGGG",
@@ -1602,7 +1698,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "DDJKKJKKDJKKJKKJ",
@@ -1699,7 +1801,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "MMMMMMMMMMMMMMMM",
@@ -1796,7 +1904,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "QQQQQQQQQQQQQQQQ",
@@ -1893,7 +2007,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "................",
@@ -1990,7 +2110,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "................",
@@ -2087,7 +2213,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "................",
@@ -2184,7 +2316,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "................",
@@ -2281,7 +2419,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "................",
@@ -2378,7 +2522,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "................",
@@ -2475,7 +2625,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "................",
@@ -2572,7 +2728,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "................",
@@ -2669,7 +2831,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "................",
@@ -2766,7 +2934,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "................",
@@ -2863,7 +3037,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "................",
@@ -2960,7 +3140,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "................",
@@ -3057,7 +3243,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "................",
@@ -3154,7 +3346,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "................",
@@ -3251,7 +3449,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "................",
@@ -3348,7 +3552,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "5555555555555555",
@@ -3445,7 +3655,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "5555555555555555",
@@ -3542,7 +3758,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "54............45",
@@ -3639,7 +3861,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "5555555555555555",
@@ -3736,7 +3964,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "v78888888888886v",
@@ -3833,7 +4067,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "6666666676676666",
@@ -3930,7 +4170,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "################",
@@ -4027,7 +4273,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "################",
@@ -4124,7 +4376,13 @@
       "8": "pillow",
       "9": "chest",
       "#": "chest_dark",
-      "$": "iron"
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
      },
      "rows": [
       "................",
@@ -4143,6 +4401,521 @@
       "....54454445....",
       "....55555555....",
       "................"
+     ]
+    }
+   ]
+  },
+  {
+   "cmd": "define",
+   "name": "dead_log_top",
+   "commands": [
+    {
+     "cmd": "pixels",
+     "at": [
+      0,
+      0
+     ],
+     "colors": {
+      "a": "grass",
+      "b": "grass_dark",
+      "c": "grass_light",
+      "d": "dirt",
+      "e": "dirt_dark",
+      "f": "dirt_light",
+      "g": "stone",
+      "h": "stone_dark",
+      "i": "stone_light",
+      "j": "mortar_dark",
+      "k": "sand",
+      "l": "sand_dark",
+      "m": "sand_light",
+      "n": "bark_dark",
+      "o": "bark",
+      "p": "ring",
+      "q": "ring_light",
+      "r": "leaf",
+      "s": "leaf_dark",
+      "t": "leaf_light",
+      "u": "plank",
+      "v": "plank_dark",
+      "w": "plank_light",
+      "x": "glass",
+      "y": "shine",
+      "z": "glass_dark",
+      "A": "brick",
+      "B": "brick_dark",
+      "C": "mortar",
+      "D": "coal",
+      "E": "gold",
+      "F": "gold_light",
+      "G": "water",
+      "H": "water_light",
+      "I": "water_dark",
+      "J": "bedrock",
+      "K": "bedrock_light",
+      "L": "crack",
+      "M": "cloud",
+      "N": "cloud_shade",
+      "O": "lamp",
+      "P": "lamp_light",
+      "Q": "lamp_frame",
+      "R": "stem",
+      "S": "petal_yellow",
+      "T": "petal_red",
+      "U": "petal_white",
+      "V": "apple",
+      "W": "apple_dark",
+      "X": "seed",
+      "Y": "seed_dark",
+      "Z": "crust",
+      "0": "crumb",
+      "1": "gold_dark",
+      "2": "flame",
+      "3": "flame_core",
+      "4": "door",
+      "5": "door_dark",
+      "6": "blanket",
+      "7": "blanket_dark",
+      "8": "pillow",
+      "9": "chest",
+      "#": "chest_dark",
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
+     },
+     "rows": [
+      "&&&&&&&&&&&&&&&&",
+      "&%%%%%%%%%%%%%%&",
+      "&%******%*****%&",
+      "&%*%********%*%&",
+      "&%**%%%%%%%%*%%&",
+      "&%**%**%*%*%**%&",
+      "&%*%%**%***%%*%&",
+      "&%**%*%%%**%*%%&",
+      "&%**%**%%%*%%*%&",
+      "&%*%%*%%***%**%&",
+      "&%**%**%**%%**%&",
+      "&%**%%%%%%%%**%&",
+      "&%******%*%*%*%&",
+      "&%************%&",
+      "&%%%%%%%%%%%%%%&",
+      "&&&&&&&&&&&&&&&&"
+     ]
+    }
+   ]
+  },
+  {
+   "cmd": "define",
+   "name": "dead_log_side",
+   "commands": [
+    {
+     "cmd": "pixels",
+     "at": [
+      0,
+      0
+     ],
+     "colors": {
+      "a": "grass",
+      "b": "grass_dark",
+      "c": "grass_light",
+      "d": "dirt",
+      "e": "dirt_dark",
+      "f": "dirt_light",
+      "g": "stone",
+      "h": "stone_dark",
+      "i": "stone_light",
+      "j": "mortar_dark",
+      "k": "sand",
+      "l": "sand_dark",
+      "m": "sand_light",
+      "n": "bark_dark",
+      "o": "bark",
+      "p": "ring",
+      "q": "ring_light",
+      "r": "leaf",
+      "s": "leaf_dark",
+      "t": "leaf_light",
+      "u": "plank",
+      "v": "plank_dark",
+      "w": "plank_light",
+      "x": "glass",
+      "y": "shine",
+      "z": "glass_dark",
+      "A": "brick",
+      "B": "brick_dark",
+      "C": "mortar",
+      "D": "coal",
+      "E": "gold",
+      "F": "gold_light",
+      "G": "water",
+      "H": "water_light",
+      "I": "water_dark",
+      "J": "bedrock",
+      "K": "bedrock_light",
+      "L": "crack",
+      "M": "cloud",
+      "N": "cloud_shade",
+      "O": "lamp",
+      "P": "lamp_light",
+      "Q": "lamp_frame",
+      "R": "stem",
+      "S": "petal_yellow",
+      "T": "petal_red",
+      "U": "petal_white",
+      "V": "apple",
+      "W": "apple_dark",
+      "X": "seed",
+      "Y": "seed_dark",
+      "Z": "crust",
+      "0": "crumb",
+      "1": "gold_dark",
+      "2": "flame",
+      "3": "flame_core",
+      "4": "door",
+      "5": "door_dark",
+      "6": "blanket",
+      "7": "blanket_dark",
+      "8": "pillow",
+      "9": "chest",
+      "#": "chest_dark",
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
+     },
+     "rows": [
+      "***%%%*%******%*",
+      "%******&*%**&**y",
+      "%%*%***&*%**&**%",
+      "%******&****&**%",
+      "*&*y%*%&%**%&***",
+      "*&*%***&%**&&y%*",
+      "*&%*%*%&%%%&&*%%",
+      "*&*%*%y&*%*&&***",
+      "y&&%%%*&%%*&&***",
+      "*&&*%**&***&***%",
+      "*&&%*%%%**%&**y*",
+      "%&&%*y%%**%&***%",
+      "*&&**%***%*&***%",
+      "%&&%******%&%***",
+      "*&&%**%*%**&%***",
+      "**%%****%*&***%*"
+     ]
+    }
+   ]
+  },
+  {
+   "cmd": "define",
+   "name": "dead_grass_top",
+   "commands": [
+    {
+     "cmd": "pixels",
+     "at": [
+      0,
+      0
+     ],
+     "colors": {
+      "a": "grass",
+      "b": "grass_dark",
+      "c": "grass_light",
+      "d": "dirt",
+      "e": "dirt_dark",
+      "f": "dirt_light",
+      "g": "stone",
+      "h": "stone_dark",
+      "i": "stone_light",
+      "j": "mortar_dark",
+      "k": "sand",
+      "l": "sand_dark",
+      "m": "sand_light",
+      "n": "bark_dark",
+      "o": "bark",
+      "p": "ring",
+      "q": "ring_light",
+      "r": "leaf",
+      "s": "leaf_dark",
+      "t": "leaf_light",
+      "u": "plank",
+      "v": "plank_dark",
+      "w": "plank_light",
+      "x": "glass",
+      "y": "shine",
+      "z": "glass_dark",
+      "A": "brick",
+      "B": "brick_dark",
+      "C": "mortar",
+      "D": "coal",
+      "E": "gold",
+      "F": "gold_light",
+      "G": "water",
+      "H": "water_light",
+      "I": "water_dark",
+      "J": "bedrock",
+      "K": "bedrock_light",
+      "L": "crack",
+      "M": "cloud",
+      "N": "cloud_shade",
+      "O": "lamp",
+      "P": "lamp_light",
+      "Q": "lamp_frame",
+      "R": "stem",
+      "S": "petal_yellow",
+      "T": "petal_red",
+      "U": "petal_white",
+      "V": "apple",
+      "W": "apple_dark",
+      "X": "seed",
+      "Y": "seed_dark",
+      "Z": "crust",
+      "0": "crumb",
+      "1": "gold_dark",
+      "2": "flame",
+      "3": "flame_core",
+      "4": "door",
+      "5": "door_dark",
+      "6": "blanket",
+      "7": "blanket_dark",
+      "8": "pillow",
+      "9": "chest",
+      "#": "chest_dark",
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
+     },
+     "rows": [
+      "%&%%%%%%%%%*%%%%",
+      "%&%e%e%%%%%%%&%%",
+      "%%&&e%%&%&%&%%&%",
+      "&&&%&%e&%%%%&*&*",
+      "%%%%%%%%%&&*%*%%",
+      "%%%%%&&%%%&%%%%%",
+      "%%&%%%%%%%%&%*%%",
+      "%*%e%%&%%&%&%&*&",
+      "&&%%%%%%%&&%&%%%",
+      "%%%%&%*%%%%%%e%%",
+      "%&e&e%&&%&%%%%e&",
+      "%%%%&%%%%*%&%%%e",
+      "%%%*%&%%%&&%%%&&",
+      "%%%%&%&%&&%%%%&%",
+      "*%&%%&*%%%%%e%*%",
+      "%%%%%%%%&&%%e&%%"
+     ]
+    }
+   ]
+  },
+  {
+   "cmd": "define",
+   "name": "dead_grass_side",
+   "commands": [
+    {
+     "cmd": "pixels",
+     "at": [
+      0,
+      0
+     ],
+     "colors": {
+      "a": "grass",
+      "b": "grass_dark",
+      "c": "grass_light",
+      "d": "dirt",
+      "e": "dirt_dark",
+      "f": "dirt_light",
+      "g": "stone",
+      "h": "stone_dark",
+      "i": "stone_light",
+      "j": "mortar_dark",
+      "k": "sand",
+      "l": "sand_dark",
+      "m": "sand_light",
+      "n": "bark_dark",
+      "o": "bark",
+      "p": "ring",
+      "q": "ring_light",
+      "r": "leaf",
+      "s": "leaf_dark",
+      "t": "leaf_light",
+      "u": "plank",
+      "v": "plank_dark",
+      "w": "plank_light",
+      "x": "glass",
+      "y": "shine",
+      "z": "glass_dark",
+      "A": "brick",
+      "B": "brick_dark",
+      "C": "mortar",
+      "D": "coal",
+      "E": "gold",
+      "F": "gold_light",
+      "G": "water",
+      "H": "water_light",
+      "I": "water_dark",
+      "J": "bedrock",
+      "K": "bedrock_light",
+      "L": "crack",
+      "M": "cloud",
+      "N": "cloud_shade",
+      "O": "lamp",
+      "P": "lamp_light",
+      "Q": "lamp_frame",
+      "R": "stem",
+      "S": "petal_yellow",
+      "T": "petal_red",
+      "U": "petal_white",
+      "V": "apple",
+      "W": "apple_dark",
+      "X": "seed",
+      "Y": "seed_dark",
+      "Z": "crust",
+      "0": "crumb",
+      "1": "gold_dark",
+      "2": "flame",
+      "3": "flame_core",
+      "4": "door",
+      "5": "door_dark",
+      "6": "blanket",
+      "7": "blanket_dark",
+      "8": "pillow",
+      "9": "chest",
+      "#": "chest_dark",
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
+     },
+     "rows": [
+      "&&%&&&&%&&%&%%%&",
+      "%%%%%&&%&%&%&%%%",
+      "e%d&ddd%%de%%e%d",
+      "e&d%efddddde%dde",
+      "dddfddfdeddddddd",
+      "deddddddeddddddd",
+      "dfddfddddedeeede",
+      "deefddfdddddeded",
+      "ddeedededdddeded",
+      "dddeedddfddddddd",
+      "dddedddedfdddded",
+      "edeedddddddddefd",
+      "defdddddddddddde",
+      "ddfdedfeddddeedd",
+      "dddedddeefdddedd",
+      "ddddeddeddddeddd"
+     ]
+    }
+   ]
+  },
+  {
+   "cmd": "define",
+   "name": "glitch",
+   "commands": [
+    {
+     "cmd": "pixels",
+     "at": [
+      0,
+      0
+     ],
+     "colors": {
+      "a": "grass",
+      "b": "grass_dark",
+      "c": "grass_light",
+      "d": "dirt",
+      "e": "dirt_dark",
+      "f": "dirt_light",
+      "g": "stone",
+      "h": "stone_dark",
+      "i": "stone_light",
+      "j": "mortar_dark",
+      "k": "sand",
+      "l": "sand_dark",
+      "m": "sand_light",
+      "n": "bark_dark",
+      "o": "bark",
+      "p": "ring",
+      "q": "ring_light",
+      "r": "leaf",
+      "s": "leaf_dark",
+      "t": "leaf_light",
+      "u": "plank",
+      "v": "plank_dark",
+      "w": "plank_light",
+      "x": "glass",
+      "y": "shine",
+      "z": "glass_dark",
+      "A": "brick",
+      "B": "brick_dark",
+      "C": "mortar",
+      "D": "coal",
+      "E": "gold",
+      "F": "gold_light",
+      "G": "water",
+      "H": "water_light",
+      "I": "water_dark",
+      "J": "bedrock",
+      "K": "bedrock_light",
+      "L": "crack",
+      "M": "cloud",
+      "N": "cloud_shade",
+      "O": "lamp",
+      "P": "lamp_light",
+      "Q": "lamp_frame",
+      "R": "stem",
+      "S": "petal_yellow",
+      "T": "petal_red",
+      "U": "petal_white",
+      "V": "apple",
+      "W": "apple_dark",
+      "X": "seed",
+      "Y": "seed_dark",
+      "Z": "crust",
+      "0": "crumb",
+      "1": "gold_dark",
+      "2": "flame",
+      "3": "flame_core",
+      "4": "door",
+      "5": "door_dark",
+      "6": "blanket",
+      "7": "blanket_dark",
+      "8": "pillow",
+      "9": "chest",
+      "#": "chest_dark",
+      "$": "iron",
+      "%": "dead",
+      "&": "dead_dark",
+      "*": "dead_light",
+      "+": "glitch_pink",
+      "=": "glitch_cyan",
+      "?": "glitch_green"
+     },
+     "rows": [
+      "++DDDDDDDDDyyDyy",
+      "++DDDDDDDDDyyDyy",
+      "DD++DDyDDDDyyyyy",
+      "DD++???D????DDDD",
+      "DDDDy???????=DDD",
+      "D=DD?D??????DDDD",
+      "DDDDDDDDD?DDyDDD",
+      "DDDDDDDDDDDDDDD?",
+      "DDDDDDDDDyyyDD=D",
+      "DDD?DDDDDy+yDDDD",
+      "D+DDDDDDDDDDDDDD",
+      "DDDDDDDD?DDDDDDD",
+      "DDDDDDDDDDDDDDDD",
+      "++y+++++++++++++",
+      "+++++++++++D++D+",
+      "DDD=======DDDDyD"
      ]
     }
    ]
@@ -4566,6 +5339,56 @@
     {
      "cmd": "use",
      "name": "door_item"
+    }
+   ]
+  },
+  "dead_log_top": {
+   "frames": 1,
+   "fps": 1,
+   "commands": [
+    {
+     "cmd": "use",
+     "name": "dead_log_top"
+    }
+   ]
+  },
+  "dead_log_side": {
+   "frames": 1,
+   "fps": 1,
+   "commands": [
+    {
+     "cmd": "use",
+     "name": "dead_log_side"
+    }
+   ]
+  },
+  "dead_grass_top": {
+   "frames": 1,
+   "fps": 1,
+   "commands": [
+    {
+     "cmd": "use",
+     "name": "dead_grass_top"
+    }
+   ]
+  },
+  "dead_grass_side": {
+   "frames": 1,
+   "fps": 1,
+   "commands": [
+    {
+     "cmd": "use",
+     "name": "dead_grass_side"
+    }
+   ]
+  },
+  "glitch": {
+   "frames": 1,
+   "fps": 1,
+   "commands": [
+    {
+     "cmd": "use",
+     "name": "glitch"
     }
    ]
   }

@@ -679,7 +679,9 @@ impl DuckCraft {
         // Dread: how near the nearest thing is. Anything that's up counts,
         // a mimic still looking like a duckling too (its only tell); the
         // Watcher, wherever it stands, a little.
-        let mut dread: f32 = 0.0;
+        // Some lands are uneasy just to stand in.
+        let (land, haze) = lands::haze(self.position.x, self.position.z, self.world.seed);
+        let mut dread: f32 = land.unease() * haze;
         if hunting {
             for hollow in self.hollows.iter().filter(|h| h.fading.is_none()) {
                 let d = hollow.position.distance(duck);
@@ -688,6 +690,15 @@ impl DuckCraft {
             if self.watcher.is_some() {
                 dread = dread.max(0.35);
             }
+        }
+        // The Nothing coming, the moon looked at, the Other behind you.
+        for nothing in &self.haunt.nothings {
+            let d = nothing.position.distance(duck);
+            dread = dread.max(((24.0 - d) / 18.0).clamp(0.0, 1.0));
+        }
+        dread = dread.max(self.haunt.moon_stare / haunt::STARE_SECONDS);
+        if self.haunt.other.as_ref().is_some_and(|o| o.visit == haunt::Visit::Behind) {
+            dread = dread.max(0.5);
         }
         self.dread = approach(self.dread, dread, 1.5 * dt);
         ctx.report("dread", (self.dread * 10.0).round() / 10.0);
