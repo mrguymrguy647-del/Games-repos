@@ -1759,12 +1759,11 @@ struct DuckCraft {
 }
 
 impl DuckCraft {
-    /// The world's chunks near enough to see (inside the fog) and not
-    /// behind you. Out past the fog they'd only be fog, and drawing all
-    /// of the world's every frame is slow.
+    /// The world's chunks near enough to see (inside the fog). Out past the
+    /// fog they'd only be fog, and drawing all of the world's every frame
+    /// is slow.
     fn draw_chunks(&self, canvas: &mut Canvas, camera: &Camera3D, far: f32) {
         let eye = vec2(camera.position.x, camera.position.z);
-        let ahead = vec2(camera.yaw.sin(), camera.yaw.cos());
         let (across, deep) = self.world.grid.chunks();
         let size = CHUNK as f32;
         for cz in 0..deep {
@@ -1777,11 +1776,9 @@ impl DuckCraft {
                 if nearest.distance(eye) > far + 1.0 {
                     continue;
                 }
-                let behind = [(0.0, 0.0), (size, 0.0), (0.0, size), (size, size)]
-                    .iter()
-                    .all(|&(dx, dz)| (low + vec2(dx, dz) - eye).dot(ahead) < -2.0);
+                // (What's off the screen the engine skips itself.)
                 let mesh = self.world.grid.chunk_mesh(cx, cz);
-                if !behind && !mesh.triangles.is_empty() {
+                if !mesh.triangles.is_empty() {
                     canvas.draw_mesh(mesh, &Transform::default(), camera);
                 }
             }
@@ -2650,7 +2647,7 @@ impl Game for DuckCraft {
         // Weather greys the sky over; so does the fog of the lands across
         // the sea. Over the broken land the sky is the colour of a bruise.
         let (land, haze) = lands::haze(self.position.x, self.position.z, self.world.seed);
-        let grey = self.weather.grey().max(haze * (1.0 - land.sight()));
+        let grey = self.sky_grey();
         let cloud = night_sky.lerp(Color::from_hex(0x7c8590), daylight);
         let mut sky = night_sky.lerp(day_sky, daylight).lerp(cloud, grey);
         if land == lands::Land::Broken {

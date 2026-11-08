@@ -3244,13 +3244,13 @@ fn the_nothing_only_moves_while_you_cannot_see_it() {
     let at = vec3(8.5, FLOOR as f32, 24.5);
     // Looking at it: it stays where it is.
     let mut game = haunted(3, 0.75);
-    game.haunt.nothings = vec![haunt::Nothing { position: at, yaw: PI, seen: false }];
+    game.haunt.nothings = vec![haunt::Nothing::new(at)];
     let mut played = PlayTest::new(config(), game).frames(120).run();
     assert_eq!(played.game().haunt.nothings[0].position, at);
     assert!(played.scene().labels_named("nothing").next().is_some());
     // Looking away: it comes, and it hurts.
     let mut game = haunted(3, 0.75);
-    game.haunt.nothings = vec![haunt::Nothing { position: at, yaw: PI, seen: false }];
+    game.haunt.nothings = vec![haunt::Nothing::new(at)];
     game.yaw = PI;
     let played = PlayTest::new(config(), game).frames(300).run();
     assert!(played.game().haunt.nothings.iter().all(|n| n.position != at));
@@ -3392,7 +3392,9 @@ fn haunt_views() {
     for (k, d) in [(-0.4f32, 9.0f32), (0.1, 14.0), (0.5, 20.0)] {
         let a = game.yaw + k;
         if let Some(at) = game.standing_spot((s.x + a.sin() * d) as i32, (s.z + a.cos() * d) as i32) {
-            game.haunt.nothings.push(haunt::Nothing { position: at, yaw: game.yaw + PI, seen: true });
+            let mut nothing = haunt::Nothing::new(at);
+            nothing.yaw = game.yaw + PI;
+            game.haunt.nothings.push(nothing);
         }
     }
     shot("nothing", game, 3);
@@ -3416,4 +3418,98 @@ fn haunt_views() {
     game.haunt.calm = true;
     game.haunt.flash = Some((String::from("ERROR 422: duck not found"), 0.6));
     shot("error", game, 2);
+}
+
+#[test]
+fn in_creative_it_only_watches() {
+    let mut game = haunted(4, 0.75);
+    game.mode = Mode::Creative;
+    game.haunt.nothings = vec![haunt::Nothing::new(vec3(8.5, FLOOR as f32, 24.5))];
+    game.haunt.prank_at = 0.0;
+    game.yaw = PI; // looking away from it, and from the moon or not
+    let played = PlayTest::new(config(), game).frames(300).run();
+    let game = played.game();
+    assert_eq!(game.vitals.health, 20);
+    assert!(game.haunt.nothings.is_empty());
+    assert_eq!(game.haunt.pranks, 0);
+}
+
+#[test]
+fn the_moon_cannot_get_you_under_a_roof() {
+    let mut game = haunted(4, 0.75);
+    for z in 4..14 {
+        for x in 4..14 {
+            game.world.set(x, FLOOR + 3, z, Block::Stone);
+        }
+    }
+    let m = game.sky().sun * -1.0;
+    game.yaw = m.x.atan2(m.z);
+    game.pitch = m.y.asin();
+    let played = PlayTest::new(config(), game).frames(420).run();
+    assert_eq!(played.game().vitals.health, 20);
+    assert_eq!(played.game().haunt.moon_stare, 0.0);
+}
+
+#[test]
+fn the_nothing_never_goes_through_a_block() {
+    // The duck in a tunnel two high under a stone ceiling, the Nothing
+    // on the ceiling's top, a wall in its way: it can't get in.
+    let mut game = haunted(3, 0.75);
+    for z in 0..32 {
+        for x in 0..32 {
+            for y in [FLOOR, FLOOR + 1] {
+                let tunnel = (7..10).contains(&x);
+                game.world.set(x, y, z, if tunnel { Block::Air } else { Block::Stone });
+            }
+            game.world.set(x, FLOOR + 2, z, Block::Stone);
+        }
+    }
+    for x in 0..32 {
+        game.world.set(x, FLOOR + 3, 14, Block::Planks);
+        game.world.set(x, FLOOR + 4, 14, Block::Planks);
+    }
+    game.haunt.nothings = vec![haunt::Nothing::new(vec3(8.5, (FLOOR + 3) as f32, 24.5))];
+    game.yaw = PI;
+    let played = PlayTest::new(config(), game).frames(300).run();
+    let game = played.game();
+    assert_eq!(game.vitals.health, 20);
+    assert!(game.haunt.nothings.iter().all(|n| n.position.y >= (FLOOR + 3) as f32));
+}
+
+#[test]
+fn its_tunnels_go_through_the_ground_not_through_what_you_built() {
+    let mut base = haunted(2, 0.3);
+    // Grass, a hill of dirt, and a house of planks on it, behind the duck.
+    for z in 0..32 {
+        for x in 0..32 {
+            base.world.set(x, FLOOR - 1, z, Block::Grass);
+            for y in FLOOR..FLOOR + 4 {
+                let block = if z < 12 { Block::Planks } else { Block::Air };
+                base.world.set(x, y, z, block);
+            }
+        }
+    }
+    base.position = vec3(16.5, FLOOR as f32, 30.5);
+    let planks = |g: &DuckCraft| g.world.grid.blocks().iter().filter(|&&b| b == Block::Planks as BlockId).count();
+    let before = planks(&base);
+    for seed in 0..20 {
+        let mut game = base.clone();
+        game.tunnel(&mut Rng::new(seed));
+        assert_eq!(planks(&game), before, "seed {seed}");
+    }
+}
+
+#[test]
+fn it_puts_out_the_nearest_torch_it_can() {
+    let mut game = haunted(2, 0.3);
+    game.yaw = 0.0;
+    game.position = vec3(8.5, FLOOR as f32, 12.5);
+    game.world.put_torch(8, FLOOR, 0); // 12 behind
+    game.world.put_torch(9, FLOOR, 1);
+    game.world.put_torch(8, FLOOR, 30); // in front: seen
+    for _ in 0..2 {
+        assert!(game.snuff_a_torch());
+    }
+    assert!(!game.snuff_a_torch(), "the one in view stays lit");
+    assert!(game.world.plants.contains_key(&[8, FLOOR, 30]));
 }

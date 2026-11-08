@@ -65,6 +65,15 @@ pub struct Nothing {
     pub yaw: f32,
     /// Whether you could see it this frame (it doesn't move if so).
     pub seen: bool,
+    /// Seconds it's been unseen and unable to come closer (it goes after
+    /// a few, to come back somewhere it can).
+    stuck: f32,
+}
+
+impl Nothing {
+    pub fn new(position: Vec3) -> Nothing {
+        Nothing { position, yaw: 0.0, seen: false, stuck: 0.0 }
+    }
 }
 
 #[cfg(test)]
@@ -184,9 +193,15 @@ impl DuckCraft {
         self.haunt.moon_jump = (self.haunt.moon_jump - dt).max(0.0);
         self.arrive_on_lands();
         self.update_other(ctx);
-        self.maybe_prank(ctx);
-        self.update_nothings(ctx);
-        self.update_moon(ctx);
+        // In creative (nothing hurts, nothing's lost) it only watches.
+        if self.mode == Mode::Survival {
+            self.maybe_prank(ctx);
+            self.update_nothings(ctx);
+            self.update_moon(ctx);
+        } else {
+            self.haunt.nothings.clear();
+            self.haunt.moon_stare = 0.0;
+        }
         self.maybe_glitch(ctx);
         self.maybe_speak(ctx);
         ctx.report("other", self.haunt.other.as_ref().map_or("none", |o| match o.visit {
@@ -228,7 +243,9 @@ impl DuckCraft {
     /// Whether you can see `at`: in front of you (a bit past the screen's
     /// edge counts) with nothing solid between.
     pub fn sees(&self, at: Vec3) -> bool {
-        let eye = self.eye();
+        // (From the camera: in the view from behind, that's back from the
+        // eyes.)
+        let eye = self.camera().position;
         let to = at - eye;
         if to.length() < 0.8 {
             return true;
@@ -485,13 +502,19 @@ impl DuckCraft {
 
     /// Puts out one of your torches that you can't see.
     pub fn snuff_a_torch(&mut self) -> bool {
+        // The nearest (the same one every time, whatever order they're kept in).
+        let middle = |[x, y, z]: [i32; 3]| vec3(x as f32 + 0.5, y as f32 + 0.5, z as f32 + 0.5);
         let torch = self
             .world
             .plants
             .iter()
             .filter(|&(_, &p)| p == Plant::Torch)
             .map(|(&cell, _)| cell)
-            .find(|&[x, y, z]| self.out_of_sight(vec3(x as f32 + 0.5, y as f32 + 0.5, z as f32 + 0.5), 56.0));
+            .filter(|&cell| self.out_of_sight(middle(cell), 56.0))
+            .min_by(|&a, &b| {
+                let (da, db) = (middle(a).distance(self.position), middle(b).distance(self.position));
+                da.total_cmp(&db).then(a.cmp(&b))
+            });
         match torch {
             Some([x, y, z]) => {
                 self.world.remove_plant(x, y, z);
@@ -508,7 +531,9 @@ impl DuckCraft {
             let distance = rng.range(14.0, 30.0);
             let x = (self.position.x + angle.sin() * distance).floor() as i32;
             let z = (self.position.z + angle.cos() * distance).floor() as i32;
-            let spot = self.standing_spot(x, z)?;
+            let Some(spot) = self.standing_spot(x, z) else {
+                continue;
+            };
             let y = spot.y as i32;
             let ground = self.world.get(x, y - 1, z);
             if !matches!(ground, Block::Grass | Block::Sand | Block::DeadGrass | Block::Dirt) {
@@ -545,10 +570,18 @@ impl DuckCraft {
         true
     }
 
-    /// A tunnel two by two, straight into a hill.
+    /// A tunnel two by two, straight into a hill: only through the
+    /// ground (never anything built), never near you, and nowhere you can
+    /// see.
     pub fn tunnel(&mut self, rng: &mut Rng) -> bool {
         let Some((x, y, z)) = self.hidden_ground(rng) else {
             return false;
+        };
+        let natural = |b: Block| {
+            matches!(
+                b,
+                Block::Air | Block::Stone | Block::Dirt | Block::Grass | Block::Sand | Block::DeadGrass | Block::CoalOre | Block::GoldOre
+            )
         };
         for (dx, dz) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
             let rises = (2..5).any(|k| self.world.get(x + dx * k, y + 2, z + dz * k).solid());
@@ -556,16 +589,29 @@ impl DuckCraft {
                 continue;
             }
             let (sx, sz) = (dz.abs(), dx.abs()); // sideways
-            for k in 0..14 {
-                for (w, h) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
-                    let (cx, cy, cz) = (x + dx * k + sx * w, y + h, z + dz * k + sz * w);
-                    let block = self.world.get(cx, cy, cz);
-                    let keep = matches!(block, Block::Bedrock | Block::Water | Block::Chest | Block::Bed)
-                        || block.is_door()
-                        || DIRECTIONS.iter().any(|&(ax, ay, az)| self.world.get(cx + ax, cy + ay, cz + az) == Block::Water);
-                    if !keep && World::inside(cx, cy, cz) {
-                        self.world.set(cx, cy, cz, Block::Air);
-                    }
+            let cells = |k: i32| [(0, 0), (1, 0), (0, 1), (1, 1)].map(|(w, h)| (x + dx * k + sx * w, y + h, z + dz * k + sz * w));
+            // As far as the ground goes (up to 14), stopping before anything
+            // that isn't ground, or is wet.
+            let mut length = 0;
+            while length < 14 {
+                let fine = cells(length).iter().all(|&(cx, cy, cz)| {
+                    World::inside(cx, cy, cz)
+                        && natural(self.world.get(cx, cy, cz))
+                        && !DIRECTIONS.iter().any(|&(ax, ay, az)| self.world.get(cx + ax, cy + ay, cz + az) == Block::Water)
+                        && vec3(cx as f32 + 0.5, cy as f32, cz as f32 + 0.5).distance(self.position) > 8.0
+                });
+                if !fine {
+                    break;
+                }
+                length += 1;
+            }
+            let (ex, ey, ez) = cells(length.max(1) - 1)[0];
+            if length < 5 || !self.out_of_sight(vec3(ex as f32 + 0.5, ey as f32 + 1.0, ez as f32 + 0.5), 48.0) {
+                continue;
+            }
+            for k in 0..length {
+                for (cx, cy, cz) in cells(k) {
+                    self.world.set(cx, cy, cz, Block::Air);
                 }
             }
             return true;
@@ -643,7 +689,7 @@ impl DuckCraft {
         let seen: Vec<bool> = self.haunt.nothings.iter().map(|n| self.sees(n.position + vec3(0.0, 1.0, 0.0))).collect();
         let mut i = 0;
         self.haunt.nothings.retain(|n| {
-            let keep = !(unwanted && !seen[i]) && n.position.distance(duck) < 64.0;
+            let keep = !(unwanted && !seen[i]) && n.position.distance(duck) < 64.0 && n.stuck < 4.0;
             i += 1;
             keep
         });
@@ -654,9 +700,11 @@ impl DuckCraft {
                 let distance = ctx.rng.range(18.0, 26.0);
                 let x = (duck.x + angle.sin() * distance).floor() as i32;
                 let z = (duck.z + angle.cos() * distance).floor() as i32;
+                // On the ground near your level (not up on a roof, or a lump
+                // of the broken land it couldn't get down from).
                 if let Some(spot) = self.standing_spot(x, z) {
-                    if !self.sees(spot + vec3(0.0, 1.0, 0.0)) {
-                        self.haunt.nothings.push(Nothing { position: spot, yaw: 0.0, seen: false });
+                    if (spot.y - duck.y).abs() < 5.0 && !self.sees(spot + vec3(0.0, 1.0, 0.0)) {
+                        self.haunt.nothings.push(Nothing::new(spot));
                         break;
                     }
                 }
@@ -680,8 +728,13 @@ impl DuckCraft {
             let to = vec2(duck.x - at.x, duck.z - at.z);
             if !seen {
                 nothing.yaw = to.x.atan2(to.y);
-                if let Some(next) = nothing_step(&self.world, at, to, speed * dt) {
-                    nothing.position = next;
+                match nothing_step(&self.world, at, to, speed * dt) {
+                    Some(next) => {
+                        nothing.position = next;
+                        nothing.stuck = 0.0;
+                    }
+                    None if to.length() > 0.8 => nothing.stuck += dt,
+                    None => {}
                 }
             }
             let close = vec2(duck.x - nothing.position.x, duck.z - nothing.position.z).length();
@@ -704,12 +757,14 @@ impl DuckCraft {
         let night = self.night_of();
         let sky = self.sky();
         let moon = sky.sun * -1.0;
-        let up = night >= MOON_NIGHT && sky.daylight < 0.15 && moon.y > 0.05 && self.weather.grey() < 0.5;
+        let eye = self.eye();
+        let open = hunt::clear_line(&self.world, eye, eye + moon * 40.0);
+        let up = night >= MOON_NIGHT && sky.daylight < 0.15 && moon.y > 0.05 && self.sky_grey() < 0.5;
         if up && self.haunt.warned_night != night {
             self.haunt.warned_night = night;
             self.haunt.say("<???> dont look at the moon");
         }
-        let watching = up && self.haunt.moon_night != night;
+        let watching = up && open && self.haunt.moon_night != night;
         let looking = watching && self.look_direction().dot(moon) > 0.97;
         self.haunt.moon_stare = if looking {
             self.haunt.moon_stare + dt
@@ -724,6 +779,13 @@ impl DuckCraft {
             self.scare = 1.0;
             self.hurt(ctx, MOON_HURTS, "the moon");
         }
+    }
+
+    /// How grey the sky is: the weather's, or the fog of the land you're
+    /// in (as the sky is drawn; over 0.5 the moon and stars are hidden).
+    pub fn sky_grey(&self) -> f32 {
+        let (land, haze) = lands::haze(self.position.x, self.position.z, self.world.seed);
+        self.weather.grey().max(haze * (1.0 - land.sight()))
     }
 
     /// Which night it is (a night after midnight is still the night it
@@ -974,23 +1036,30 @@ fn dt_chance(dt: f32, mean: f32) -> f32 {
 }
 
 /// One step of a Nothing toward `to` (a flat direction): straight on, or
-/// round something, up a block or down a few. `None`: it can't.
+/// round something, up a block or down a few, never through anything:
+/// every cell between where it stands and where it lands is open, with
+/// room for its head. `None`: it can't.
 fn nothing_step(world: &World, at: Vec3, to: Vec2, length: f32) -> Option<Vec3> {
     if to.length() < 0.05 {
         return None;
     }
     let dir = to.normalized();
     let length = length.min(to.length());
+    let open = |x: i32, y: i32, z: i32| World::inside(x, y, z) && !world.get(x, y, z).solid();
+    let (hx, hz) = (at.x.floor() as i32, at.z.floor() as i32);
+    let feet = at.y.floor() as i32;
     for turn in [0.0, 0.6, -0.6, 1.2, -1.2] {
         let (s, c) = (f32::sin(turn), f32::cos(turn));
         let d = vec2(dir.x * c - dir.y * s, dir.x * s + dir.y * c);
         let next = vec2(at.x + d.x * length, at.z + d.y * length);
         let (cx, cz) = (next.x.floor() as i32, next.y.floor() as i32);
-        let feet = at.y.floor() as i32;
         for dy in [0, 1, -1, -2, -3] {
             let y = feet + dy;
-            let free = !world.get(cx, y, cz).solid() && !world.get(cx, y + 1, cz).solid();
-            if free && world.get(cx, y - 1, cz).solid() && World::inside(cx, y, cz) {
+            // From the lower of where it lands and where it stands, up to the
+            // higher one's head: all open (and room overhead to step up).
+            let column = (y.min(feet)..=y.max(feet) + 1).all(|cy| open(cx, cy, cz));
+            let headroom = dy <= 0 || open(hx, feet + 2, hz);
+            if column && headroom && world.get(cx, y - 1, cz).solid() {
                 return Some(vec3(next.x, y as f32, next.y));
             }
         }
