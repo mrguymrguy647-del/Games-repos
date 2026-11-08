@@ -2759,7 +2759,7 @@ impl DuckCraft {
                 Some(cube) => (
                     cube,
                     Transform::at(at)
-                        .rotated(spin_then_tip(std::f32::consts::FRAC_PI_4, 0.52))
+                        .rotated(spin_then_tip(std::f32::consts::FRAC_PI_4, 0.62))
                         .sized(11.0 * per_pixel),
                 ),
                 None => return,
@@ -2768,7 +2768,7 @@ impl DuckCraft {
                 Some(apple) => (
                     apple,
                     Transform::at(at)
-                        .rotated(spin_then_tip(-0.5, 0.35))
+                        .rotated(spin_then_tip(-0.5, 0.5))
                         .sized(13.0 * per_pixel),
                 ),
                 None => return,
@@ -2776,7 +2776,10 @@ impl DuckCraft {
             _ => match self.art.item_cards.get(&item) {
                 Some(model) => (
                     model,
-                    Transform::at(at).sized(15.0 * per_pixel),
+                    // Leaning back a little, face up towards you.
+                    Transform::at(at)
+                        .rotated(vec3(-0.2, 0.0, 0.0))
+                        .sized(15.0 * per_pixel),
                 ),
                 None => return,
             },
