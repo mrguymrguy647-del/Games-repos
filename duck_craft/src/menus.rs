@@ -151,10 +151,11 @@ impl DuckCraft {
     fn menu_input(ctx: &Context, selected: &mut usize, count: usize, top: f32) -> bool {
         let input = &ctx.input;
         let pressed = |keys: &[Key]| keys.iter().any(|&k| input.was_pressed(k));
-        if pressed(&[Key::W, Key::Up]) {
+        // Any way you'd think of moving through a list moves through it.
+        if pressed(&[Key::W, Key::Up, Key::A, Key::Left]) {
             *selected = (*selected + count - 1) % count;
         }
-        if pressed(&[Key::S, Key::Down]) {
+        if pressed(&[Key::S, Key::Down, Key::D, Key::Right, Key::Tab]) {
             *selected = (*selected + 1) % count;
         }
         let mut clicked = false;

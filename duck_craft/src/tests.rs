@@ -2498,3 +2498,170 @@ fn a_saved_bed_and_torch_come_back() {
     assert_eq!(loaded.world.plant(5, FLOOR, 5), Some(Plant::Torch));
     assert!(loaded.world.lamps.contains(&[5, FLOOR, 5]), "and it still lights");
 }
+
+// ---- The Hollows' wits ----
+
+/// The arena at night `night` (1, 2, ...), no Hollows coming up by
+/// themselves, with `hollow` the only one.
+fn night_arena(night: u32, change: impl FnOnce(&mut World), hollow: Hollow) -> DuckCraft {
+    let mut game = arena(change);
+    game.time = at_time_of_day(0.75) + (night - 1) as f32 * DAY_SECONDS;
+    game.last_time_of_day = game.time_of_day();
+    game.watcher_night = night; // no Watcher
+    game.spawn_wait = 1e9;
+    game.hollows = vec![hollow];
+    game
+}
+
+#[test]
+fn each_night_is_worse_than_the_last() {
+    for night in 1..8 {
+        assert!(night::max_hollows(night + 1) >= night::max_hollows(night));
+        assert!(night::spawn_seconds(night + 1) <= night::spawn_seconds(night));
+        assert!(night::chase_speed(night + 1) >= night::chase_speed(night));
+        assert!(night::hollow_damage(night + 1) >= night::hollow_damage(night));
+        assert!(night::watcher_distance(night + 1).0 <= night::watcher_distance(night).0);
+    }
+    assert!(night::max_hollows(6) > night::max_hollows(1));
+    assert!(night::chase_speed(6) > night::chase_speed(1));
+}
+
+#[test]
+fn a_hollow_finds_its_way_round_a_wall() {
+    // A wall three high across the arena, a gap at one end; the duck on
+    // the far side. Walking straight at it, a Hollow would stand at the
+    // wall all night.
+    let wall = |w: &mut World| {
+        for x in 1..15 {
+            for y in FLOOR..FLOOR + 3 {
+                if x != 13 {
+                    w.set(x, y, 11, Block::Stone);
+                }
+            }
+        }
+    };
+    let mut game = night_arena(1, wall, Hollow::new(vec3(4.5, FLOOR as f32, 6.5), 0.0));
+    game.position = vec3(4.5, FLOOR as f32, 14.5);
+    game.yaw = PI;
+    let played = PlayTest::new(config(), game).frames(900).run();
+    let game = played.game();
+    assert!(
+        game.vitals.health < 20,
+        "it came round through the gap and reached the duck (it's at {:?})",
+        game.hollows[0].position
+    );
+}
+
+#[test]
+fn hollows_wait_at_the_edge_of_torchlight() {
+    let mut game = night_arena(1, |_| {}, Hollow::new(vec3(8.5, FLOOR as f32, 1.5), 0.0));
+    game.world.put_torch(8, FLOOR, 10);
+    game.position = vec3(8.5, FLOOR as f32, 9.5);
+    let played = PlayTest::new(config(), game).frames(600).run();
+    let game = played.game();
+    assert_eq!(game.vitals.health, 20, "it never came into the light");
+    let torch = vec3(8.5, FLOOR as f32, 10.5);
+    let h = game.hollows[0].position;
+    let d = vec2(h.x - torch.x, h.z - torch.z).length();
+    assert!(d > night::LAMP_FEAR - 1.0, "it's out at the edge: {d}");
+    assert!(d < night::LAMP_FEAR + 4.0, "and it waits there, close: {d}");
+}
+
+#[test]
+fn a_crawler_climbs_a_wall_to_get_you() {
+    // The duck on a stone block four high; walkers can't get up.
+    let pillar = |w: &mut World| {
+        for y in FLOOR..FLOOR + 4 {
+            for (x, z) in [(8, 12), (9, 12), (8, 13), (9, 13)] {
+                w.set(x, y, z, Block::Stone);
+            }
+        }
+    };
+    let crawler = Hollow::of_kind(night::Kind::Crawler, vec3(8.5, FLOOR as f32, 6.5), 0.0);
+    let mut game = night_arena(2, pillar, crawler);
+    game.position = vec3(8.5, FLOOR as f32 + 4.0, 12.5);
+    let played = PlayTest::new(config(), game).frames(600).run();
+    let game = played.game();
+    assert!(game.vitals.health < 20, "it climbed up (it's at {:?})", game.hollows[0].position);
+}
+
+/// A shut room round the duck: stone walls, a stone roof, a door.
+fn room(w: &mut World) {
+    for x in 6..=10 {
+        for z in 6..=10 {
+            for y in FLOOR..FLOOR + 3 {
+                let edge = x == 6 || x == 10 || z == 6 || z == 10;
+                if edge {
+                    w.set(x, y, z, Block::Stone);
+                }
+            }
+            w.set(x, FLOOR + 3, z, Block::Stone);
+        }
+    }
+    w.set(8, FLOOR, 10, Block::DoorLow);
+    w.set(8, FLOOR + 1, 10, Block::DoorHigh);
+}
+
+#[test]
+fn on_later_nights_hollows_break_shut_doors() {
+    for (night, breaks) in [(1, false), (night::DOOR_BREAK_NIGHT, true)] {
+        let hollow = Hollow::new(vec3(8.5, FLOOR as f32, 13.5), PI);
+        let mut game = night_arena(night, room, hollow);
+        game.position = vec3(8.5, FLOOR as f32, 8.5);
+        let played = PlayTest::new(config(), game).frames(900).run();
+        let game = played.game();
+        let door = game.world.get(8, FLOOR, 10);
+        if breaks {
+            assert_eq!(door, Block::Air, "night {night}: the door was broken");
+            assert!(played.sound_frames("crash").len() == 1);
+        } else {
+            assert_eq!(door, Block::DoorLow, "night {night}: the door held");
+            assert!(!played.sound_frames("bang").is_empty(), "but they banged on it");
+        }
+    }
+}
+
+#[test]
+fn a_mimic_looks_like_a_duckling_until_you_are_close() {
+    let mimic = Hollow::of_kind(
+        night::Kind::Mimic { revealed: false },
+        vec3(8.5, FLOOR as f32, 14.5),
+        PI,
+    );
+    let mut game = night_arena(3, |_| {}, mimic);
+    game.position = vec3(8.5, FLOOR as f32, 8.5);
+    // It follows, like a duckling, and doesn't hurt you...
+    let played = PlayTest::new(config(), game).frames(240).run();
+    let mut game = played.game().clone();
+    assert_eq!(game.vitals.health, 20);
+    assert!(game.hollows[0].disguised() || game.hollows[0].kind == night::Kind::Mimic { revealed: true });
+    // ...until you walk up to it.
+    let at = game.hollows[0].position;
+    game.position = vec3(at.x, at.y, at.z - 2.0);
+    let played = PlayTest::new(config(), game).frames(300).run();
+    let game = played.game();
+    assert_eq!(game.hollows[0].kind, night::Kind::Mimic { revealed: true });
+    assert!(!played.sound_frames("sting").is_empty());
+    assert!(game.vitals.health < 20, "and then it does");
+}
+
+#[test]
+fn a_hollow_behind_a_wall_hears_you_dig() {
+    // A wall between them: it can't see the duck, and it's too far to smell.
+    let wall = |w: &mut World| {
+        for x in 1..15 {
+            for y in FLOOR..FLOOR + 4 {
+                w.set(x, y, 8, Block::Stone);
+            }
+        }
+    };
+    let mut game = night_arena(1, wall, Hollow::new(vec3(8.5, FLOOR as f32, 1.5), 0.0));
+    game.position = vec3(8.5, FLOOR as f32, 12.5);
+    game.yaw = 0.0;
+    game.pitch = -0.6; // at the floor ahead
+    let played = PlayTest::new(config(), game).frames(60).run();
+    let game = played.game().clone();
+    assert_eq!(game.hollows[0].knows, 0.0, "it doesn't know you're there");
+    let played = PlayTest::new(config(), game).script(&hold(&["X"], 90)).run();
+    assert!(played.game().hollows[0].knows > 0.0, "it heard the digging");
+}

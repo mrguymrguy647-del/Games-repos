@@ -1605,6 +1605,20 @@ struct DuckCraft {
     bed: Option<[i32; 3]>,
     /// Seconds of sleep left (the screen is dark; then it's morning).
     sleeping: f32,
+    /// The Hollows' maps of the way to the duck (walkers, crawlers).
+    walk_field: hunt::Field,
+    climb_field: hunt::Field,
+    /// Seconds till the maps are made again.
+    hunt_wait: f32,
+    /// Shut doors near the duck (the Hollows go to these when there's no
+    /// way in).
+    doors_near: Vec<[i32; 3]>,
+    /// Seconds each door has been banged on.
+    door_damage: std::collections::HashMap<[i32; 3], f32>,
+    /// Seconds the duck's last dig or build can still be heard.
+    noise: f32,
+    /// Digs and builds so far (a change makes noise).
+    last_acted: u32,
     mode: Mode,
     /// The island came from a save file (the title offers to carry on).
     has_save: bool,
@@ -1708,6 +1722,13 @@ impl DuckCraft {
             controls_open: false,
             bed: None,
             sleeping: 0.0,
+            walk_field: hunt::Field::new(false),
+            climb_field: hunt::Field::new(true),
+            hunt_wait: 0.0,
+            doors_near: Vec::new(),
+            door_damage: Default::default(),
+            noise: 0.0,
+            last_acted: 0,
             mode: Mode::Survival,
             has_save: false,
             music: None,
@@ -3089,6 +3110,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 mod ducklings;
 mod furniture;
 mod health;
+mod hunt;
 mod inventory;
 mod items;
 mod menus;

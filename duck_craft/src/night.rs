@@ -24,7 +24,70 @@ pub const HOLLOW: Body = Body {
 pub const HOLLOW_SIZE: f32 = 1.12; // the duck's model, 1.12 times as big
 pub const WATCHER_SIZE: f32 = 1.75;
 pub const HOLLOW_HEALTH: i32 = 12;
-pub const MAX_HOLLOWS: usize = 5;
+/// A crawler: low, quick, and it climbs walls.
+pub const CRAWLER: Body = Body {
+    half_width: 0.3,
+    height: 0.9,
+};
+/// A mimic while it looks like a duckling.
+pub const MIMIC: Body = Body {
+    half_width: 0.25,
+    height: 0.6,
+};
+/// It smells you this near, wall or no wall.
+const SMELLS: f32 = 6.0;
+/// It hears you dig or build this near.
+const HEARS: f32 = 16.0;
+/// Seconds it keeps after you, once it's lost you.
+const MEMORY: f32 = 8.0;
+/// Crawlers go up walls this fast.
+const CLIMB_SPEED: f32 = 2.6;
+/// From this night, Hollows break shut doors (before it, they only bang).
+pub const DOOR_BREAK_NIGHT: u32 = 4;
+/// Seconds of banging that break a door.
+pub const DOOR_SECONDS: f32 = 6.0;
+
+// Each night is worse than the one before.
+
+/// How many Hollows can be up at once, on night `night` (1, 2, ...).
+pub fn max_hollows(night: u32) -> usize {
+    (3 + night as usize).min(10)
+}
+
+/// Seconds between Hollows coming up.
+pub fn spawn_seconds(night: u32) -> f32 {
+    (3.4 - 0.3 * night as f32).max(1.2)
+}
+
+/// How fast a walker comes for you (5% faster a night, up to 40%).
+pub fn chase_speed(night: u32) -> f32 {
+    CHASE_SPEED * (1.0 + 0.05 * night.saturating_sub(1) as f32).min(1.4)
+}
+
+/// How hard a blow lands (one more every third night).
+pub fn hollow_damage(night: u32) -> u32 {
+    HOLLOW_DAMAGE + night.saturating_sub(1) / 3
+}
+
+/// How near the Watcher stands on night `night` (nearest and farthest):
+/// nearer every night.
+pub fn watcher_distance(night: u32) -> (f32, f32) {
+    let near = (24.0 - 3.0 * night.saturating_sub(1) as f32).max(8.0);
+    (near, near + 8.0)
+}
+
+/// Kinds of Hollow.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Kind {
+    /// The first kind: tall, slow, relentless.
+    Walker,
+    /// From the second night: low and quick, and up walls (`CRAWLER`).
+    Crawler,
+    /// From the third night: looks like a duckling, follows like one,
+    /// until you're close.
+    Mimic { revealed: bool },
+}
+
 const CHASE_SPEED: f32 = 2.9; // blocks a second: slower than you walk
 const WANDER_SPEED: f32 = 0.8;
 const SEES: f32 = 22.0; // how far off it notices you
@@ -32,8 +95,6 @@ const HIT_REACH: f32 = 1.3;
 pub const HOLLOW_DAMAGE: u32 = 2;
 const ATTACK_SECONDS: f32 = 1.1;
 const SPAWN_NEAR: f32 = 14.0;
-/// Seconds between tries at a Hollow coming up (one at a time, not a crowd).
-const SPAWN_SECONDS: f32 = 3.0;
 const SPAWN_FAR: f32 = 30.0;
 /// Hollows keep at least this far from a lamp.
 pub const LAMP_FEAR: f32 = 6.0;
@@ -70,16 +131,39 @@ pub struct Hollow {
     groan_wait: f32,
     wander: Option<f32>,
     wander_wait: f32,
+    pub kind: Kind,
+    /// Seconds it still knows where you are (it saw, heard or smelt you).
+    pub knows: f32,
+    /// It can see you right now (looked again every quarter second).
+    pub sees: bool,
+    look_wait: f32,
+    /// Seconds it's been trying to go somewhere and not getting there.
+    stuck: f32,
+    /// Going a different way for a moment, to get unstuck.
+    sidestep: Option<(Vec3, f32)>,
+    /// Going up a wall (crawlers).
+    climbing: bool,
 }
 
 impl Hollow {
     /// Its body, for bumping into things.
     pub fn body(&self) -> Body {
-        HOLLOW
+        match self.kind {
+            Kind::Walker => HOLLOW,
+            Kind::Crawler | Kind::Mimic { revealed: true } => CRAWLER,
+            Kind::Mimic { revealed: false } => MIMIC,
+        }
     }
 
+    /// A walker (for the tests: the game picks kinds as they come up).
+    #[cfg(test)]
     pub fn new(position: Vec3, yaw: f32) -> Hollow {
+        Hollow::of_kind(Kind::Walker, position, yaw)
+    }
+
+    pub fn of_kind(kind: Kind, position: Vec3, yaw: f32) -> Hollow {
         Hollow {
+
             position,
             velocity: Vec3::ZERO,
             yaw,
@@ -95,14 +179,38 @@ impl Hollow {
             groan_wait: 2.0 + yaw.abs(),
             wander: None,
             wander_wait: 0.0,
+            kind,
+            knows: 0.0,
+            sees: false,
+            look_wait: 0.0,
+            stuck: 0.0,
+            sidestep: None,
+            climbing: false,
         }
+        .with_health()
     }
 
+    fn with_health(mut self) -> Hollow {
+        self.health = match self.kind {
+            Kind::Walker => HOLLOW_HEALTH,
+            Kind::Crawler => 8,
+            Kind::Mimic { .. } => 6,
+        };
+        self
+    }
+
+    /// Whether it still looks like a duckling.
+    pub fn disguised(&self) -> bool {
+        self.kind == Kind::Mimic { revealed: false }
+    }
+
+
     pub fn bounds(&self) -> (Vec3, Vec3) {
-        let h = HOLLOW.half_width + 0.05;
+        let body = self.body();
+        let h = body.half_width + 0.05;
         (
             self.position - vec3(h, 0.0, h),
-            self.position + vec3(h, HOLLOW.height, h),
+            self.position + vec3(h, body.height, h),
         )
     }
 }
@@ -114,6 +222,8 @@ pub struct Watcher {
     /// Seconds it's been looked at (it goes at a fifth of a second).
     seen: f32,
     age: f32,
+    /// Come this near and it's gone (half as far as it stood).
+    pub near: f32,
 }
 
 impl Watcher {
@@ -123,6 +233,7 @@ impl Watcher {
             yaw,
             seen: 0.0,
             age: 0.0,
+            near: 14.0,
         }
     }
 }
@@ -130,6 +241,7 @@ impl Watcher {
 /// A blow landing on the duck: how hard, and from where.
 struct Blow {
     from: Vec3,
+    damage: u32,
 }
 
 impl DuckCraft {
@@ -195,7 +307,18 @@ impl DuckCraft {
             }
             let feet = vec3(x as f32 + 0.5, y as f32, z as f32 + 0.5);
             let facing = (self.position.x - feet.x).atan2(self.position.z - feet.z);
-            self.hollows.push(Hollow::new(feet, facing));
+            // Later nights bring other kinds (one mimic at a time).
+            let night = self.day_number();
+            let roll = ctx.rng.range(0.0, 1.0);
+            let mimic_up = self.hollows.iter().any(|h| matches!(h.kind, Kind::Mimic { .. }));
+            let kind = if night >= 3 && roll < 0.15 && !mimic_up {
+                Kind::Mimic { revealed: false }
+            } else if night >= 2 && roll < 0.4 {
+                Kind::Crawler
+            } else {
+                Kind::Walker
+            };
+            self.hollows.push(Hollow::of_kind(kind, feet, facing));
             return;
         }
     }
@@ -206,19 +329,44 @@ impl DuckCraft {
         let art = self.art.clone();
         let daylight = sky_at(self.time_of_day()).daylight;
 
+        let night = self.day_number();
         self.spawn_wait -= dt;
         if self.spawn_wait <= 0.0 {
-            self.spawn_wait = SPAWN_SECONDS;
-            if self.hollows.iter().filter(|h| h.fading.is_none()).count() < MAX_HOLLOWS {
+            self.spawn_wait = spawn_seconds(night);
+            if self.hollows.iter().filter(|h| h.fading.is_none()).count() < max_hollows(night) {
                 self.spawn_hollow(ctx);
             }
         }
-
         let hunting = self.mode == Mode::Survival && !self.vitals.fainted;
         let duck = self.position;
+        let duck_eye = self.eye();
         let yaw = self.yaw;
+        // Digging and building make noise.
+        let acted = self.dug + self.placed;
+        if acted != self.last_acted {
+            self.last_acted = acted;
+            self.noise = 2.0;
+        }
+        self.noise = (self.noise - dt).max(0.0);
+        let noisy = self.noise > 0.0;
+        // The maps of the way to the duck, a few times a second.
+        self.hunt_wait -= dt;
+        let up = self.hollows.iter().any(|h| h.fading.is_none());
+        if up && hunting && self.hunt_wait <= 0.0 {
+            self.hunt_wait = 0.4;
+            self.make_hunting_maps();
+        }
+        let speed_now = chase_speed(night);
+        let damage = hollow_damage(night);
+        let world = &self.world;
+        let walk_field = &self.walk_field;
+        let climb_field = &self.climb_field;
+        let doors = &self.doors_near;
         let mut blows = Vec::new();
-        for hollow in &mut self.hollows {
+        let mut banging = Vec::new();
+        let mut revealed = Vec::new();
+        for (i, hollow) in self.hollows.iter_mut().enumerate() {
+
             if let Some(t) = &mut hollow.fading {
                 *t += dt;
                 hollow.position.y -= dt * 0.4; // sinking as it goes
@@ -242,14 +390,114 @@ impl DuckCraft {
                 continue;
             }
 
-            // Where it wants to go.
+            // What it knows: it sees you (nothing in the way), hears you
+            // dig or build, or smells you close, wall or no wall. It keeps
+            // after you a while once it's lost you.
             let to_duck = vec3(duck.x - hollow.position.x, 0.0, duck.z - hollow.position.z);
             let distance = to_duck.length();
-            hollow.chasing = hunting && distance < SEES && (duck.y - hollow.position.y).abs() < 8.0;
-            let mut wish = if hollow.chasing && distance > 0.8 {
-                to_duck.normalized() * CHASE_SPEED
+            let body = hollow.body();
+            hollow.look_wait -= dt;
+            if hollow.look_wait <= 0.0 {
+                hollow.look_wait = 0.25;
+                let eye = hollow.position + vec3(0.0, body.height * 0.85, 0.0);
+                hollow.sees = distance < SEES && hunt::clear_line(world, eye, duck_eye);
+            }
+            let level = (duck.y - hollow.position.y).abs() < 10.0;
+            let senses = hunting
+                && level
+                && (hollow.sees || distance < SMELLS || (noisy && distance < HEARS));
+            hollow.knows = if senses {
+                MEMORY
+            } else if hunting {
+                (hollow.knows - dt).max(0.0)
+            } else {
+                0.0
+            };
+            // A mimic follows like a duckling would, a little way off,
+            // until you come close (or hit it).
+            if hollow.disguised() && hunting && (distance < 3.0 || hollow.hurt > 0.0) {
+                hollow.kind = Kind::Mimic { revealed: true };
+                hollow.knows = MEMORY;
+                revealed.push(hollow.position);
+            }
+            let body = hollow.body();
+            hollow.chasing = hollow.knows > 0.0 && !hollow.disguised();
+            let speed = match hollow.kind {
+                Kind::Walker => speed_now,
+                Kind::Crawler => speed_now * 1.25,
+                Kind::Mimic { revealed: true } => speed_now * 1.35,
+                Kind::Mimic { revealed: false } => WANDER_SPEED * 1.4,
+            };
+            let crawls = hollow.kind != Kind::Walker;
+            let field = if crawls { climb_field } else { walk_field };
+            let cell = [
+                hollow.position.x.floor() as i32,
+                (hollow.position.y + 0.05).floor() as i32,
+                hollow.position.z.floor() as i32,
+            ];
+            let next = field
+                .next_from(world, cell)
+                .or_else(|| field.next_from(world, [cell[0], cell[1] - 1, cell[2]]));
+            let mut climb = false;
+            let mut wish = if let Some((way, left)) = &mut hollow.sidestep {
+                *left -= dt;
+                *way * speed
+            } else if let (true, Some(next)) = (hollow.chasing && distance > 1.6, next) {
+                // The way round: to the next cell on the map.
+                climb = crawls && next[1] > cell[1];
+                let to = vec3(
+                    next[0] as f32 + 0.5 - hollow.position.x,
+                    0.0,
+                    next[2] as f32 + 0.5 - hollow.position.z,
+                );
+                let way = if to.length() > 0.05 {
+                    to.normalized()
+                } else {
+                    to_duck.normalized()
+                };
+                // Near you (not too near), they spread out, to come at you
+                // from the sides: the first straight on, the next two from
+                // either side.
+                let spread = if (2.5..6.0).contains(&distance) {
+                    let side = [0.0, 1.0, -1.0][i % 3];
+                    vec3(to_duck.z, 0.0, -to_duck.x).normalized() * side * 0.5
+                } else {
+                    Vec3::ZERO
+                };
+                (way + spread).normalized() * speed
+            } else if hollow.chasing && distance > 1.6 {
+                // No way round to you (a wall, a shut door, the light): to
+                // the nearest door near you, to bang on it; else straight
+                // at you.
+                let door = doors
+                    .iter()
+                    .min_by(|a, b| {
+                        let at = |c: &[i32; 3]| vec3(c[0] as f32, c[1] as f32, c[2] as f32);
+                        let da = at(a).distance(hollow.position);
+                        let db = at(b).distance(hollow.position);
+                        da.total_cmp(&db)
+                    })
+                    .copied();
+                match door {
+                    Some(door) => {
+                        let at = vec3(door[0] as f32 + 0.5, door[1] as f32, door[2] as f32 + 0.5);
+                        let to = vec3(at.x - hollow.position.x, 0.0, at.z - hollow.position.z);
+                        if to.length() < 1.5 {
+                            banging.push(door);
+                            Vec3::ZERO
+                        } else {
+                            to.normalized() * speed
+                        }
+                    }
+                    None => to_duck.normalized() * speed,
+                }
+            } else if hollow.chasing && distance > 0.8 {
+                to_duck.normalized() * speed
             } else if hollow.chasing {
                 Vec3::ZERO
+            } else if hollow.disguised() && hollow.knows > 0.0 && distance > 3.5 {
+                // Following you, like a duckling.
+                to_duck.normalized() * speed
             } else {
                 hollow.wander_wait -= dt;
                 if hollow.wander_wait <= 0.0 {
@@ -261,8 +509,11 @@ impl DuckCraft {
                     vec3(yaw.sin(), 0.0, yaw.cos()) * WANDER_SPEED
                 })
             };
-            // Lamps: it won't come nearer than LAMP_FEAR.
-            for &[lx, ly, lz] in &self.world.lamps {
+            if hollow.sidestep.is_some_and(|(_, left)| left <= 0.0) {
+                hollow.sidestep = None;
+            }
+            // Lamps and torches: it won't come nearer than LAMP_FEAR.
+            for &[lx, ly, lz] in &world.lamps {
                 let lamp = vec3(lx as f32 + 0.5, ly as f32, lz as f32 + 0.5);
                 let away = vec3(hollow.position.x - lamp.x, 0.0, hollow.position.z - lamp.z);
                 let d = away.length();
@@ -275,8 +526,7 @@ impl DuckCraft {
                     wish = push * CHASE_SPEED * 1.2;
                 }
             }
-
-            let grip = if hollow.on_ground || hollow.in_water {
+            let grip = if hollow.on_ground || hollow.in_water || hollow.climbing {
                 12.0
             } else {
                 6.0
@@ -290,28 +540,35 @@ impl DuckCraft {
                     - std::f32::consts::PI;
                 hollow.yaw += turn.clamp(-5.0 * dt, 5.0 * dt);
             }
-            if hollow.in_water {
+            if crawls && hollow.chasing && (hollow.climbing || climb) {
+                hollow.velocity.y = CLIMB_SPEED; // up the wall
+            } else if hollow.in_water {
                 hollow.velocity.y = approach(hollow.velocity.y, 1.0, 10.0 * dt);
             } else {
                 hollow.velocity.y = (hollow.velocity.y - GRAVITY * dt).max(-30.0);
             }
-            let world = &self.world;
             let mut position = hollow.position;
-            let blocked_x = HOLLOW.move_axis(world, &mut position, 0, hollow.velocity.x * dt);
-            let blocked_z = HOLLOW.move_axis(world, &mut position, 2, hollow.velocity.z * dt);
+            let before = position;
+            let blocked_x = body.move_axis(world, &mut position, 0, hollow.velocity.x * dt);
+            let blocked_z = body.move_axis(world, &mut position, 2, hollow.velocity.z * dt);
             let falling = hollow.velocity.y <= 0.0;
-            let landed = HOLLOW.move_axis(world, &mut position, 1, hollow.velocity.y * dt);
+            let landed = body.move_axis(world, &mut position, 1, hollow.velocity.y * dt);
             if landed {
                 hollow.velocity.y = 0.0;
             }
             hollow.on_ground = landed && falling;
+            // A crawler against a wall it wants to get past goes up it
+            // (until its head bumps something).
+            hollow.climbing =
+                crawls && hollow.chasing && (blocked_x || blocked_z) && !(landed && !falling);
             // Up a step, like the duck.
             if (blocked_x || blocked_z)
                 && wish.length() > 0.1
                 && (hollow.on_ground || hollow.in_water)
+                && !crawls
             {
                 let up = position + vec3(0.0, 1.05, 0.0);
-                if !HOLLOW.hits(world, up) && !HOLLOW.hits(world, up + wish.normalized() * 0.3) {
+                if !body.hits(world, up) && !body.hits(world, up + wish.normalized() * 0.3) {
                     hollow.velocity.y = JUMP_SPEED * 0.92;
                 } else if !hollow.chasing {
                     hollow.wander_wait = 0.0;
@@ -322,6 +579,22 @@ impl DuckCraft {
             }
             if blocked_z && hollow.on_ground {
                 hollow.velocity.z = 0.0;
+            }
+            // Stuck (wanting to go, going nowhere): a jump and a step aside.
+            let moved = vec2(position.x - before.x, position.z - before.z).length();
+            if hollow.chasing && wish.length() > 0.5 && moved < 0.2 * speed * dt {
+                hollow.stuck += dt;
+            } else {
+                hollow.stuck = (hollow.stuck - dt).max(0.0);
+            }
+            if hollow.stuck > 1.2 && hollow.sidestep.is_none() {
+                hollow.stuck = 0.0;
+                let side = if ctx.rng.range(0.0, 1.0) < 0.5 { 1.0 } else { -1.0 };
+                let across = vec3(wish.z, 0.0, -wish.x).normalized() * side;
+                hollow.sidestep = Some((across, 0.6));
+                if hollow.on_ground {
+                    hollow.velocity.y = JUMP_SPEED * 0.92;
+                }
             }
             hollow.position = position;
             hollow.in_water = world.get(
@@ -340,7 +613,11 @@ impl DuckCraft {
             {
                 hollow.attack_wait = ATTACK_SECONDS;
                 hollow.lunge = 0.35;
-                blows.push(Blow { from: position });
+                let damage = match hollow.kind {
+                    Kind::Crawler => damage.saturating_sub(1).max(1),
+                    _ => damage,
+                };
+                blows.push(Blow { from: position, damage });
             }
 
             // Now and then, a groan: near is loud, far is muffled.
@@ -379,12 +656,19 @@ impl DuckCraft {
         for blow in blows {
             self.take_blow(ctx, blow);
         }
+        for at in revealed {
+            // The duckling wasn't one.
+            ctx.play_wav_panned(&art.sounds.hollow_hurt, pan_toward(duck, yaw, at));
+            ctx.play_wav(&art.sounds.sting);
+            self.scare = self.scare.max(0.35);
+        }
+        self.bang_doors(ctx, &banging, night);
 
         for hollow in &self.hollows {
             if hollow.fading.is_none() {
                 ctx.check(
                     "hollows are never inside a block",
-                    !HOLLOW.hits(&self.world, hollow.position),
+                    !hollow.body().hits(&self.world, hollow.position),
                 );
             }
         }
@@ -410,7 +694,7 @@ impl DuckCraft {
             vec3(0.0, 0.0, 1.0)
         };
         self.velocity = self.velocity + push * 6.0 + vec3(0.0, 4.5, 0.0);
-        self.hurt(ctx, HOLLOW_DAMAGE, "was caught by a Hollow");
+        self.hurt(ctx, blow.damage, "was caught by a Hollow");
     }
 
     /// Grey crumbs where a Hollow came apart.
@@ -528,7 +812,9 @@ impl DuckCraft {
         if self.watcher.is_none() && daylight < 0.05 && self.watcher_night != night {
             self.watcher_night = night;
             // Whether it comes is fixed for each night of each island.
-            if random01(night as i32, 0, 0, self.world.seed.wrapping_add(40)) < WATCHER_CHANCE {
+            // From the second night it always comes.
+            let roll = random01(night as i32, 0, 0, self.world.seed.wrapping_add(40));
+            if night >= 2 || roll < WATCHER_CHANCE {
                 self.place_watcher(ctx);
             }
         }
@@ -546,7 +832,7 @@ impl DuckCraft {
         } else {
             (watcher.seen - dt).max(0.0)
         };
-        let close = vec2(to.x, to.z).length() < 14.0;
+        let close = vec2(to.x, to.z).length() < watcher.near;
         let gone = watcher.seen > 0.2 || close || watcher.age > 120.0 || daylight > 0.2;
         if gone {
             if daylight <= 0.2 {
@@ -568,7 +854,8 @@ impl DuckCraft {
                 1.0
             };
             let angle = self.yaw + side * ctx.rng.range(0.45, 0.85);
-            let distance = ctx.rng.range(24.0, 32.0);
+            let (nearest, farthest) = watcher_distance(self.day_number());
+            let distance = ctx.rng.range(nearest, farthest);
             let x = (self.position.x + angle.sin() * distance).floor() as i32;
             let z = (self.position.z + angle.cos() * distance).floor() as i32;
             if !World::inside(x, 0, z) {
@@ -583,8 +870,91 @@ impl DuckCraft {
             }
             let position = vec3(x as f32 + 0.5, top as f32 + 1.0, z as f32 + 0.5);
             let yaw = (self.position.x - position.x).atan2(self.position.z - position.z);
-            self.watcher = Some(Watcher::new(position, yaw));
+            let mut watcher = Watcher::new(position, yaw);
+            watcher.near = (distance * 0.5).max(4.0);
+            self.watcher = Some(watcher);
             return;
+        }
+    }
+
+    /// The maps of the way to the duck (see `hunt.rs`): lit places left
+    /// out, so the Hollows wait at the edge of the light. And the shut
+    /// doors near the duck, where Hollows with no way in go to bang.
+    pub fn make_hunting_maps(&mut self) {
+        let goal = [
+            self.position.x.floor() as i32,
+            (self.position.y + 0.05).floor() as i32,
+            self.position.z.floor() as i32,
+        ];
+        let lamps = self.world.lamps.clone();
+        let avoid = |x: i32, y: i32, z: i32| {
+            lamps.iter().any(|&[lx, ly, lz]| {
+                let (dx, dz) = ((x - lx) as f32, (z - lz) as f32);
+                dx * dx + dz * dz < LAMP_FEAR * LAMP_FEAR && (y - ly).abs() < 6
+            })
+        };
+        self.walk_field.build(&self.world, goal, &avoid);
+        if self.hollows.iter().any(|h| h.kind != Kind::Walker && h.fading.is_none()) {
+            self.climb_field.build(&self.world, goal, &avoid);
+        }
+        self.doors_near.clear();
+        for y in goal[1] - 3..=goal[1] + 3 {
+            for z in goal[2] - 10..=goal[2] + 10 {
+                for x in goal[0] - 10..=goal[0] + 10 {
+                    if self.world.get(x, y, z) == Block::DoorLow {
+                        self.doors_near.push([x, y, z]);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Hollows at a shut door bang on it (more of them, faster); from
+    /// `DOOR_BREAK_NIGHT` on, enough banging breaks it.
+    fn bang_doors(&mut self, ctx: &mut Context, banging: &[[i32; 3]], night: u32) {
+        let dt = ctx.dt();
+        for &door in banging {
+            let [x, y, z] = door;
+            if self.world.get(x, y, z) != Block::DoorLow {
+                continue;
+            }
+            let hit = self.door_damage.entry(door).or_insert(0.0);
+            let before = *hit;
+            *hit += dt;
+            let total = *hit;
+            let at = vec3(x as f32 + 0.5, y as f32 + 1.0, z as f32 + 0.5);
+            if (before / 0.7).floor() != (total / 0.7).floor() {
+                ctx.play(Sound {
+                    name: "bang",
+                    wave: Wave::Noise,
+                    freq: 140.0,
+                    slide_to: 60.0,
+                    ms: 110.0,
+                    volume: (0.5 - at.distance(self.position) / 40.0).clamp(0.05, 0.4),
+                    decay: 90.0,
+                    ..Default::default()
+                });
+            }
+            if night >= DOOR_BREAK_NIGHT && total >= DOOR_SECONDS {
+                self.world.set(x, y, z, Block::Air);
+                if self.world.get(x, y + 1, z).is_door() {
+                    self.world.set(x, y + 1, z, Block::Air);
+                }
+                self.door_damage.remove(&door);
+                self.update_chunks();
+                self.say("Something broke the door");
+                ctx.play(Sound {
+                    name: "crash",
+                    wave: Wave::Noise,
+                    freq: 300.0,
+                    slide_to: 80.0,
+                    ms: 400.0,
+                    volume: 0.45,
+                    decay: 350.0,
+                    ..Default::default()
+                });
+                self.ash_cloud(ctx, at);
+            }
         }
     }
 
@@ -617,7 +987,38 @@ impl DuckCraft {
                     0.15
                 },
             };
-            for (mesh, place) in art.hollow.parts_sized(hollow.position, pose, HOLLOW_SIZE) {
+            // A mimic still looks like a duckling: almost. Its head hangs a
+            // little and it twitches.
+            if hollow.disguised() {
+                let pose = ducklings::DucklingPose {
+                    yaw: hollow.yaw,
+                    swing: (hollow.stride * 9.0).sin() * 0.5,
+                    roll: (self.time * 7.0 + i as f32).sin() * 0.07,
+                    nod: 0.45,
+                    swimming: false,
+                };
+                art.duckling.draw(canvas, camera, hollow.position, pose);
+                continue;
+            }
+            let (size, pose, shade) = match hollow.kind {
+                // Low, head down, darker.
+                Kind::Crawler => (
+                    0.55,
+                    Pose {
+                        pitch: 0.6,
+                        lift: 0.7 + hollow.lunge * 1.5,
+                        ..pose
+                    },
+                    Some(Color::rgb(120, 110, 128)),
+                ),
+                Kind::Mimic { .. } => (0.72, pose, Some(Color::rgb(150, 136, 120))),
+                Kind::Walker => (HOLLOW_SIZE, pose, None),
+            };
+            for (mesh, place) in art.hollow.parts_sized(hollow.position, pose, size) {
+                if let (Some(shade), true) = (shade, hollow.hurt <= 0.0 && fade == 0.0) {
+                    canvas.draw_mesh_tinted(mesh, &place, camera, shade);
+                    continue;
+                }
                 if hollow.hurt > 0.0 {
                     canvas.draw_mesh_tinted(mesh, &place, camera, Color::rgba(255, 60, 50, 255));
                 } else if fade > 0.0 {
@@ -639,7 +1040,7 @@ impl DuckCraft {
             // (Labels only while playing: a menu over the world has its own.)
             if let (Stage::Playing, Some(rect)) = (
                 &self.stage,
-                screen_box(camera, canvas, hollow.position, 0.7, HOLLOW.height),
+                screen_box(camera, canvas, hollow.position, 0.7, hollow.body().height),
             ) {
                 canvas.label("hollow", rect);
             }
