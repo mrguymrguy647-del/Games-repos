@@ -2290,13 +2290,20 @@ fn the_pause_menu_shows_the_controls() {
 }
 
 #[test]
-fn items_in_slots_spin_about_up_then_tip_towards_you() {
-    for (spin, tip) in [(0.0, 0.5), (0.7, 0.52), (2.4, 0.3), (4.0, 0.12), (5.9, 0.5)] {
-        let turn = Transform::default().rotated(spin_then_tip(spin, tip));
-        for p in [vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.3, -0.2, 0.9)] {
-            let want = p.rotate_y(spin).rotate_x(tip);
-            assert!((turn.apply(p) - want).length() < 1e-4, "spin {spin}, tip {tip}");
+fn items_in_slots_look_straight_at_you() {
+    // Wherever a slot is on the screen, the thing in it faces the viewer
+    // head-on: its back (+z) points straight away, so no top shows.
+    for at in [vec3(0.0, -3.0, 5.0), vec3(2.0, -3.2, 5.0), vec3(-2.5, 1.0, 5.0), vec3(0.0, 0.0, 5.0)] {
+        for spin in [0.0, -0.5, std::f32::consts::FRAC_PI_4] {
+            let turn = Transform::default().rotated(facing_you(at, spin));
+            let up = turn.apply(vec3(0.0, 1.0, 0.0));
+            // Up stays at right angles to the line of sight: no top or
+            // bottom faces you.
+            assert!(up.dot(at.normalized()).abs() < 1e-4, "at {at:?}, spin {spin}");
         }
+        let turn = Transform::default().rotated(facing_you(at, 0.0));
+        let back = turn.apply(vec3(0.0, 0.0, 1.0));
+        assert!((back - at.normalized()).length() < 1e-4, "faces the viewer at {at:?}");
     }
 }
 

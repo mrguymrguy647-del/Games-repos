@@ -1005,16 +1005,22 @@ fn apple_model() -> Mesh {
     mesh
 }
 
-/// Spin `spin` about the up axis, then tip the top `tip` towards the
-/// viewer, as the angles `Transform::rotated` takes (it turns about x,
-/// then y, then z, so the two can't simply be given in that order).
-fn spin_then_tip(spin: f32, tip: f32) -> Vec3 {
-    let (ss, cs) = spin.sin_cos();
-    let (st, ct) = tip.sin_cos();
+/// The angles (for `Transform::rotated`, which turns about x, then y,
+/// then z) that turn a thing `spin` about its up axis and then face it
+/// straight at a viewer at the middle of the view, from where it is
+/// (`at`, in view space): so a thing low on the screen is looked at
+/// head-on, not from above.
+fn facing_you(at: Vec3, spin: f32) -> Vec3 {
+    let pitch = at.y.atan2((at.x * at.x + at.z * at.z).sqrt());
+    let yaw = at.x.atan2(at.z);
+    let turn = |p: Vec3| p.rotate_y(spin).rotate_x(pitch).rotate_y(yaw);
+    // Read the angles off where the three axes end up.
+    let (x, y) = (turn(vec3(1.0, 0.0, 0.0)), turn(vec3(0.0, 1.0, 0.0)));
+    let z = turn(vec3(0.0, 0.0, 1.0));
     vec3(
-        st.atan2(ct * cs),
-        (ct * ss).clamp(-1.0, 1.0).asin(),
-        (-st * ss).atan2(cs),
+        (-y.z).atan2(z.z),
+        (-x.z).clamp(-1.0, 1.0).asin(),
+        x.y.atan2(x.x),
     )
 }
 
@@ -2729,9 +2735,9 @@ impl DuckCraft {
     }
 
     /// `item` in 3D, centred on the screen point `center`, about 15 pixels
-    /// across, still and facing you: blocks as cubes turned to show a
-    /// corner, seen a little from above (as Minecraft's inventory shows
-    /// them), the apple round, other things as solid pictures face on.
+    /// across, still and looking straight at you (never from above, even
+    /// at the bottom of the screen): blocks as cubes turned to show a
+    /// corner, the apple round, other things as solid pictures face on.
     /// Except the bread: a flat photo.
     fn draw_item_model(&self, canvas: &mut Canvas, item: Item, center: Vec2) {
         if item == Item::Bread {
@@ -2759,7 +2765,7 @@ impl DuckCraft {
                 Some(cube) => (
                     cube,
                     Transform::at(at)
-                        .rotated(spin_then_tip(std::f32::consts::FRAC_PI_4, 0.62))
+                        .rotated(facing_you(at, std::f32::consts::FRAC_PI_4))
                         .sized(11.0 * per_pixel),
                 ),
                 None => return,
@@ -2768,7 +2774,7 @@ impl DuckCraft {
                 Some(apple) => (
                     apple,
                     Transform::at(at)
-                        .rotated(spin_then_tip(-0.5, 0.5))
+                        .rotated(facing_you(at, -0.5))
                         .sized(13.0 * per_pixel),
                 ),
                 None => return,
@@ -2776,9 +2782,8 @@ impl DuckCraft {
             _ => match self.art.item_cards.get(&item) {
                 Some(model) => (
                     model,
-                    // Leaning back a little, face up towards you.
                     Transform::at(at)
-                        .rotated(vec3(-0.2, 0.0, 0.0))
+                        .rotated(facing_you(at, 0.0))
                         .sized(15.0 * per_pixel),
                 ),
                 None => return,
