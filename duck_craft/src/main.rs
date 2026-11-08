@@ -132,9 +132,19 @@ enum Block {
     Water,
     Bedrock,
     Lamp,
+    /// A door's two halves, shut (solid) and open (an empty frame you can
+    /// walk through). Placed and taken as one `Item::Door`.
+    DoorLow,
+    DoorHigh,
+    DoorLowOpen,
+    DoorHighOpen,
+    /// Sleep through the night in it, and wake up by it.
+    Bed,
+    /// Holds 27 stacks (`World::chests`).
+    Chest,
 }
 
-const BLOCK_KINDS: usize = 16;
+const BLOCK_KINDS: usize = 22;
 
 impl Block {
     const ALL: [Block; BLOCK_KINDS] = [
@@ -154,11 +164,45 @@ impl Block {
         Block::Water,
         Block::Bedrock,
         Block::Lamp,
+        Block::DoorLow,
+        Block::DoorHigh,
+        Block::DoorLowOpen,
+        Block::DoorHighOpen,
+        Block::Bed,
+        Block::Chest,
     ];
 
     /// You bump into it, stand on it, and can dig it.
     fn solid(self) -> bool {
-        !matches!(self, Block::Air | Block::Water)
+        !matches!(
+            self,
+            Block::Air | Block::Water | Block::DoorLowOpen | Block::DoorHighOpen
+        )
+    }
+
+    /// A door's half, shut or open.
+    fn is_door(self) -> bool {
+        matches!(
+            self,
+            Block::DoorLow | Block::DoorHigh | Block::DoorLowOpen | Block::DoorHighOpen
+        )
+    }
+
+    /// The same door half, the other way: shut if open, open if shut.
+    fn door_swung(self) -> Block {
+        match self {
+            Block::DoorLow => Block::DoorLowOpen,
+            Block::DoorHigh => Block::DoorHighOpen,
+            Block::DoorLowOpen => Block::DoorLow,
+            Block::DoorHighOpen => Block::DoorHigh,
+            other => other,
+        }
+    }
+
+    /// A thing you can carry as itself (not a door's half: a door is one
+    /// `Item::Door`).
+    fn carried(self) -> bool {
+        self != Block::Air && !self.is_door()
     }
 
     /// It hides the faces of blocks next to it (glass and leaves don't).
@@ -185,6 +229,12 @@ impl Block {
             Block::Water => ["water"; 3],
             Block::Bedrock => ["bedrock"; 3],
             Block::Lamp => ["lamp"; 3],
+            Block::DoorLow => ["planks", "door_low", "planks"],
+            Block::DoorHigh => ["planks", "door_high", "planks"],
+            Block::DoorLowOpen => ["door_open_low"; 3],
+            Block::DoorHighOpen => ["door_open_high"; 3],
+            Block::Bed => ["bed_top", "bed_side", "planks"],
+            Block::Chest => ["chest_top", "chest_side", "chest_top"],
         })
     }
 
@@ -199,6 +249,9 @@ impl Block {
             Block::Stone | Block::Cobblestone | Block::Brick => 1.0,
             Block::CoalOre => 1.2,
             Block::GoldOre => 1.5,
+            Block::Bed => 0.4,
+            Block::DoorLow | Block::DoorHigh | Block::DoorLowOpen | Block::DoorHighOpen => 0.6,
+            Block::Chest => 0.8,
         })
     }
 
@@ -208,6 +261,7 @@ impl Block {
             Block::Grass => Some(Block::Dirt),
             Block::Stone => Some(Block::Cobblestone),
             Block::CoalOre | Block::GoldOre | Block::Air | Block::Water | Block::Bedrock => None,
+            door if door.is_door() => None, // a whole door comes back instead
             other => Some(other),
         }
     }
@@ -230,6 +284,13 @@ impl Block {
             Block::Water => "Water",
             Block::Bedrock => "Bedrock",
             Block::Lamp => "Lamp",
+            // (Each kind needs its own name, for the palette.)
+            Block::DoorLow => "Door",
+            Block::DoorHigh => "Door (top)",
+            Block::DoorLowOpen => "Open door",
+            Block::DoorHighOpen => "Open door (top)",
+            Block::Bed => "Bed",
+            Block::Chest => "Chest",
         }
     }
 }
@@ -322,6 +383,8 @@ struct World {
     plants: std::collections::HashMap<[i32; 3], Plant>,
     /// A plant came or went: the plants' mesh needs building again.
     plants_changed: bool,
+    /// What each chest holds, by its cell (`furniture::CHEST_SLOTS` each).
+    chests: std::collections::HashMap<[i32; 3], Vec<Option<Stack>>>,
     /// The number the island grew from (the same number grows the same island).
     seed: u32,
     /// Where the duck starts: its feet, and which way it looks.
@@ -348,27 +411,30 @@ impl World {
             return;
         }
         if self.get(x, y, z) == Block::Lamp || block == Block::Lamp {
-            // A lamp came or went: the faces it lights change, in every
-            // chunk it reaches.
+            // A lamp came or went: the faces it lights change.
             self.lamps.retain(|&lamp| lamp != [x, y, z]);
             if block == Block::Lamp {
                 self.lamps.push([x, y, z]);
             }
-            let reach = LAMP_REACH.ceil() as i32;
-            for (dx, dz) in [
-                (-reach, -reach),
-                (-reach, reach),
-                (reach, -reach),
-                (reach, reach),
-            ] {
-                self.grid.mark_changed(x + dx, z + dz);
-            }
+            self.light_changed(x, z);
+        }
+        if self.get(x, y, z) == Block::Chest && block != Block::Chest {
+            self.chests.remove(&[x, y, z]); // (only ever emptied ones)
         }
         self.grid.set(x, y, z, block as BlockId);
         self.update_sky(x, z);
         self.plants_after_set(x, y, z, block);
         self.unsettled.push([x, y, z]);
         self.unsettled.push([x, y + 1, z]);
+    }
+
+    /// A light (lamp or torch) came or went at column (x, z): every chunk
+    /// it reaches is shaded again.
+    fn light_changed(&mut self, x: i32, z: i32) {
+        let reach = LAMP_REACH.ceil() as i32;
+        for (dx, dz) in [(-reach, -reach), (-reach, reach), (reach, -reach), (reach, reach)] {
+            self.grid.mark_changed(x + dx, z + dz);
+        }
     }
 
     /// Builds again the chunks that changed, shading each face by the light
@@ -422,6 +488,7 @@ impl World {
         let mut world = World {
             grid: BlockWorld::with_chunk_size(SIZE, TALL, SIZE, CHUNK),
             lamps: Vec::new(),
+            chests: Default::default(),
             unsettled: Vec::new(),
             sky: vec![0; SIZE * SIZE],
             plants: std::collections::HashMap::new(),
@@ -750,6 +817,7 @@ impl Art {
                     let kind = BlockKind::new(block.name(), tiles);
                     kinds.push(match block {
                         Block::Water | Block::Glass => kind.see_through(),
+                        Block::DoorLowOpen | Block::DoorHighOpen => kind.see_through(),
                         Block::Leaves => kind.inner_faces(),
                         Block::Lamp => kind.glowing(),
                         _ => kind,
@@ -776,6 +844,8 @@ impl Art {
             Item::Seeds,
             Item::Bread,
             Item::Blade,
+            Item::Torch,
+            Item::Door,
         ];
         let bread = photo_card(Sprite::load_png(format!("{ASSETS}/bread_photo.png"))?);
         let item_cards = others
@@ -1531,6 +1601,10 @@ struct DuckCraft {
     stage: Stage,
     /// The pause menu's page of controls is showing.
     controls_open: bool,
+    /// Where the duck's bed is: it wakes there (if it's still a bed).
+    bed: Option<[i32; 3]>,
+    /// Seconds of sleep left (the screen is dark; then it's morning).
+    sleeping: f32,
     mode: Mode,
     /// The island came from a save file (the title offers to carry on).
     has_save: bool,
@@ -1632,6 +1706,8 @@ impl DuckCraft {
             vitals: health::Vitals::default(),
             stage: Stage::Playing,
             controls_open: false,
+            bed: None,
+            sleeping: 0.0,
             mode: Mode::Survival,
             has_save: false,
             music: None,
@@ -1979,6 +2055,9 @@ impl DuckCraft {
             if plant == Plant::TallGrass && ctx.rng.range(0.0, 1.0) < plants::SEED_CHANCE {
                 self.give(Item::Seeds, 1);
             }
+            if plant == Plant::Torch && self.mode == Mode::Survival {
+                self.give(Item::Torch, 1);
+            }
             ctx.play(Sound {
                 name: "snip",
                 wave: Wave::Noise,
@@ -1994,6 +2073,14 @@ impl DuckCraft {
         if self.digging != Some(hit.cell) {
             self.digging = Some(hit.cell);
             self.dig_seconds = 0.0;
+        }
+        if hit.block == Block::Chest && self.chest_has_things(hit.cell) {
+            if ctx.input.was_mouse_pressed(MouseButton::Left) || ctx.input.was_pressed(Key::X) {
+                self.say("Empty the chest first");
+            }
+            self.digging = None;
+            self.dig_seconds = 0.0;
+            return;
         }
         let Some(needed) = hit.block.dig_time() else {
             if (left && ctx.input.was_mouse_pressed(MouseButton::Left))
@@ -2030,7 +2117,11 @@ impl DuckCraft {
 
         // Broken.
         let [x, y, z] = hit.cell;
-        self.world.set(x, y, z, Block::Air);
+        if hit.block.is_door() {
+            self.break_door(x, y, z); // both halves, one door back
+        } else {
+            self.world.set(x, y, z, Block::Air);
+        }
         // Water next to the hole flows in (one block of it).
         let wet = DIRECTIONS
             .iter()
@@ -2112,6 +2203,16 @@ impl DuckCraft {
         let Some(hit) = self.target else {
             return;
         };
+        // Right click on a door, bed or chest uses it.
+        if pressed && hit.plant.is_none() && self.use_block(hit, ctx) {
+            self.place_wait = PLACE_REPEAT;
+            return;
+        }
+        if let Some(item) = self.holding().map(|s| s.item)
+            && self.place_special(item, hit, pressed, ctx)
+        {
+            return;
+        }
         let Some(block) = self.holding_block() else {
             return; // nothing to build with in this hand (food is eaten)
         };
@@ -2272,6 +2373,11 @@ impl Game for DuckCraft {
             self.behind_view = !self.behind_view;
         }
         self.day_and_night(ctx);
+        if self.sleeping > 0.0 {
+            self.update_sleep(ctx);
+            self.update_chunks();
+            return;
+        }
 
         let was_on_ground = self.on_ground;
         self.walk(ctx);
@@ -2622,6 +2728,7 @@ impl Game for DuckCraft {
                 Color::rgba(255, 255, 255, alpha),
             );
         }
+        self.draw_sleep(canvas);
         self.draw_pause(canvas);
     }
 }
@@ -2980,6 +3087,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 // Play tests: `cargo test -p duck_craft`. The bot that records
 // playthroughs/duck_craft.json: `cargo test -p duck_craft -- --ignored`.
 mod ducklings;
+mod furniture;
 mod health;
 mod inventory;
 mod items;

@@ -38,6 +38,9 @@ PALETTE = {
     "petal_white": "#F4F0E8", "apple": "#D8322C", "apple_dark": "#A01E1E",
     "seed": "#D8B868", "seed_dark": "#9A7838", "crust": "#B86E2C",
     "crumb": "#F0D490", "gold_dark": "#B88A10",
+    "flame": "#FF8A24", "flame_core": "#FFF2A8", "door": "#7E5630", "door_dark": "#4E321A",
+    "blanket": "#8E1C20", "blanket_dark": "#5E1014", "pillow": "#E4DECE",
+    "chest": "#6E4A24", "chest_dark": "#3E2810", "iron": "#8C8C94",
 }
 
 # One letter per palette colour, for the pixel rows.
@@ -470,6 +473,131 @@ TILES = [
 ]
 for i, stage in enumerate(cracks()):
     TILES.append((f"crack_{i + 1}", stage))
+
+
+# ---- Furniture (added after everything else, so the tiles above keep
+# their random speckles) ----
+
+def torch():
+    """A stick with a flame, for a torch drawn as two crossed pictures."""
+    return picture([
+        "................",
+        "................",
+        "......o.........",
+        ".......o........",
+        "......ooo.......",
+        ".....oyyo.......",
+        ".....oyyoo......",
+        "......oo........",
+        "......bB........",
+        "......bB........",
+        "......bB........",
+        "......bB........",
+        "......bB........",
+        "......bB........",
+        "......bB........",
+        "......bB........",
+    ], {"o": "flame", "y": "flame_core", "b": "bark", "B": "bark_dark"})
+
+
+def door(high):
+    """A plank door: dark rails round it, a window up top, a handle below."""
+    grid = noise("door", [("plank", 0.1)])
+    for i in range(N):
+        for (x, y) in [(i, 0), (i, N - 1), (0, i), (1, i), (N - 1, i), (N - 2, i)]:
+            grid[y][x] = "door_dark"
+    for y in range(N):
+        grid[y][7] = "door_dark"  # two boards
+    if high:
+        for y in range(3, 9):
+            for x in range(4, 12):
+                grid[y][x] = "glass_dark" if y in (3, 8) or x in (4, 11) else "coal"
+    else:
+        grid[4][12] = grid[5][12] = "iron"
+        grid[N - 1 - 4][3:13] = ["door_dark"] * 10
+    return grid
+
+
+def door_open(high):
+    """An open door, seen as its empty frame: posts at the sides, a lintel."""
+    grid = blank()
+    for y in range(N):
+        for x in (0, 1, N - 2, N - 1):
+            grid[y][x] = "door_dark" if x in (0, N - 1) else "door"
+    if high:
+        for x in range(N):
+            grid[0][x] = grid[1][x] = "door_dark"
+    return grid
+
+
+def bed_top():
+    grid = noise("blanket", [("blanket_dark", 0.12)])
+    for y in range(0, 5):
+        for x in range(2, 14):
+            grid[y][x] = "pillow"
+    for i in range(N):
+        grid[i][0] = grid[i][N - 1] = "plank_dark"
+    return grid
+
+
+def bed_side():
+    grid = noise("blanket", [("blanket_dark", 0.15)])
+    for y in range(8, N):
+        for x in range(N):
+            grid[y][x] = "plank" if y < 13 else "plank_dark"
+    for x in range(N):
+        grid[7][x] = "blanket_dark"
+    return grid
+
+
+def chest(front):
+    grid = noise("chest", [("plank_dark", 0.1)])
+    for i in range(N):
+        for (x, y) in [(i, 0), (i, N - 1), (0, i), (N - 1, i)]:
+            grid[y][x] = "chest_dark"
+    if front:
+        for x in range(N):
+            grid[5][x] = "chest_dark"
+        for y in range(4, 8):
+            for x in range(6, 10):
+                grid[y][x] = "iron"
+        grid[6][7] = grid[6][8] = "coal"
+    return grid
+
+
+def door_item():
+    return picture([
+        "................",
+        "....dddddddd....",
+        "....dwwwwwwd....",
+        "....dwkkkkwd....",
+        "....dwkkkkwd....",
+        "....dwwwwwwd....",
+        "....dwwdwwwd....",
+        "....dwwdwwwd....",
+        "....dwwdwwid....",
+        "....dwwdwwid....",
+        "....dwwdwwwd....",
+        "....dwwdwwwd....",
+        "....dwwdwwwd....",
+        "....dwwdwwwd....",
+        "....dddddddd....",
+        "................",
+    ], {"d": "door_dark", "w": "door", "k": "coal", "i": "iron"})
+
+
+TILES += [
+    ("torch", torch()),
+    ("door_low", door(False)),
+    ("door_high", door(True)),
+    ("door_open_low", door_open(False)),
+    ("door_open_high", door_open(True)),
+    ("bed_top", bed_top()),
+    ("bed_side", bed_side()),
+    ("chest_top", chest(False)),
+    ("chest_side", chest(True)),
+    ("door_item", door_item()),
+]
 
 
 def rows(grid):

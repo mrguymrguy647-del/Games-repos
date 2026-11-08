@@ -23,6 +23,11 @@ pub enum Item {
     Bread,
     /// Knapped stone on a stick: hits harder than wings. One to a slot.
     Blade,
+    /// Light you can stand anywhere there's something under it: the
+    /// Hollows keep back from it, like a lamp's (`Plant::Torch`).
+    Torch,
+    /// Puts a door's two halves down; right click opens and shuts it.
+    Door,
 }
 
 /// How many fit in one slot, for most things (see `Item::max_stack`).
@@ -41,6 +46,8 @@ impl Item {
             Item::Seeds => "Seeds",
             Item::Bread => "Bread",
             Item::Blade => "Stone blade",
+            Item::Torch => "Torch",
+            Item::Door => "Door",
         }
     }
 
@@ -62,6 +69,8 @@ impl Item {
             Item::Seeds => "seeds",
             Item::Bread => "bread",
             Item::Blade => "stone_blade",
+            Item::Torch => "torch",
+            Item::Door => "door_item",
         }
     }
 
@@ -87,7 +96,7 @@ impl Item {
     pub fn all() -> Vec<Item> {
         let blocks = Block::ALL
             .into_iter()
-            .filter(|&b| b != Block::Air)
+            .filter(|&b| b.carried())
             .map(Item::Block);
         blocks
             .chain([
@@ -97,6 +106,8 @@ impl Item {
                 Item::Seeds,
                 Item::Bread,
                 Item::Blade,
+                Item::Torch,
+                Item::Door,
             ])
             .collect()
     }
@@ -104,13 +115,15 @@ impl Item {
     /// A number for the save file (0 is "no item").
     pub fn id(self) -> u8 {
         match self {
-            Item::Block(block) => block as u8, // 1 to 15 (Air is 0, never carried)
+            Item::Block(block) => block as u8, // 1 to 21 (Air is 0, never carried)
             Item::Gold => 100,
             Item::Coal => 101,
             Item::Apple => 102,
             Item::Seeds => 103,
             Item::Bread => 104,
             Item::Blade => 105,
+            Item::Torch => 106,
+            Item::Door => 107,
         }
     }
 
@@ -122,7 +135,11 @@ impl Item {
             103 => Item::Seeds,
             104 => Item::Bread,
             105 => Item::Blade,
-            n if (1..BLOCK_KINDS as u8).contains(&n) => Item::Block(Block::ALL[n as usize]),
+            106 => Item::Torch,
+            107 => Item::Door,
+            n if (1..BLOCK_KINDS as u8).contains(&n) && Block::ALL[n as usize].carried() => {
+                Item::Block(Block::ALL[n as usize])
+            }
             _ => return None,
         })
     }

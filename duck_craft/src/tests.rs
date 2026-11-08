@@ -2334,3 +2334,167 @@ fn the_duck_in_the_inventory_looks_down_at_a_cursor_below_it() {
     let up = vec3(0.0, 0.0, 1.0).rotate_x(above);
     assert!(up.y > 0.0, "positive pitch really is up");
 }
+
+// ---- Torches, doors, beds and chests ----
+
+/// The arena with `block` two ahead of the duck, on the floor, and the duck
+/// looking at it, holding `item` (survival).
+fn furniture_ahead(block: Block, item: Option<Item>) -> DuckCraft {
+    let mut game = arena(|w| {
+        if block != Block::Air {
+            w.set(8, FLOOR, 10, block);
+        }
+    });
+    game.pitch = -0.3;
+    game.inventory = Inventory::empty();
+    if let Some(item) = item {
+        game.inventory.slots[0] = Some(Stack::new(item, 3));
+    }
+    game.slot = 0;
+    game
+}
+
+#[test]
+fn a_torch_stands_on_the_floor_lights_and_comes_back_when_picked() {
+    let mut game = furniture_ahead(Block::Air, Some(Item::Torch));
+    game.pitch = -0.6; // at the floor ahead
+    let played = PlayTest::new(config(), game).script(&tap("C")).frames(5).run();
+    let game = played.game().clone();
+    let torch = game.world.plants.iter().find(|(_, p)| **p == Plant::Torch).map(|(c, _)| *c);
+    let cell = torch.expect("a torch stands there");
+    assert!(game.world.lamps.contains(&cell), "it lights like a lamp");
+    assert_eq!(game.count(Item::Torch), 2);
+    // Picked: it's gone, the light too, and the torch is back in the bag.
+    let played = PlayTest::new(config(), game).script(&tap("X")).frames(5).run();
+    let game = played.game();
+    assert!(game.world.plant(cell[0], cell[1], cell[2]).is_none());
+    assert!(!game.world.lamps.contains(&cell));
+    assert_eq!(game.count(Item::Torch), 3);
+}
+
+#[test]
+fn a_torch_falls_with_the_block_under_it() {
+    let mut game = arena(|_| {});
+    game.world.put_torch(8, FLOOR, 10);
+    game.world.set(8, FLOOR - 1, 10, Block::Air);
+    assert!(game.world.plant(8, FLOOR, 10).is_none());
+    assert!(!game.world.lamps.contains(&[8, FLOOR, 10]));
+}
+
+#[test]
+fn a_door_is_two_blocks_opens_and_shuts_and_comes_back_whole() {
+    let mut game = furniture_ahead(Block::Air, Some(Item::Door));
+    game.pitch = -0.6;
+    let played = PlayTest::new(config(), game).script(&tap("C")).frames(5).run();
+    let mut game = played.game().clone();
+    assert_eq!(game.world.get(8, FLOOR, 10), Block::DoorLow);
+    assert_eq!(game.world.get(8, FLOOR + 1, 10), Block::DoorHigh);
+    assert!(game.world.get(8, FLOOR, 10).solid(), "shut, it's solid");
+    assert!(game.swing_door(8, FLOOR + 1, 10), "the top half opens it too");
+    assert_eq!(game.world.get(8, FLOOR, 10), Block::DoorLowOpen);
+    assert!(!game.world.get(8, FLOOR, 10).solid(), "open, you walk through");
+    // It won't shut on someone standing in it.
+    game.position = vec3(8.5, FLOOR as f32, 10.5);
+    assert!(!game.swing_door(8, FLOOR, 10));
+    game.position = vec3(8.5, FLOOR as f32, 8.5);
+    assert!(game.swing_door(8, FLOOR, 10));
+    // Broken: both halves go, one door comes back.
+    let before = game.count(Item::Door);
+    game.break_door(8, FLOOR + 1, 10);
+    assert_eq!(game.world.get(8, FLOOR, 10), Block::Air);
+    assert_eq!(game.world.get(8, FLOOR + 1, 10), Block::Air);
+    assert_eq!(game.count(Item::Door), before + 1);
+}
+
+#[test]
+fn right_clicking_a_door_swings_it_instead_of_building_on_it() {
+    let game = furniture_ahead(Block::Air, Some(Item::Block(Block::Planks)));
+    let mut game = game;
+    game.world.set(8, FLOOR, 10, Block::DoorLow);
+    game.world.set(8, FLOOR + 1, 10, Block::DoorHigh);
+    let played = PlayTest::new(config(), game).script(&tap("C")).frames(5).run();
+    let game = played.game();
+    assert_eq!(game.world.get(8, FLOOR, 10), Block::DoorLowOpen);
+    assert_eq!(game.count(Item::Block(Block::Planks)), 3, "nothing built");
+}
+
+#[test]
+fn a_bed_at_night_sleeps_till_morning_and_you_wake_there_after() {
+    let mut game = furniture_ahead(Block::Bed, None);
+    // Night.
+    game.time = (0.7 - menus::DAY_START).rem_euclid(1.0) * DAY_SECONDS;
+    game.last_time_of_day = game.time_of_day();
+    let played = PlayTest::new(config(), game).script(&tap("C")).frames(5).run();
+    let game = played.game().clone();
+    assert_eq!(game.bed, Some([8, FLOOR, 10]));
+    assert!(game.sleeping > 0.0, "asleep");
+    let played = PlayTest::new(config(), game).frames(200).run();
+    let game = played.game();
+    assert_eq!(game.sleeping, 0.0);
+    let morning = game.time_of_day();
+    assert!(morning < 0.2, "it's morning: {morning}");
+    assert_eq!(game.wake_point(), vec3(8.5, FLOOR as f32 + 1.0, 10.5));
+}
+
+#[test]
+fn you_cant_sleep_with_a_hollow_near() {
+    let mut game = furniture_ahead(Block::Bed, None);
+    game.time = (0.7 - menus::DAY_START).rem_euclid(1.0) * DAY_SECONDS;
+    game.last_time_of_day = game.time_of_day();
+    game.hollows.push(night::Hollow::new(vec3(4.5, FLOOR as f32, 4.5), 0.0));
+    let played = PlayTest::new(config(), game).script(&tap("C")).frames(5).run();
+    assert_eq!(played.game().sleeping, 0.0);
+    assert!(played.game().message.contains("close"));
+}
+
+#[test]
+fn a_chest_keeps_things_and_wont_break_until_empty() {
+    use inventory::Spot;
+    let game = furniture_ahead(Block::Chest, Some(Item::Apple));
+    let played = PlayTest::new(config(), game).script(&tap("C")).frames(5).run();
+    let mut game = played.game().clone();
+    assert_eq!(game.screen.as_ref().and_then(|s| s.chest), Some([8, FLOOR, 10]));
+    // Shift-click the apples in; close.
+    game.click_spot(Spot::Slot(0), true, true);
+    assert_eq!(game.count(Item::Apple), 0);
+    game.close_inventory();
+    assert!(game.chest_has_things([8, FLOOR, 10]));
+    // Saved and loaded, they're still in it.
+    let mut loaded = DuckCraft::from_bytes(game.art.clone(), &game.to_bytes()).unwrap();
+    let slots = &loaded.world.chests[&[8, FLOOR, 10]];
+    assert_eq!(slots[0], Some(Stack::new(Item::Apple, 3)));
+    // Digging it does nothing while it's full.
+    loaded.pitch = -0.3;
+    let played = PlayTest::new(config(), loaded).script(&hold(&["X"], 120)).run();
+    let game = played.game();
+    assert_eq!(game.world.get(8, FLOOR, 10), Block::Chest);
+    assert!(game.message.contains("Empty"));
+}
+
+#[test]
+fn torches_doors_beds_and_chests_are_crafted() {
+    let have = |needs: &[Item]| {
+        let mut grid: [Option<Stack>; 4] = Default::default();
+        for (i, &item) in needs.iter().enumerate() {
+            grid[i] = Some(Stack::new(item, 1));
+        }
+        inventory::matching_recipe(&grid).map(|r| r.makes)
+    };
+    let planks = Item::Block(Block::Planks);
+    let leaves = Item::Block(Block::Leaves);
+    assert_eq!(have(&[Item::Coal, planks]), Some((Item::Torch, 4)));
+    assert_eq!(have(&[planks, planks, planks]), Some((Item::Door, 1)));
+    assert_eq!(have(&[planks, leaves, planks, leaves]), Some((Item::Block(Block::Bed), 1)));
+    assert_eq!(have(&[planks; 4]), Some((Item::Block(Block::Chest), 1)));
+}
+
+#[test]
+fn a_saved_bed_and_torch_come_back() {
+    let mut game = arena(|w| w.set(8, FLOOR, 10, Block::Bed));
+    game.bed = Some([8, FLOOR, 10]);
+    game.world.put_torch(5, FLOOR, 5);
+    let loaded = DuckCraft::from_bytes(game.art.clone(), &game.to_bytes()).unwrap();
+    assert_eq!(loaded.bed, Some([8, FLOOR, 10]));
+    assert_eq!(loaded.world.plant(5, FLOOR, 5), Some(Plant::Torch));
+    assert!(loaded.world.lamps.contains(&[5, FLOOR, 5]), "and it still lights");
+}

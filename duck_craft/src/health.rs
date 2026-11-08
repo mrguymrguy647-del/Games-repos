@@ -239,7 +239,7 @@ impl DuckCraft {
             };
             // At the spawn, or the nearest place to it you fit (someone
             // may have built there).
-            self.position = self.free_spot(self.world.spawn);
+            self.position = self.free_spot(self.wake_point());
             self.velocity = Vec3::ZERO;
             self.yaw = self.world.spawn_yaw;
             self.pitch = -0.25;

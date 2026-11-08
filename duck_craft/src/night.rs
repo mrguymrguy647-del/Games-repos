@@ -73,6 +73,11 @@ pub struct Hollow {
 }
 
 impl Hollow {
+    /// Its body, for bumping into things.
+    pub fn body(&self) -> Body {
+        HOLLOW
+    }
+
     pub fn new(position: Vec3, yaw: f32) -> Hollow {
         Hollow {
             position,

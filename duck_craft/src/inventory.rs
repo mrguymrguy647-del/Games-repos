@@ -30,7 +30,7 @@ const fn block(b: Block) -> Item {
     Item::Block(b)
 }
 
-pub const RECIPES: [Recipe; 8] = [
+pub const RECIPES: [Recipe; 12] = [
     Recipe {
         needs: &[block(Block::Log)],
         makes: (block(Block::Planks), 4),
@@ -76,6 +76,33 @@ pub const RECIPES: [Recipe; 8] = [
         ],
         makes: (block(Block::Dirt), 1),
     },
+    // Light, and a way in and out, and somewhere to sleep and keep things.
+    Recipe {
+        needs: &[Item::Coal, block(Block::Planks)],
+        makes: (Item::Torch, 4),
+    },
+    Recipe {
+        needs: &[block(Block::Planks), block(Block::Planks), block(Block::Planks)],
+        makes: (Item::Door, 1),
+    },
+    Recipe {
+        needs: &[
+            block(Block::Planks),
+            block(Block::Planks),
+            block(Block::Leaves),
+            block(Block::Leaves),
+        ],
+        makes: (block(Block::Bed), 1),
+    },
+    Recipe {
+        needs: &[
+            block(Block::Planks),
+            block(Block::Planks),
+            block(Block::Planks),
+            block(Block::Planks),
+        ],
+        makes: (block(Block::Chest), 1),
+    },
 ];
 
 /// The recipe the grid's contents make, if any: the same items, one a
@@ -109,6 +136,9 @@ pub struct Screen {
     pub cursor: Option<Spot>,
     /// Seconds since it opened, for the opening wipe.
     pub opened: f32,
+    /// Open at a chest (its cell): the chest's slots take the place of
+    /// the duck and the crafting grid.
+    pub chest: Option<[i32; 3]>,
 }
 
 /// A place on the screen that holds a stack, or does something.
@@ -123,6 +153,8 @@ pub enum Spot {
     Palette(usize),
     /// Creative: one of that panel's tabs.
     Tab(usize),
+    /// One of an open chest's slots.
+    Chest(usize),
 }
 
 /// Creative's tabs; `tab_of` says which each thing is under.
@@ -136,7 +168,9 @@ pub fn tab_of(item: Item) -> usize {
             | Block::Planks
             | Block::Brick
             | Block::Glass
-            | Block::Lamp,
+            | Block::Lamp
+            | Block::Bed
+            | Block::Chest,
         ) => 0,
         Item::Block(_) => 1,
         _ => 2,
@@ -185,6 +219,7 @@ pub fn spot_rect(spot: Spot, book_open: bool) -> Rect {
             at(8.0 + (i % 9) as f32 * SLOT, 90.0 + (i / 9) as f32 * SLOT)
         }
         Spot::Grid(i) => at(84.0 + (i % 2) as f32 * SLOT, 28.0 + (i / 2) as f32 * SLOT),
+        Spot::Chest(i) => at(8.0 + (i % 9) as f32 * SLOT, 22.0 + (i / 9) as f32 * SLOT),
         Spot::Result => at(147.0, 37.0),
         Spot::Palette(i) => {
             let b = book_panel(book_open);
@@ -212,7 +247,13 @@ fn preview_rect(book_open: bool) -> Rect {
 
 /// Every spot there is right now. In creative the panel of everything is
 /// beside the bag, showing one tab.
-fn spots(book_open: bool, creative: bool, tab: usize) -> Vec<Spot> {
+fn spots(book_open: bool, creative: bool, tab: usize, chest: bool) -> Vec<Spot> {
+    if chest {
+        return (0..SLOTS)
+            .map(Spot::Slot)
+            .chain((0..furniture::CHEST_SLOTS).map(Spot::Chest))
+            .collect();
+    }
     let mut all: Vec<Spot> = (0..SLOTS)
         .map(Spot::Slot)
         .chain((0..4).map(Spot::Grid))
@@ -231,21 +272,28 @@ fn spots(book_open: bool, creative: bool, tab: usize) -> Vec<Spot> {
     all
 }
 
-pub fn spot_at(point: Vec2, book_open: bool, creative: bool, tab: usize) -> Option<Spot> {
-    spots(book_open, creative, tab)
+pub fn spot_at(point: Vec2, book_open: bool, creative: bool, tab: usize, chest: bool) -> Option<Spot> {
+    spots(book_open, creative, tab, chest)
         .into_iter()
         .find(|&spot| spot_rect(spot, book_open).contains(point))
 }
 
 /// Where the arrow keys go from `from`, heading `dir`: the nearest spot
 /// that way, keeping to the same row or column when there's one there.
-pub fn step_from(from: Spot, dir: Vec2, book_open: bool, creative: bool, tab: usize) -> Option<Spot> {
+pub fn step_from(
+    from: Spot,
+    dir: Vec2,
+    book_open: bool,
+    creative: bool,
+    tab: usize,
+    chest: bool,
+) -> Option<Spot> {
     let center = |spot: Spot| {
         let r = spot_rect(spot, book_open);
         vec2(r.x + r.w / 2.0, r.y + r.h / 2.0)
     };
     let here = center(from);
-    spots(book_open, creative, tab)
+    spots(book_open, creative, tab, chest)
         .into_iter()
         .filter(|&spot| spot != from)
         .filter_map(|spot| {
@@ -339,12 +387,12 @@ impl DuckCraft {
         if mouse_moved || left_click || right_click {
             screen.cursor = None; // the mouse takes over
         }
-        let (book, tab) = (screen.book_open, screen.tab);
-        let under_mouse = mouse.and_then(|m| spot_at(m, book, creative, tab));
+        let (book, tab, chest) = (screen.book_open, screen.tab, screen.chest.is_some());
+        let under_mouse = mouse.and_then(|m| spot_at(m, book, creative, tab, chest));
         if let Some(dir) = dir {
             // The first press shows where the cursor is; then it moves.
             let next = match screen.cursor {
-                Some(from) => step_from(from, dir, book, creative, tab).unwrap_or(from),
+                Some(from) => step_from(from, dir, book, creative, tab, chest).unwrap_or(from),
                 None => under_mouse.unwrap_or(Spot::Slot(hand)),
             };
             screen.cursor = Some(next);
@@ -400,6 +448,41 @@ impl DuckCraft {
                 Some(1000.0)
             }
             Spot::Result => self.take_result(&mut screen, shift),
+            Spot::Chest(i) => {
+                let cell = screen.chest.unwrap_or_default();
+                let slots = self
+                    .world
+                    .chests
+                    .entry(cell)
+                    .or_insert_with(|| vec![None; furniture::CHEST_SLOTS]);
+                if shift && left {
+                    // Into the bag, as much as fits.
+                    match slots[i].take() {
+                        Some(stack) => {
+                            let left_over = self.inventory.add(stack.item, stack.count);
+                            slots[i] = (left_over > 0).then(|| Stack::new(stack.item, left_over));
+                            Some(650.0)
+                        }
+                        None => None,
+                    }
+                } else {
+                    click_slot(&mut slots[i], &mut screen.held, left)
+                }
+            }
+            Spot::Slot(i) if shift && left && screen.chest.is_some() => {
+                // From the bag into the chest.
+                let cell = screen.chest.unwrap_or_default();
+                match (self.inventory.slots[i].take(), self.world.chests.get_mut(&cell)) {
+                    (Some(stack), Some(slots)) => {
+                        self.inventory.slots[i] = add_into(slots, stack);
+                        Some(650.0)
+                    }
+                    (stack, _) => {
+                        self.inventory.slots[i] = stack;
+                        None
+                    }
+                }
+            }
             Spot::Slot(i) if shift && left => {
                 // Across: hotbar to backpack, backpack to hotbar.
                 if let Some(stack) = self.inventory.slots[i].take() {
@@ -493,9 +576,15 @@ impl DuckCraft {
                 *slot = (left > 0).then(|| Stack::new(stack.item, left));
             }
         }
-        // The stack on the pointer: the bag, else the grid.
+        // The stack on the pointer: the bag, else the chest (if one is
+        // open), else the grid.
         if let Some(held) = screen.held.take() {
-            let left = self.inventory.add(held.item, held.count);
+            let mut left = self.inventory.add(held.item, held.count);
+            if left > 0
+                && let Some(slots) = screen.chest.and_then(|cell| self.world.chests.get_mut(&cell))
+            {
+                left = add_into(slots, Stack::new(held.item, left)).map_or(0, |s| s.count);
+            }
             if left > 0 {
                 let rest = add_into(&mut screen.grid, Stack::new(held.item, left));
                 if let Some(rest) = rest {
@@ -538,53 +627,65 @@ impl DuckCraft {
             Mode::Survival => format!("DAY {}", self.day_number()),
             Mode::Creative => String::from("CREATIVE"),
         };
-        ps_panel(canvas, p, Some(("INVENTORY", &corner)));
+        let chest = screen.chest.is_some();
+        ps_panel(canvas, p, Some((if chest { "CHEST" } else { "INVENTORY" }, &corner)));
         canvas.label("inventory", p);
         self.fresh_depth(canvas);
+        if let Some(cell) = screen.chest {
+            // The chest's 27 slots, where the duck and the grid would be.
+            let slots = self.world.chests.get(&cell);
+            for i in 0..furniture::CHEST_SLOTS {
+                let stack = slots.and_then(|s| s.get(i).copied().flatten());
+                self.draw_slot(canvas, spot_rect(Spot::Chest(i), book), stack);
+            }
+            canvas.label("chest", Rect::new(p.x + 8.0, p.y + 22.0, 162.0, 54.0));
+        }
 
-        // The duck's window: a spotlight on black, a shadow on the floor.
-        let window = preview_rect(book);
-        canvas.fill_rect(window, WELL);
-        for k in 0..5 {
-            let inset = 6.0 + k as f32 * 6.0;
-            canvas.fill_rect(
-                Rect::new(window.x + inset, window.y, window.w - inset * 2.0, window.h - 4.0 - k as f32 * 8.0),
-                Color::rgba(255, 236, 210, 7),
-            );
-        }
-        let floor = vec2(window.x + window.w / 2.0, window.y + window.h - 8.0);
-        for (w, h) in [(34.0, 5.0), (26.0, 7.0), (14.0, 9.0)] {
-            canvas.fill_rect(
-                Rect::new(floor.x - w / 2.0, floor.y - h / 2.0 + 1.0, w, h),
-                Color::rgba(0, 0, 0, 60),
-            );
-        }
-        well_edges(canvas, window);
+        if !chest {
+            // The duck's window: a spotlight on black, a shadow on the floor.
+            let window = preview_rect(book);
+            canvas.fill_rect(window, WELL);
+            for k in 0..5 {
+                let inset = 6.0 + k as f32 * 6.0;
+                canvas.fill_rect(
+                    Rect::new(window.x + inset, window.y, window.w - inset * 2.0, window.h - 4.0 - k as f32 * 8.0),
+                    Color::rgba(255, 236, 210, 7),
+                );
+            }
+            let floor = vec2(window.x + window.w / 2.0, window.y + window.h - 8.0);
+            for (w, h) in [(34.0, 5.0), (26.0, 7.0), (14.0, 9.0)] {
+                canvas.fill_rect(
+                    Rect::new(floor.x - w / 2.0, floor.y - h / 2.0 + 1.0, w, h),
+                    Color::rgba(0, 0, 0, 60),
+                );
+            }
+            well_edges(canvas, window);
 
-        // Crafting: the grid, an arrow, what it makes.
-        shadowed_text(canvas, "CRAFTING", vec2(p.x + 84.0, p.y + 18.0), DIM);
-        for i in 0..4 {
-            self.draw_slot(canvas, spot_rect(Spot::Grid(i), book), screen.grid[i]);
+            // Crafting: the grid, an arrow, what it makes.
+            shadowed_text(canvas, "CRAFTING", vec2(p.x + 84.0, p.y + 18.0), DIM);
+            for i in 0..4 {
+                self.draw_slot(canvas, spot_rect(Spot::Grid(i), book), screen.grid[i]);
+            }
+            let arrow = vec2(p.x + 126.0, p.y + 42.0);
+            canvas.fill_rect(Rect::new(arrow.x, arrow.y + 2.0, 8.0, 4.0), FAINT);
+            canvas.fill_triangle(
+                arrow + vec2(8.0, -2.0),
+                arrow + vec2(14.0, 4.0),
+                arrow + vec2(8.0, 10.0),
+                FAINT,
+            );
+            let result = matching_recipe(&screen.grid).map(|r| Stack::new(r.makes.0, r.makes.1));
+            let result_rect = spot_rect(Spot::Result, book);
+            let big = Rect::new(result_rect.x - 4.0, result_rect.y - 4.0, 26.0, 26.0);
+            canvas.fill_rect(big, WELL);
+            well_edges(canvas, big);
+            if result.is_some() {
+                // Something can be made: the frame breathes.
+                let glow = (0.5 + 0.5 * (self.time * 4.0).sin()) * 0.6 + 0.2;
+                canvas.draw_rect(big, Color::rgba(200, 60, 50, (glow * 255.0) as u8));
+            }
+            self.draw_stack(canvas, result, vec2(result_rect.x + 1.0, result_rect.y + 1.0));
         }
-        let arrow = vec2(p.x + 126.0, p.y + 42.0);
-        canvas.fill_rect(Rect::new(arrow.x, arrow.y + 2.0, 8.0, 4.0), FAINT);
-        canvas.fill_triangle(
-            arrow + vec2(8.0, -2.0),
-            arrow + vec2(14.0, 4.0),
-            arrow + vec2(8.0, 10.0),
-            FAINT,
-        );
-        let result = matching_recipe(&screen.grid).map(|r| Stack::new(r.makes.0, r.makes.1));
-        let result_rect = spot_rect(Spot::Result, book);
-        let big = Rect::new(result_rect.x - 4.0, result_rect.y - 4.0, 26.0, 26.0);
-        canvas.fill_rect(big, WELL);
-        well_edges(canvas, big);
-        if result.is_some() {
-            // Something can be made: the frame breathes.
-            let glow = (0.5 + 0.5 * (self.time * 4.0).sin()) * 0.6 + 0.2;
-            canvas.draw_rect(big, Color::rgba(200, 60, 50, (glow * 255.0) as u8));
-        }
-        self.draw_stack(canvas, result, vec2(result_rect.x + 1.0, result_rect.y + 1.0));
 
         // The bag, a rule, the hotbar; the slot in hand framed in red.
         for i in 0..SLOTS {
@@ -605,7 +706,7 @@ impl DuckCraft {
         // The cursor: on the key cursor, or on what the mouse is over.
         let pointed = screen
             .cursor
-            .or_else(|| mouse.and_then(|m| spot_at(m, book, creative, screen.tab)));
+            .or_else(|| mouse.and_then(|m| spot_at(m, book, creative, screen.tab, chest)));
         if let Some(spot) = pointed {
             selection(canvas, spot_rect(spot, book), self.time);
         }
@@ -616,7 +717,9 @@ impl DuckCraft {
             }
             None => mouse,
         };
-        self.draw_duck_preview(canvas, camera, look_at);
+        if !chest {
+            self.draw_duck_preview(canvas, camera, look_at);
+        }
 
         // The held stack floats by the cursor, or follows the mouse.
         let hold_at = match screen.cursor {

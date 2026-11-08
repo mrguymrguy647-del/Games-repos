@@ -14,16 +14,20 @@ pub enum Plant {
     YellowFlower,
     RedFlower,
     WhiteFlower,
+    /// Not a plant, but drawn like one (two crossed pictures) and stood
+    /// on a block like one: a torch, which lights and keeps Hollows off.
+    Torch,
 }
 
 pub const SEED_CHANCE: f32 = 0.3; // of seeds, from tall grass
 
 impl Plant {
-    pub const ALL: [Plant; 4] = [
+    pub const ALL: [Plant; 5] = [
         Plant::TallGrass,
         Plant::YellowFlower,
         Plant::RedFlower,
         Plant::WhiteFlower,
+        Plant::Torch,
     ];
 
     pub fn name(self) -> &'static str {
@@ -32,6 +36,7 @@ impl Plant {
             Plant::YellowFlower => "Yellow flower",
             Plant::RedFlower => "Red flower",
             Plant::WhiteFlower => "White flower",
+            Plant::Torch => "Torch",
         }
     }
 
@@ -41,6 +46,7 @@ impl Plant {
             Plant::YellowFlower => "flower_yellow",
             Plant::RedFlower => "flower_red",
             Plant::WhiteFlower => "flower_white",
+            Plant::Torch => "torch",
         }
     }
 
@@ -56,6 +62,7 @@ impl Plant {
     pub fn height(self) -> f32 {
         match self {
             Plant::TallGrass => 0.9,
+            Plant::Torch => 0.75,
             _ => 0.8,
         }
     }
@@ -113,16 +120,32 @@ impl World {
         if plant.is_some() {
             self.plants_changed = true;
         }
+        if plant == Some(Plant::Torch) {
+            self.lamps.retain(|&lamp| lamp != [x, y, z]);
+            self.light_changed(x, z);
+        }
         plant
     }
 
+    /// Stands a torch in the air cell (x, y, z): it lights like a lamp.
+    pub fn put_torch(&mut self, x: i32, y: i32, z: i32) {
+        self.plants.insert([x, y, z], Plant::Torch);
+        self.plants_changed = true;
+        self.lamps.push([x, y, z]);
+        self.light_changed(x, z);
+    }
+
     /// After block (x, y, z) changed: a plant can't share a cell with a
-    /// block, and needs grass or dirt under it.
+    /// block, and needs grass or dirt under it (a torch, anything solid).
     pub fn plants_after_set(&mut self, x: i32, y: i32, z: i32, block: Block) {
         if block != Block::Air {
             self.remove_plant(x, y, z);
         }
-        if !grows_on(block) {
+        let keeps = match self.plant(x, y + 1, z) {
+            Some(Plant::Torch) => block.solid(),
+            _ => grows_on(block),
+        };
+        if !keeps {
             self.remove_plant(x, y + 1, z);
         }
     }
@@ -137,8 +160,14 @@ impl Art {
         cells.sort(); // the same mesh for the same plants, every time
         for (&[x, y, z], &plant) in cells {
             let uv = self.plant_uvs[plant as usize];
-            let shade = (255.0 * light(&world.grid, &world.sky, x, y, z)) as u8;
+            let torch = plant == Plant::Torch;
+            let shade = if torch {
+                255 // its own light
+            } else {
+                (255.0 * light(&world.grid, &world.sky, x, y, z)) as u8
+            };
             let color = Color::rgb(shade, shade, shade);
+            let first = mesh.triangles.len();
             let (low, high) = (0.15, 0.85);
             let top = y as f32 + plant.height();
             let base = vec3(x as f32, y as f32, z as f32);
@@ -165,6 +194,11 @@ impl Art {
                     [points[3], points[2], points[1], points[0]],
                     color,
                 );
+            }
+            if torch {
+                for t in first..mesh.triangles.len() {
+                    mesh.set_glow(t, 1.0);
+                }
             }
         }
         mesh

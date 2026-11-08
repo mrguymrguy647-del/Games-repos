@@ -14,10 +14,12 @@ use menus::Mode;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
-/// The file's first bytes. Version 3 adds the island's seed, the mode and
-/// the music setting; version 2 keeps stacks in slots; version 1 (a count
-/// of each block, gold and coal). All of them still load.
-const MAGIC: &[u8; 10] = b"DUCKCRAFT3";
+/// The file's first bytes. Version 4 adds the bed and what the chests
+/// hold; version 3 the island's seed, the mode and the music setting;
+/// version 2 keeps stacks in slots; version 1 (a count of each block, gold
+/// and coal). All of them still load.
+const MAGIC: &[u8; 10] = b"DUCKCRAFT4";
+const MAGIC_V3: &[u8; 10] = b"DUCKCRAFT3";
 const MAGIC_V2: &[u8; 10] = b"DUCKCRAFT2";
 const MAGIC_V1: &[u8; 10] = b"DUCKCRAFT1";
 pub const SAVE_FILE: &str = "duck_craft_save.dat";
@@ -171,6 +173,36 @@ impl DuckCraft {
             w.f32(duckling.yaw);
             w.u32(duckling.follows.unwrap_or(0));
         }
+        // Version 4: the bed, and the chests.
+        match self.bed {
+            Some([x, y, z]) => {
+                w.u8(1);
+                w.u8(x as u8);
+                w.u8(y as u8);
+                w.u8(z as u8);
+            }
+            None => w.u8(0),
+        }
+        let mut chests: Vec<_> = self.world.chests.iter().collect();
+        chests.sort_by_key(|(cell, _)| **cell);
+        w.u32(chests.len() as u32);
+        for (&[x, y, z], slots) in chests {
+            w.u8(x as u8);
+            w.u8(y as u8);
+            w.u8(z as u8);
+            for i in 0..furniture::CHEST_SLOTS {
+                match slots.get(i).copied().flatten() {
+                    Some(stack) => {
+                        w.u8(stack.item.id());
+                        w.u32(stack.count);
+                    }
+                    None => {
+                        w.u8(0);
+                        w.u32(0);
+                    }
+                }
+            }
+        }
         w.0
     }
 
@@ -178,7 +210,8 @@ impl DuckCraft {
     pub fn from_bytes(art: Rc<Art>, bytes: &[u8]) -> io::Result<DuckCraft> {
         let mut r = Reader(bytes);
         let version = match r.take(MAGIC.len())? {
-            m if m == MAGIC => 3,
+            m if m == MAGIC => 4,
+            m if m == MAGIC_V3 => 3,
             m if m == MAGIC_V2 => 2,
             m if m == MAGIC_V1 => 1,
             _ => return Err(bad("not a Duck Craft save")),
@@ -262,6 +295,9 @@ impl DuckCraft {
                 let (x, y, z, id) = (r.u8()? as i32, r.u8()? as i32, r.u8()? as i32, r.u8()?);
                 if let Some(plant) = Plant::from_id(id) {
                     game.world.plants.insert([x, y, z], plant);
+                    if plant == Plant::Torch {
+                        game.world.lamps.push([x, y, z]);
+                    }
                 }
             }
         } else {
@@ -270,11 +306,16 @@ impl DuckCraft {
             let world = &game.world;
             let gone: Vec<[i32; 3]> = world
                 .plants
-                .keys()
-                .filter(|&&[x, y, z]| {
-                    world.get(x, y, z) != Block::Air || !plants::grows_on(world.get(x, y - 1, z))
+                .iter()
+                .filter(|&(&[x, y, z], &plant)| {
+                    let under = world.get(x, y - 1, z);
+                    let stands = match plant {
+                        Plant::Torch => under.solid(),
+                        _ => plants::grows_on(under),
+                    };
+                    world.get(x, y, z) != Block::Air || !stands
                 })
-                .copied()
+                .map(|(&cell, _)| cell)
                 .collect();
             for [x, y, z] in gone {
                 game.world.remove_plant(x, y, z);
@@ -296,6 +337,33 @@ impl DuckCraft {
             let mut duckling = ducklings::Duckling::new(position, yaw);
             duckling.follows = (follows > 0).then_some(follows);
             game.ducklings.push(duckling);
+        }
+        game.bed = None;
+        game.world.chests.clear();
+        if version >= 4 {
+            if r.u8()? == 1 {
+                let cell = [r.u8()? as i32, r.u8()? as i32, r.u8()? as i32];
+                game.bed = Some(cell);
+            }
+            let count = r.u32()? as usize;
+            if count > SIZE * SIZE * TALL {
+                return Err(bad("the save has more chests than the island has room for"));
+            }
+            for _ in 0..count {
+                let cell = [r.u8()? as i32, r.u8()? as i32, r.u8()? as i32];
+                let mut slots = vec![None; furniture::CHEST_SLOTS];
+                for slot in slots.iter_mut() {
+                    let id = r.u8()?;
+                    let count = r.u32()?;
+                    if let Some(item) = Item::from_id(id).filter(|_| count > 0) {
+                        *slot = Some(Stack::new(item, count.min(item.max_stack())));
+                    }
+                }
+                // Only where there's still a chest.
+                if game.world.get(cell[0], cell[1], cell[2]) == Block::Chest {
+                    game.world.chests.insert(cell, slots);
+                }
+            }
         }
         // Somewhere impossible (an odd file): the spawn. Inside a block:
         // the nearest place you fit.
