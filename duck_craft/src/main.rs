@@ -550,6 +550,11 @@ impl World {
             }
         }
 
+        // Tunnels, the cavern and its ruin, and ore along the caves' walls.
+        world.dig_tunnels(&height);
+        world.hollow_out_cavern(&height);
+        world.lay_ore_veins();
+
         // Trees, on grass, not too close to each other.
         let mut trees: Vec<(i32, i32)> = Vec::new();
         for z in 3..SIZE as i32 - 3 {
@@ -565,6 +570,9 @@ impl World {
                 }
             }
         }
+
+        // Abandoned houses, away from the middle (where you start).
+        world.build_ruins(&height, (SIZE as i32 / 2, SIZE as i32 / 2));
 
         for z in 0..SIZE as i32 {
             for x in 0..SIZE as i32 {
@@ -3116,6 +3124,7 @@ mod items;
 mod menus;
 mod night;
 mod plants;
+mod ruins;
 mod save;
 
 use ducklings::{Duckling, DucklingModel};

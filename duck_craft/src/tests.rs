@@ -2665,3 +2665,63 @@ fn a_hollow_behind_a_wall_hears_you_dig() {
     let played = PlayTest::new(config(), game).script(&hold(&["X"], 90)).run();
     assert!(played.game().hollows[0].knows > 0.0, "it heard the digging");
 }
+
+// ---- Caves and ruins ----
+
+#[test]
+fn the_island_has_ruins_with_chests_and_a_cavern_with_a_room() {
+    let world = World::generate(SEED);
+    let surface: Vec<_> = world.chests.keys().filter(|c| c[1] > SEA).collect();
+    let deep: Vec<_> = world.chests.keys().filter(|c| c[1] < 8).collect();
+    assert!(surface.len() >= 2, "abandoned houses: {surface:?}");
+    assert_eq!(deep.len(), 1, "the cavern's room");
+    for (cell, slots) in &world.chests {
+        assert_eq!(world.get(cell[0], cell[1], cell[2]), Block::Chest);
+        assert!(slots.iter().any(|s| s.is_some()), "someone left something");
+    }
+    let deep_loot = &world.chests[deep[0]];
+    assert!(deep_loot.iter().flatten().any(|s| s.item == Item::Blade), "a blade, deep down");
+    // The houses have open doors and old beds.
+    let count = |kind: Block| world.grid.blocks().iter().filter(|&&b| b == kind as BlockId).count();
+    assert!(count(Block::DoorLowOpen) >= 2);
+    assert!(count(Block::Bed) >= 2);
+}
+
+#[test]
+fn caves_wind_through_the_rock_with_ore_along_them() {
+    let world = World::generate(SEED);
+    // Air under the surface, in the rock.
+    let mut cave_air = 0;
+    let mut ore_by_air = 0;
+    for z in 0..SIZE as i32 {
+        for x in 0..SIZE as i32 {
+            for y in 2..SEA {
+                let block = world.get(x, y, z);
+                if block == Block::Air {
+                    cave_air += 1;
+                }
+                let by_air = DIRECTIONS
+                    .iter()
+                    .any(|&(dx, dy, dz)| world.get(x + dx, y + dy, z + dz) == Block::Air);
+                if by_air && matches!(block, Block::CoalOre | Block::GoldOre) {
+                    ore_by_air += 1;
+                }
+            }
+        }
+    }
+    assert!(cave_air > 1500, "caves: {cave_air} cells of air below the sea's top");
+    assert!(ore_by_air > 40, "ore you can see from the caves: {ore_by_air}");
+    // No cave let the sea in: no air right next to water below the sea.
+    for z in 0..SIZE as i32 {
+        for x in 0..SIZE as i32 {
+            for y in 2..SEA {
+                if world.get(x, y, z) == Block::Air {
+                    let wet = DIRECTIONS
+                        .iter()
+                        .any(|&(dx, dy, dz)| world.get(x + dx, y + dy, z + dz) == Block::Water);
+                    assert!(!wet, "a hole by the sea at {x} {y} {z}");
+                }
+            }
+        }
+    }
+}
