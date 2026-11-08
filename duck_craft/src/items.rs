@@ -44,36 +44,6 @@ impl Item {
         }
     }
 
-    /// One line about it, for the inventory's bar.
-    pub fn about(self) -> &'static str {
-        match self {
-            Item::Block(block) => match block {
-                Block::Air => "Nothing. There's a lot of it.",
-                Block::Grass => "Green, for now.",
-                Block::Dirt => "Everything ends up here.",
-                Block::Stone => "It was here before you. It'll stay.",
-                Block::Cobblestone => "Stone, broken. Still stone.",
-                Block::Sand => "It falls, like everything.",
-                Block::Log => "A tree, stopped.",
-                Block::Leaves => "They let some of the light through.",
-                Block::Planks => "A log, made useful.",
-                Block::Glass => "See out. Be seen.",
-                Block::Brick => "Walls make anywhere feel like home.",
-                Block::CoalOre => "Old fire, waiting in the rock.",
-                Block::GoldOre => "Something bright, under all that dark.",
-                Block::Water => "Cold, deep and patient.",
-                Block::Bedrock => "The bottom. Nothing goes further.",
-                Block::Lamp => "The Hollows keep away from it. Mostly.",
-            },
-            Item::Gold => "Shiny. It won't save you.",
-            Item::Coal => "It burns once.",
-            Item::Apple => "Sweet, a little bruised. Fills 2.",
-            Item::Seeds => "Three make bread. Or eat them. Fills a bit.",
-            Item::Bread => "The best food there is. Fills 3.",
-            Item::Blade => "Knapped stone on a stick. Hits hard.",
-        }
-    }
-
     /// How many fit in one slot.
     pub fn max_stack(self) -> u32 {
         match self {
@@ -223,7 +193,8 @@ impl Inventory {
 
     /// Takes up to `count` of `item` out, from the backpack's last slots
     /// first (so the hotbar keeps its things longest). Returns how many it
-    /// took.
+    /// took. (Only the tests need it now the recipe book is gone.)
+    #[cfg(test)]
     pub fn take(&mut self, item: Item, count: u32) -> u32 {
         let mut taken = 0;
         for slot in self.slots.iter_mut().rev() {

@@ -591,7 +591,7 @@ fn views() {
     }
     // The inventory: with a log in the grid, a stack on the pointer, and
     // the recipe book open.
-    for (name, book) in [("inventory", false), ("inventory_book", true)] {
+    for (name, book) in [("inventory", false)] {
         let mut game = arena(|_| {});
         game.inventory.set(Item::Block(Block::Log), 3);
         game.inventory.set(Item::Block(Block::Sand), 6);
@@ -978,8 +978,8 @@ fn showcase() {
     sim.release(Key::C);
     shoot(&mut sim, 20);
     tap(&mut sim, Key::Digit1, &mut shoot);
-    // Crafting in the inventory: open the recipe book, fill the grid from
-    // it, take what it makes.
+    // Crafting in the inventory: a log from the bag into the grid, then
+    // the planks it makes.
     use inventory::{Spot, spot_rect};
     let click = |sim: &mut Simulation<DuckCraft>,
                  spot: Spot,
@@ -1006,17 +1006,13 @@ fn showcase() {
         shoot(sim, 10);
     };
     tap(&mut sim, Key::E, &mut shoot);
-    click(&mut sim, Spot::Book, false, &mut shoot);
-    click(&mut sim, Spot::Recipe(0), false, &mut shoot); // a log
-    click(&mut sim, Spot::Result, true, &mut shoot); // planks, into the bag
-    shoot(&mut sim, 10);
-    click(&mut sim, Spot::Recipe(2), false, &mut shoot); // sand, sand, coal
-    click(&mut sim, Spot::Result, false, &mut shoot); // glass, on the pointer
-    click(&mut sim, Spot::Slot(16), false, &mut shoot); // put down in the bag
-    click(&mut sim, Spot::Recipe(5), false, &mut shoot); // gold and glass
-    click(&mut sim, Spot::Result, true, &mut shoot); // lamps
-    click(&mut sim, Spot::Recipe(1), false, &mut shoot); // three seeds
-    click(&mut sim, Spot::Result, true, &mut shoot); // bread
+    let logs = (0..items::SLOTS)
+        .find(|&i| sim.game().inventory.slots[i].is_some_and(|s| s.item == Item::Block(Block::Log)));
+    if let Some(logs) = logs {
+        click(&mut sim, Spot::Slot(logs), false, &mut shoot); // pick up the logs
+        click(&mut sim, Spot::Grid(0), false, &mut shoot); // into the grid
+        click(&mut sim, Spot::Result, true, &mut shoot); // planks, into the bag
+    }
     shoot(&mut sim, 20);
     tap(&mut sim, Key::E, &mut shoot);
 
@@ -1309,23 +1305,21 @@ fn a_log_in_the_grid_makes_planks() {
 }
 
 #[test]
-fn the_recipe_book_fills_the_grid_and_shift_makes_all_it_can() {
+fn shift_on_the_result_makes_one_lot_or_all_it_can() {
     use inventory::Spot;
-    let game = inventory_open(|g| {
-        g.inventory.set(Item::Block(Block::Sand), 7);
-        g.inventory.set(Item::Coal, 2);
-        g.screen.as_mut().unwrap().book_open = true;
+    let mut game = inventory_open(|g| {
+        g.inventory.set(Item::Block(Block::Sand), 5);
+        g.inventory.set(Item::Coal, 1);
     });
     let glass = game.count(Item::Block(Block::Glass));
-    // Sand, sand and coal (recipe 2) into the grid, then make glass.
-    let game = run_clicks(
-        game,
-        &[
-            (Spot::Recipe(2), "Left", false),
-            (Spot::Result, "Left", true),
-        ],
-        true,
-    );
+    // Sand, sand and coal in the grid, one of each, then make glass.
+    game.screen.as_mut().unwrap().grid = [
+        Some(Stack::new(Item::Block(Block::Sand), 1)),
+        Some(Stack::new(Item::Block(Block::Sand), 1)),
+        Some(Stack::new(Item::Coal, 1)),
+        None,
+    ];
+    let game = run_clicks(game, &[(Spot::Result, "Left", true)], false);
     assert_eq!(
         game.count(Item::Block(Block::Glass)),
         glass + 2,
@@ -1341,7 +1335,7 @@ fn the_recipe_book_fills_the_grid_and_shift_makes_all_it_can() {
         None,
     ];
     let glass = game.count(Item::Block(Block::Glass));
-    let game = run_clicks(game, &[(Spot::Result, "Left", true)], true);
+    let game = run_clicks(game, &[(Spot::Result, "Left", true)], false);
     assert_eq!(game.count(Item::Block(Block::Glass)), glass + 4);
     assert!(
         game.screen
@@ -1609,7 +1603,7 @@ fn saved_plants_stay_as_they_were() {
 /// and every stack holds 1 to 64.
 #[test]
 fn random_clicks_never_lose_or_copy_things() {
-    use inventory::{RECIPES, Spot};
+    use inventory::Spot;
     let mut game = inventory_open(|g| {
         g.inventory.set(Item::Block(Block::Log), 9);
         g.inventory.set(Item::Block(Block::Sand), 70);
@@ -1651,8 +1645,6 @@ fn random_clicks_never_lose_or_copy_things() {
         let spot = match random(10) {
             0 => Spot::Grid(random(4)),
             1 => Spot::Result,
-            2 => Spot::Recipe(random(RECIPES.len())),
-            3 => Spot::Book,
             _ => Spot::Slot(random(items::SLOTS)),
         };
         let crafting = matches!(spot, Spot::Result);
@@ -2017,7 +2009,6 @@ fn the_watcher_goes_when_you_look_at_it() {
 
 #[test]
 fn a_full_bag_never_destroys_what_is_in_the_grid() {
-    use inventory::Spot;
     let mut game = inventory_open(|g| {
         for i in 0..items::SLOTS {
             g.inventory.slots[i] = Some(Stack::new(Item::Block(Block::Brick), 64));
@@ -2025,12 +2016,6 @@ fn a_full_bag_never_destroys_what_is_in_the_grid() {
         g.screen.as_mut().unwrap().grid[0] = Some(Stack::new(Item::Block(Block::Log), 61));
         g.screen.as_mut().unwrap().book_open = true;
     });
-    game.click_spot(Spot::Recipe(2), true, false);
-    assert_eq!(
-        game.screen.as_ref().unwrap().grid[0],
-        Some(Stack::new(Item::Block(Block::Log), 61)),
-        "not thrown away"
-    );
     game.close_inventory();
     assert_eq!(
         game.kept_grid[0],

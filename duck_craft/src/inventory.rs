@@ -10,11 +10,8 @@
 //! - **arrows** (or **WASD**) move a cursor from spot to spot
 //! - put things in the grid that match a recipe and the result shows on
 //!   the right; click it to make it (Shift: as many as you can)
-//! - the **book** button lists the recipes; click one to fill the grid
-//!   from your bag. In creative it's the panel of everything, in three
-//!   tabs (**Q** and **R** change tab)
-//! - the bar along the bottom says what the cursor is on, and which keys
-//!   do what
+//! - in creative the panel of everything is beside the bag, in three tabs
+//!   (**Q** and **R** change tab)
 //! - **E** or **Escape** closes it; what's in the grid and in your hand
 //!   goes back in the bag
 //!
@@ -103,6 +100,7 @@ pub struct Screen {
     pub grid: [Option<Stack>; 4],
     /// The stack on the mouse pointer (or on the key cursor).
     pub held: Option<Stack>,
+    /// The panel beside it is showing: creative's panel of everything.
     pub book_open: bool,
     /// Creative: which tab of the panel of everything is showing.
     pub tab: usize,
@@ -120,11 +118,8 @@ pub enum Spot {
     Slot(usize),
     Grid(usize),
     Result,
-    Book,
-    /// A recipe in the book.
-    Recipe(usize),
     /// Creative: one of everything there is (its place in `Item::all()`),
-    /// in the panel where the book is.
+    /// in the panel beside the bag.
     Palette(usize),
     /// Creative: one of that panel's tabs.
     Tab(usize),
@@ -155,16 +150,14 @@ fn place_in_tab(i: usize) -> usize {
     all[..i].iter().filter(|&&item| tab_of(item) == tab).count()
 }
 
-// The layout, in canvas pixels (the screen is 320 x 240): the panel near
-// the top, the recipe book (or creative's panel) to its left when open,
-// and the information bar along the bottom.
+// The layout, in canvas pixels (the screen is 320 x 240): the panel in the
+// middle, creative's panel of everything to its left.
 const PANEL_W: f32 = 178.0;
 const PANEL_H: f32 = 174.0;
-const PANEL_TOP: f32 = 12.0;
+const PANEL_TOP: f32 = 22.0;
 const BOOK_W: f32 = 112.0;
 const GAP: f32 = 4.0;
 const SLOT: f32 = 18.0;
-const ROW_H: f32 = 19.0;
 
 pub fn panel(book_open: bool) -> Rect {
     let width = if book_open {
@@ -181,12 +174,6 @@ fn book_panel(book_open: bool) -> Rect {
     Rect::new(p.x - BOOK_W - GAP, p.y, BOOK_W, PANEL_H)
 }
 
-/// The bar along the bottom: what the cursor is on, and which keys do what.
-fn info_bar() -> Rect {
-    let top = PANEL_TOP + PANEL_H + 6.0;
-    Rect::new(8.0, top, WIDTH - 16.0, HEIGHT - top - 6.0)
-}
-
 /// Where each spot is (its 18 x 18 box, or the button's).
 pub fn spot_rect(spot: Spot, book_open: bool) -> Rect {
     let p = panel(book_open);
@@ -199,7 +186,6 @@ pub fn spot_rect(spot: Spot, book_open: bool) -> Rect {
         }
         Spot::Grid(i) => at(84.0 + (i % 2) as f32 * SLOT, 28.0 + (i / 2) as f32 * SLOT),
         Spot::Result => at(147.0, 37.0),
-        Spot::Book => Rect::new(p.x + 84.0, p.y + 69.0, 36.0, 15.0),
         Spot::Palette(i) => {
             let b = book_panel(book_open);
             let k = place_in_tab(i);
@@ -215,15 +201,6 @@ pub fn spot_rect(spot: Spot, book_open: bool) -> Rect {
             let w = ((b.w - 6.0) / TABS.len() as f32).floor();
             Rect::new(b.x + 3.0 + t as f32 * w, b.y + 3.0, w - 1.0, 12.0)
         }
-        Spot::Recipe(i) => {
-            let b = book_panel(book_open);
-            Rect::new(
-                b.x + 4.0,
-                b.y + 17.0 + i as f32 * ROW_H,
-                b.w - 8.0,
-                ROW_H - 2.0,
-            )
-        }
     }
 }
 
@@ -233,13 +210,13 @@ fn preview_rect(book_open: bool) -> Rect {
     Rect::new(p.x + 8.0, p.y + 17.0, 70.0, 69.0)
 }
 
-/// Every spot there is right now. In creative the book's place holds the
-/// panel of everything, showing one tab.
+/// Every spot there is right now. In creative the panel of everything is
+/// beside the bag, showing one tab.
 fn spots(book_open: bool, creative: bool, tab: usize) -> Vec<Spot> {
     let mut all: Vec<Spot> = (0..SLOTS)
         .map(Spot::Slot)
         .chain((0..4).map(Spot::Grid))
-        .chain([Spot::Result, Spot::Book])
+        .chain([Spot::Result])
         .collect();
     if book_open && creative {
         all.extend((0..TABS.len()).map(Spot::Tab));
@@ -250,8 +227,6 @@ fn spots(book_open: bool, creative: bool, tab: usize) -> Vec<Spot> {
                 .filter(|&(_, &item)| tab_of(item) == tab)
                 .map(|(i, _)| Spot::Palette(i)),
         );
-    } else if book_open {
-        all.extend((0..RECIPES.len()).map(Spot::Recipe));
     }
     all
 }
@@ -405,14 +380,6 @@ impl DuckCraft {
     pub fn click_spot(&mut self, spot: Spot, left: bool, shift: bool) -> Option<f32> {
         let mut screen = self.screen.take()?;
         let sound = match spot {
-            Spot::Book => {
-                screen.book_open = !screen.book_open;
-                Some(800.0)
-            }
-            Spot::Recipe(i) => {
-                self.fill_grid(&mut screen, &RECIPES[i]);
-                Some(900.0)
-            }
             Spot::Palette(i) => {
                 let item = Item::all()[i];
                 if screen.held.take().is_some() {
@@ -512,43 +479,6 @@ impl DuckCraft {
         }
     }
 
-    /// The recipe book: empties the grid into the bag, then puts in one of
-    /// each thing the recipe needs, if the bag has them.
-    fn fill_grid(&mut self, screen: &mut Screen, recipe: &Recipe) {
-        // What's in the grid goes back in the bag first: only if it all fits
-        // (nothing is ever thrown away).
-        let mut trial = self.inventory.clone();
-        let fits = screen
-            .grid
-            .iter()
-            .flatten()
-            .all(|stack| trial.add(stack.item, stack.count) == 0);
-        if !fits {
-            self.say("Your bag is full");
-            return;
-        }
-        for slot in screen.grid.iter_mut() {
-            if let Some(stack) = slot.take() {
-                self.inventory.add(stack.item, stack.count);
-            }
-        }
-        let mut missing = None;
-        for &item in recipe.needs {
-            let need = recipe.needs.iter().filter(|&&i| i == item).count() as u32;
-            if self.inventory.count(item) < need {
-                missing = Some(item);
-            }
-        }
-        if let Some(item) = missing {
-            self.say(format!("Not enough {}", item.name()));
-            return;
-        }
-        for (i, &item) in recipe.needs.iter().enumerate() {
-            self.inventory.take(item, 1);
-            screen.grid[i] = Some(Stack::new(item, 1));
-        }
-    }
-
     /// Closes the screen, putting the grid and the held stack back in the
     /// bag.
     pub fn close_inventory(&mut self) {
@@ -586,8 +516,7 @@ impl DuckCraft {
     /// The screen, drawn like Minecraft would have looked on a PlayStation:
     /// dark slate panels shaded in dithered bands, chunky bevels, sunken
     /// black slots, bone-white capitals with a blood-red rule under each
-    /// title, scanlines over the world, a wipe as it opens, and a bar along
-    /// the bottom saying what the cursor is on and which keys do what.
+    /// title, scanlines over the world, and a wipe as it opens.
     pub fn draw_inventory(&self, canvas: &mut Canvas, camera: &Camera3D, mouse: Option<Vec2>) {
         let Some(screen) = &self.screen else {
             return;
@@ -656,25 +585,6 @@ impl DuckCraft {
         }
         self.draw_stack(canvas, result, vec2(result_rect.x + 1.0, result_rect.y + 1.0));
 
-        // The book button: a little red book, pressed in while it's open.
-        let b = spot_rect(Spot::Book, book);
-        if book {
-            canvas.fill_rect(b, WELL);
-            well_edges(canvas, b);
-        } else {
-            bevel_box(canvas, b, Color::rgb(56, 56, 66));
-        }
-        let cover = Rect::new(b.x + 4.0, b.y + 2.0, 8.0, 11.0);
-        canvas.fill_rect(cover, Color::rgb(120, 26, 24));
-        canvas.fill_rect(Rect::new(cover.x, cover.y, 1.0, cover.h), Color::rgb(60, 10, 10));
-        canvas.fill_rect(Rect::new(cover.x + 3.0, cover.y + 3.0, 3.0, 1.0), INK);
-        canvas.draw_text(
-            if creative { "ALL" } else { "BOOK" },
-            vec2(b.x + 14.0, b.y + 4.0),
-            1,
-            if book { INK } else { DIM },
-        );
-
         // The bag, a rule, the hotbar; the slot in hand framed in red.
         for i in 0..SLOTS {
             self.draw_slot(canvas, spot_rect(Spot::Slot(i), book), self.inventory.slots[i]);
@@ -689,8 +599,6 @@ impl DuckCraft {
 
         if book && creative {
             self.draw_palette(canvas, screen.tab);
-        } else if book {
-            self.draw_book(canvas);
         }
 
         // The cursor: on the key cursor, or on what the mouse is over.
@@ -708,7 +616,6 @@ impl DuckCraft {
             None => mouse,
         };
         self.draw_duck_preview(canvas, camera, look_at);
-        self.draw_info_bar(canvas, pointed, result);
 
         // The held stack floats by the cursor, or follows the mouse.
         let hold_at = match screen.cursor {
@@ -750,100 +657,6 @@ impl DuckCraft {
         self.draw_stack(canvas, stack, vec2(rect.x + 1.0, rect.y + 1.0));
     }
 
-    /// The bar along the bottom: the thing under the cursor (or held, or in
-    /// hand), what it is, and the keys that do something right now.
-    fn draw_info_bar(&self, canvas: &mut Canvas, pointed: Option<Spot>, result: Option<Stack>) {
-        let Some(screen) = &self.screen else {
-            return;
-        };
-        let bar = info_bar();
-        ps_panel(canvas, bar, None);
-        canvas.label("info_bar", bar);
-        let under = pointed.and_then(|spot| match spot {
-            Spot::Palette(i) => Some(Stack::new(Item::all()[i], 1)),
-            Spot::Slot(i) => self.inventory.slots[i],
-            Spot::Grid(i) => screen.grid[i],
-            Spot::Result => result,
-            _ => None,
-        });
-        let (stack, name, about): (Option<Stack>, String, String) = match (screen.held, pointed) {
-            (Some(held), _) => (
-                Some(held),
-                format!("{} (held)", held.item.name()),
-                held.item.about().into(),
-            ),
-            (None, Some(Spot::Recipe(i))) => {
-                let (item, n) = RECIPES[i].makes;
-                (
-                    Some(Stack::new(item, n)),
-                    format!("Recipe: {}", item.name()),
-                    String::from("Fills the grid from your bag."),
-                )
-            }
-            (None, Some(Spot::Book)) => (
-                None,
-                String::from(if self.mode == Mode::Creative {
-                    "Everything"
-                } else {
-                    "Recipe book"
-                }),
-                String::from("Every way to make something. Not many."),
-            ),
-            (None, Some(Spot::Tab(t))) => (
-                None,
-                TABS[t].to_string(),
-                String::from("Q and R change the tab."),
-            ),
-            _ => match under {
-                Some(stack) => (Some(stack), stack.item.name().into(), stack.item.about().into()),
-                None => match self.inventory.slots[self.slot] {
-                    Some(stack) => (
-                        Some(stack),
-                        format!("In hand: {}", stack.item.name()),
-                        stack.item.about().into(),
-                    ),
-                    None => (None, String::from("Empty-handed"), String::from("Like everyone, in the end.")),
-                },
-            },
-        };
-        self.draw_stack(canvas, stack, vec2(bar.x + 6.0, bar.y + 5.0));
-        shadowed_text(canvas, &name, vec2(bar.x + 28.0, bar.y + 6.0), INK);
-        canvas.draw_text(&about, vec2(bar.x + 28.0, bar.y + 16.0), 1, DIM);
-
-        // The keys, as little key caps.
-        let holding = screen.held.is_some();
-        let mut keys: Vec<(&str, &str)> = match (holding, pointed) {
-            (true, Some(Spot::Palette(_))) => vec![("X", "bin it")],
-            (true, _) => vec![("X", "put"), ("C", "one")],
-            (false, Some(Spot::Recipe(_))) => vec![("X", "fill grid")],
-            (false, Some(Spot::Book | Spot::Tab(_))) => vec![("X", "choose")],
-            (false, Some(Spot::Palette(_))) => vec![("X", "stack"), ("SHIFT+X", "to bag")],
-            (false, Some(Spot::Result)) => vec![("X", "make"), ("SHIFT+X", "make all")],
-            (false, Some(_)) if under.is_some() => {
-                vec![("X", "take"), ("C", "half"), ("SHIFT+X", "move")]
-            }
-            _ => vec![("ARROWS", "move"), ("X", "pick")],
-        };
-        if self.mode == Mode::Creative && screen.book_open {
-            keys.push(("Q/R", "tab"));
-        }
-        keys.push(("E", "close"));
-        let mut x = bar.x + 6.0;
-        let y = bar.y + bar.h - 13.0;
-        for (key, what) in keys {
-            let w = Canvas::text_width(key, 1) + 6.0;
-            let needed = w + 3.0 + Canvas::text_width(what, 1) + 9.0;
-            if x + needed > bar.x + bar.w - 4.0 {
-                break;
-            }
-            bevel_box(canvas, Rect::new(x, y, w, 10.0), Color::rgb(64, 64, 76));
-            canvas.draw_text(key, vec2(x + 3.0, y + 2.0), 1, INK);
-            x += w + 3.0;
-            canvas.draw_text(what, vec2(x, y + 2.0), 1, DIM);
-            x += Canvas::text_width(what, 1) + 9.0;
-        }
-    }
-
     /// Creative: one of everything, under three tabs, to take as many as
     /// you like.
     fn draw_palette(&self, canvas: &mut Canvas, tab: usize) {
@@ -873,48 +686,6 @@ impl DuckCraft {
         for (n, note) in ["X: a full stack", "Holding: bin it"].iter().enumerate() {
             let at = vec2(b.x + 6.0, b.y + b.h - 24.0 + n as f32 * 10.0);
             canvas.draw_text(note, at, 1, FAINT);
-        }
-    }
-
-    fn draw_book(&self, canvas: &mut Canvas) {
-        let b = book_panel(true);
-        ps_panel(canvas, b, Some(("RECIPES", "")));
-        for (i, recipe) in RECIPES.iter().enumerate() {
-            let row = spot_rect(Spot::Recipe(i), true);
-            let ready = recipe.needs.iter().all(|&item| {
-                self.inventory.count(item)
-                    >= recipe.needs.iter().filter(|&&n| n == item).count() as u32
-            });
-            canvas.fill_rect(
-                row,
-                if ready {
-                    Color::rgb(28, 38, 30)
-                } else {
-                    Color::rgb(34, 24, 24)
-                },
-            );
-            well_edges(canvas, row);
-            // The ingredients, then the result.
-            let mut x = row.x + 1.0;
-            let mut kinds: Vec<(Item, u32)> = Vec::new();
-            for &item in recipe.needs {
-                match kinds.iter_mut().find(|(k, _)| *k == item) {
-                    Some((_, n)) => *n += 1,
-                    None => kinds.push((item, 1)),
-                }
-            }
-            for (item, n) in kinds {
-                self.draw_stack(canvas, Some(Stack::new(item, n)), vec2(x, row.y));
-                x += 18.0;
-            }
-            canvas.draw_text(
-                ">",
-                vec2(row.x + row.w - 27.0, row.y + 5.0),
-                1,
-                if ready { INK } else { FAINT },
-            );
-            let (item, n) = recipe.makes;
-            self.draw_stack(canvas, Some(Stack::new(item, n)), vec2(row.x + row.w - 18.0, row.y));
         }
     }
 
