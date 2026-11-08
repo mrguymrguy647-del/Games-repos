@@ -137,6 +137,17 @@ game copes; the tool still has the gap.
     night showcase (`duck_craft_night.json`, an underscore) is never
     replayed, so it went stale unnoticed; and it needs a tune value
     (`start_time_of_day`) that a replay can't carry (see 31).
+48. **Sound crackles and stutters in the window (Windows).** The mix
+    itself is right: a headless `audio.wav` of the title matches the
+    music file sample for sample. But in the window the music comes out
+    choppy, broken enough to sound like a different tune. On Windows the
+    speaker goes through tinyaudio's DirectSound double buffer, with
+    only 1024 frames (23 ms) a half (`BLOCK` in `speaker.rs`). Its feed
+    thread waits on two auto-reset events, so a refill that comes later
+    than one half (Windows timers tick every 15.6 ms; the game renders on
+    the CPU) writes into the half that's playing, or lets a half play
+    twice. Also: the mix is hard-clipped (`clamp`), and a loop's volume
+    jumps once a block instead of gliding.
 
 ## Duck Quill
 
