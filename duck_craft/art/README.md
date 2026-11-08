@@ -36,6 +36,8 @@ the Hollow:
 | `music_night.wav` | "Nothing Waits": a low drone and a throb under the ground, a tone that falls forever (a Shepard tone), whispers that move from ear to ear, strings piling up on wrong notes and cut off dead, bowed metal, a choir sinking on a tritone, a far bell; 64 s, stereo |
 | `music_title.wav` | "The Island Doesn't Remember", in the style of creepypasta music: an original children's tune on an old games-console chip, slowed down and played off a worn VHS tape (wobble, hiss, crinkles), a thin high note a half-step wrong, a skip, the tune backwards, then a broadcast tone; 32 s, stereo |
 | `wind.wav` | the island's wind, gusting, a little different in each ear; 24 s, stereo |
+| `rain.wav` | rain, a hiss of drops with nearer ones now and then; 16 s, stereo, loops (loud outside, a patter indoors) |
+| `thunder.wav` | a crack and a long roll, for storms |
 | `groan.wav`, `groan_far.wav` | a Hollow, near and far (the engine plays a file at one loudness, so distance is a second file); panned toward it |
 | `hollow_hurt.wav`, `hollow_die.wav` | a Hollow hit, and coming apart into ash; panned toward it |
 | `sting.wav` | the Watcher, seen |
@@ -64,3 +66,13 @@ cubes turned to show a corner, seen from a little above (as Minecraft's
 inventory shows them), the apple as a round ball of little cubes with a stem
 and a leaf (`apple_model` in `main.rs`), and things like the blade as
 their picture made solid with a one-pixel edge (`item_model`).
+
+## Furniture
+
+`make_blocks.py` also draws the torch (a stick and a flame, drawn like a
+plant), a door's halves shut (planks, a window up top, a handle) and open
+(just the frame: a see-through block), the bed's top and sides, the
+chest's lid and its front with the latch, and the door's item picture.
+They're added after every other tile, so the older tiles keep their
+random speckles.
+

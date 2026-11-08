@@ -115,6 +115,27 @@ game copes; the tool still has the gap.
     overlapped. Only a world draw makes the next in-view draw forget old
     depths, so the game draws an invisible mesh to get one
     (`fresh_depth`). A `canvas.clear_depth()` would say what it means.
+41. **Every block is a full cube.** `BlockWorld` has no slabs, panes or
+    thin shapes, so the new furniture is faked: an open door is a frame
+    drawn on a see-through cube, and a torch is drawn with the plants'
+    crossed pictures (`Plant::Torch`), its light kept by the game. A
+    block shape (cube, slab, panel on one side, crossed pictures) in
+    `BlockKind` would let a door be a door.
+42. **Block kinds need unique names, but one thing can be two kinds.** A
+    door's halves, open and shut, are four kinds of block, and
+    `BlockPalette::new` panics on two kinds both called "Door". They had
+    to be called "Door (top)" and so on. A kind's key could be separate
+    from the name shown, or the panic could say which blocks clash.
+43. **No pathfinding.** The Hollows' way round walls is a flow field the
+    game builds itself (`hunt.rs`, a breadth-first search over the
+    blocks). Any block game needs one: a `BlockWorld::flow_field(goal,
+    can_stand, can_step)` would save every game writing its own.
+44. **The fuzzer cries "freeze" on menus.** It presses every key the game
+    reads, so as the game reads more keys (the inventory's Q, R, Tab,
+    Backspace), it spent ten seconds on the title screen pressing only
+    keys the title ignores, and called that a freeze. The menus now take
+    more keys, but the fuzzer could press only the keys the current
+    screen reads (a game could report them).
 
 ## Duck Quill
 

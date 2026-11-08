@@ -65,18 +65,19 @@ const PAUSE: [PauseChoice; 5] = [
 ];
 
 /// The pause menu's page of controls: the keys, and what they do.
-const CONTROLS: [(&str, &str); 11] = [
+const CONTROLS: [(&str, &str); 12] = [
     ("WASD", "walk (Shift: run)"),
     ("SPACE", "jump; twice in creative: fly"),
     ("MOUSE", "look (or the arrow keys)"),
     ("CLICK", "dig, hit (or X)"),
-    ("RIGHT", "build, eat (hold), duckling (or C)"),
+    ("RIGHT", "build; use doors, beds, chests (or C)"),
+    ("FOOD", "hold right click to eat"),
     ("1-9", "pick from the hotbar (or the wheel)"),
     ("E", "bag and crafting"),
     ("V", "first person / behind the duck"),
     ("F5", "save"),
     ("ESC", "pause"),
-    ("", "Lamps keep the dark away. Mostly."),
+    ("", "Torches keep the dark away. Mostly."),
 ];
 
 /// Music volumes, at most.
@@ -545,7 +546,7 @@ impl DuckCraft {
     /// cap, then what it does.
     fn draw_controls(&self, canvas: &mut Canvas) {
         use inventory::{BLOOD, DIM, INK, bevel_box, ps_panel, shadowed_text};
-        let r = Rect::new(20.0, 22.0, WIDTH - 40.0, 182.0);
+        let r = Rect::new(20.0, 18.0, WIDTH - 40.0, 198.0);
         ps_panel(canvas, r, Some(("CONTROLS", "ANY KEY: BACK")));
         canvas.label("controls", r);
         for (i, (key, what)) in CONTROLS.iter().enumerate() {
