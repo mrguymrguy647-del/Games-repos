@@ -2301,12 +2301,18 @@ fn items_in_slots_spin_about_up_then_tip_towards_you() {
 }
 
 #[test]
-fn the_bread_is_a_photo_and_other_things_are_solid() {
+fn the_bread_is_a_photo_and_other_things_are_solid_and_the_apple_round() {
     let game = new_game().unwrap();
-    // A solid picture has edges as well as its two faces; the photo is
-    // one paper-thin card.
+    // A solid picture has edges as well as its two faces; the apple is
+    // round, many faces; the photo is one flat card, the shape of the
+    // photo.
     let blade = &game.art.item_cards[&Item::Blade];
+    let apple = &game.art.item_cards[&Item::Apple];
     let bread = &game.art.item_cards[&Item::Bread];
     assert!(blade.triangles.len() > 8, "the blade has edges");
-    assert_eq!(bread.triangles.len(), 4, "the bread is a flat print, both sides");
+    assert!(apple.triangles.len() > 200, "the apple is round");
+    assert!(apple.texture.is_none(), "made of coloured cubes");
+    assert_eq!(bread.triangles.len(), 4, "the bread is a flat photo, both sides");
+    let height = bread.vertices.iter().map(|v| v.y).fold(f32::MIN, f32::max) * 2.0;
+    assert!((height - 188.0 / 256.0).abs() < 0.01, "as tall as the photo, for its width");
 }

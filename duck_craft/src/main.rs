@@ -712,9 +712,11 @@ struct Art {
     /// The four stages of cracks, drawn over a block being dug.
     cracks: Vec<Mesh>,
     /// Items that aren't blocks, as small solid things (their picture
-    /// with a thin edge, as Minecraft holds them), for the hand, the
-    /// hotbar and the inventory. Bread is different: a photo.
+    /// with a thin edge, as Minecraft holds them; the apple round), for
+    /// the hand, the hotbar and the inventory. Bread is different: a photo.
     item_cards: std::collections::HashMap<Item, Mesh>,
+    /// The bread's photo, shrunk to fit a slot, where it sits still.
+    bread_icon: Sprite,
     /// Hearts, bread and bubbles over the hotbar.
     hud: Tileset,
     /// Each plant's picture in the atlas (by `Plant as usize`).
@@ -780,6 +782,7 @@ impl Art {
             .into_iter()
             .map(|item| match item {
                 Item::Bread => (item, bread.clone()),
+                Item::Apple => (item, apple_model()),
                 _ => (item, item_model(atlas.tile(item.tile()))),
             })
             .collect();
@@ -788,6 +791,7 @@ impl Art {
             cubes,
             cracks,
             item_cards,
+            bread_icon: Sprite::load_png(format!("{ASSETS}/bread_icon.png"))?,
             hud: Tileset::load(format!("{ASSETS}/hud.json"))?,
             plant_uvs: Plant::ALL.iter().map(|p| atlas.uv_rect(p.tile())).collect(),
             ocean: ocean(atlas.tile("water")),
@@ -906,15 +910,98 @@ fn item_model(picture: Sprite) -> Mesh {
     mesh
 }
 
-/// The bread: a photo print, paper-thin, the photo on its front and the
-/// print's back on its back (`print` holds both, side by side).
-fn photo_card(print: Sprite) -> Mesh {
-    let mut mesh = Mesh::new().with_texture(print);
-    let h = 0.5;
-    let corners = [vec3(-h, -h, 0.0), vec3(-h, h, 0.0), vec3(h, h, 0.0), vec3(h, -h, 0.0)];
-    let front = [vec2(0.0, 1.0), vec2(0.0, 0.0), vec2(0.5, 0.0), vec2(0.5, 1.0)];
-    let back = [vec2(1.0, 1.0), vec2(1.0, 0.0), vec2(0.5, 0.0), vec2(0.5, 1.0)];
+/// The bread: the photo, flat, as it is (seen from behind, the same photo
+/// the wrong way round, as a picture on glass would be).
+fn photo_card(photo: Sprite) -> Mesh {
+    let tall = photo.height() as f32 / photo.width() as f32;
+    let mut mesh = Mesh::new().with_texture(photo);
+    let (w, h) = (0.5, 0.5 * tall);
+    let corners = [vec3(-w, -h, 0.0), vec3(-w, h, 0.0), vec3(w, h, 0.0), vec3(w, -h, 0.0)];
+    let front = [vec2(0.0, 1.0), vec2(0.0, 0.0), vec2(1.0, 0.0), vec2(1.0, 1.0)];
+    let back = [vec2(1.0, 1.0), vec2(1.0, 0.0), vec2(0.0, 0.0), vec2(0.0, 1.0)];
     two_sided(&mut mesh, corners, front, back);
+    mesh
+}
+
+/// The apple, round: a ball of little cubes, a dimple on top with a stem
+/// in it and a leaf, red darker underneath and lit where the sun catches
+/// it. One unit across, centred.
+fn apple_model() -> Mesh {
+    const N: i32 = 10;
+    let mut voxels: std::collections::HashMap<(i32, i32, i32), Color> = Default::default();
+    let mut seed = 7u32;
+    let mut noise = || {
+        seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+        (seed >> 16) as f32 / 65_535.0
+    };
+    let center = vec3(4.5, 4.0, 4.5);
+    for y in 0..N {
+        for z in 0..N {
+            for x in 0..N {
+                let d = vec3(x as f32, y as f32, z as f32) - center;
+                let r = (d.x * d.x + d.z * d.z + (d.y / 0.9) * (d.y / 0.9)).sqrt();
+                let dimple = y >= 8 && (d.x * d.x + d.z * d.z) < 2.5;
+                if r > 4.6 || dimple {
+                    continue;
+                }
+                // Darker underneath and on the far side; a highlight up
+                // and to the left; a few yellow freckles.
+                let shade = 0.62 + 0.38 * ((d.y + 4.0) / 8.0).clamp(0.0, 1.0);
+                let lit = (-d.x - d.z * 0.5 + d.y) > 4.5;
+                let mut color = if lit {
+                    Color::rgb(232, 86, 72)
+                } else {
+                    let jitter = 0.9 + 0.2 * noise();
+                    let k = shade * jitter;
+                    Color::rgb((186.0 * k) as u8, (30.0 * k) as u8, (34.0 * k) as u8)
+                };
+                if noise() < 0.04 {
+                    color = Color::rgb(214, 156, 66);
+                }
+                voxels.insert((x, y, z), color);
+            }
+        }
+    }
+    for y in 7..11 {
+        voxels.insert((4, y, 5), Color::rgb(92, 60, 30)); // the stem
+    }
+    for (x, y, z) in [(5, 9, 5), (6, 9, 5), (6, 10, 5), (7, 10, 5)] {
+        voxels.insert((x, y, z), Color::rgb(70, 140, 44)); // the leaf
+    }
+    let mut mesh = Mesh::new();
+    let size = 1.0 / N as f32;
+    // Each face's corners as offsets from a cube's low corner, in the
+    // order Duck Forge's own cube uses (bottom left, top left, top right,
+    // bottom right, seen from outside).
+    type Face = ((i32, i32, i32), [(f32, f32, f32); 4]);
+    let faces: [Face; 6] = [
+        ((0, 0, -1), [(0., 0., 0.), (0., 1., 0.), (1., 1., 0.), (1., 0., 0.)]),
+        ((0, 0, 1), [(1., 0., 1.), (1., 1., 1.), (0., 1., 1.), (0., 0., 1.)]),
+        ((-1, 0, 0), [(0., 0., 1.), (0., 1., 1.), (0., 1., 0.), (0., 0., 0.)]),
+        ((1, 0, 0), [(1., 0., 0.), (1., 1., 0.), (1., 1., 1.), (1., 0., 1.)]),
+        ((0, 1, 0), [(0., 1., 0.), (0., 1., 1.), (1., 1., 1.), (1., 1., 0.)]),
+        ((0, -1, 0), [(0., 0., 0.), (1., 0., 0.), (1., 0., 1.), (0., 0., 1.)]),
+    ];
+    let mut cells: Vec<_> = voxels.iter().collect();
+    cells.sort_by_key(|(cell, _)| **cell); // the same mesh every time
+    for (&(x, y, z), &color) in cells {
+        for ((dx, dy, dz), corners) in faces {
+            if voxels.contains_key(&(x + dx, y + dy, z + dz)) {
+                continue;
+            }
+            let i: Vec<usize> = corners
+                .iter()
+                .map(|&(cx, cy, cz)| {
+                    mesh.add_vertex(vec3(
+                        (x as f32 + cx) * size - 0.5,
+                        (y as f32 + cy) * size - 0.5,
+                        (z as f32 + cz) * size - 0.5,
+                    ))
+                })
+                .collect();
+            mesh.add_quad(i[0], i[1], i[2], i[3], color);
+        }
+    }
     mesh
 }
 
@@ -2614,7 +2701,9 @@ impl DuckCraft {
                     } else {
                         hand + vec3(0.0, 0.08, 0.0)
                     };
-                    let place = Transform::at(at).rotated(vec3(0.0, -0.6, 0.15)).sized(0.32);
+                    // The apple is solid all round, so it needs less room.
+                    let size = if item == Item::Apple { 0.22 } else { 0.32 };
+                    let place = Transform::at(at).rotated(vec3(0.0, -0.6, 0.15)).sized(size);
                     canvas.draw_mesh_in_view(card, &place, camera);
                 }
             }
@@ -2640,10 +2729,16 @@ impl DuckCraft {
     }
 
     /// `item` in 3D, centred on the screen point `center`, about 15 pixels
-    /// across, turning: blocks as cubes seen a little from above, other
-    /// things as solid pictures, and the bread as what it is, a photo,
-    /// turning slowly and a little crooked, edge-on now and then.
+    /// across, turning: blocks as cubes seen a little from above, the apple
+    /// round, other things as solid pictures. Except the bread: a flat
+    /// photo that just sits there.
     fn draw_item_model(&self, canvas: &mut Canvas, item: Item, center: Vec2) {
+        if item == Item::Bread {
+            let icon = &self.art.bread_icon;
+            let at = center - vec2(icon.width() as f32, icon.height() as f32) * 0.5;
+            canvas.blit_sprite(icon, vec2(at.x.round(), at.y.round()), Blit::default());
+            return;
+        }
         let view = item_view();
         let depth = 5.0;
         let per_pixel = 2.0 * depth * (view.fov / 2.0).tan() / HEIGHT;
@@ -2669,12 +2764,13 @@ impl DuckCraft {
                 ),
                 None => return,
             },
-            Item::Bread => match self.art.item_cards.get(&item) {
-                Some(card) => {
-                    let mut turn = spin_then_tip(spin * 0.55, 0.12);
-                    turn.z += 0.14; // not quite straight, never
-                    (card, Transform::at(at).rotated(turn).sized(15.0 * per_pixel))
-                }
+            Item::Apple => match self.art.item_cards.get(&item) {
+                Some(apple) => (
+                    apple,
+                    Transform::at(at)
+                        .rotated(spin_then_tip(spin, 0.45))
+                        .sized(13.0 * per_pixel),
+                ),
                 None => return,
             },
             _ => match self.art.item_cards.get(&item) {

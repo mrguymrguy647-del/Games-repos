@@ -52,15 +52,14 @@ night by the light, the heartbeat by how hurt you are.
 ## The bread
 
 The bread isn't drawn like everything else: it's a real photo of a loaf,
-crushed small, saved as a bad JPEG twice, faded yellow, date-stamped and
-printed on old photo paper, with "BREAD?" pencilled on the back, as if
-someone forced it into the game. `make_bread_photo.py path/to/photo.jpg`
-makes `../assets/bread_photo.png` (front and back side by side); the
-source photo isn't kept here, only the crushed print. In the game it's a
-paper-thin card: it turns slowly in its slot, a little crooked, and goes
-edge-on; in the hand you hold up the print.
+unedited, just put in the game as it is, as if someone forced it in. It
+doesn't turn like the other things: in a slot it's the photo, shrunk
+smoothly, sitting still; in the hand you hold up the photo, flat.
+`make_bread_photo.py path/to/photo.jpg` makes `../assets/bread_photo.png`
+(256 wide) and `bread_icon.png` (16 wide) by only making it smaller; the
+full-size source isn't kept here.
 
-Every other item is drawn in 3D too: blocks as small turning cubes seen
-from a little above, and things like the apple and the blade as their
-picture made solid, with a one-pixel edge (`item_model` in `main.rs`).
-
+Every other item is drawn in 3D: blocks as small turning cubes seen from
+a little above, the apple as a round ball of little cubes with a stem
+and a leaf (`apple_model` in `main.rs`), and things like the blade as
+their picture made solid with a one-pixel edge (`item_model`).
