@@ -50,8 +50,8 @@
 //!
 //! - The world is a grid of blocks (`World`), 192 x 44 x 192, grown by
 //!   `World::generate` from value noise with a fixed seed: the island (64
-//!   across) in the middle, the sea and the other lands round it. Only
-//!   the chunks inside the fog and in front of you are drawn.
+//!   across) in the middle, the sea and the other lands round it. The
+//!   engine draws only the chunks inside the fog and in view.
 //! - The pictures are one Duck Quill atlas (`art/blocks.json`, written by
 //!   `art/make_blocks.py`). The engine's `BlockWorld` holds the blocks and
 //!   draws each 16 x 16 column of the world as one mesh (one draw), built
@@ -1759,32 +1759,6 @@ struct DuckCraft {
 }
 
 impl DuckCraft {
-    /// The world's chunks near enough to see (inside the fog). Out past the
-    /// fog they'd only be fog, and drawing all of the world's every frame
-    /// is slow.
-    fn draw_chunks(&self, canvas: &mut Canvas, camera: &Camera3D, far: f32) {
-        let eye = vec2(camera.position.x, camera.position.z);
-        let (across, deep) = self.world.grid.chunks();
-        let size = CHUNK as f32;
-        for cz in 0..deep {
-            for cx in 0..across {
-                let low = vec2(cx as f32 * size, cz as f32 * size);
-                let nearest = vec2(
-                    eye.x.clamp(low.x, low.x + size),
-                    eye.y.clamp(low.y, low.y + size),
-                );
-                if nearest.distance(eye) > far + 1.0 {
-                    continue;
-                }
-                // (What's off the screen the engine skips itself.)
-                let mesh = self.world.grid.chunk_mesh(cx, cz);
-                if !mesh.triangles.is_empty() {
-                    canvas.draw_mesh(mesh, &Transform::default(), camera);
-                }
-            }
-        }
-    }
-
     fn new(art: Rc<Art>, mut world: World) -> DuckCraft {
         world.update_chunks(&art.palette);
         let ducklings = ducklings::hatch(&world);
@@ -2746,7 +2720,8 @@ impl Game for DuckCraft {
         });
         let still = Transform::default();
         canvas.draw_mesh(&art.ocean, &still, &camera);
-        self.draw_chunks(canvas, &camera, far);
+        // (The engine skips chunks past the fog's far edge.)
+        self.world.grid.draw(canvas, &camera);
         canvas.draw_mesh(&self.plant_mesh, &Transform::default(), &camera);
         // Clouds glow (so their undersides aren't grey), dimmed for the night.
         let drift = (self.time * 0.8).rem_euclid(CLOUD_PERIOD);

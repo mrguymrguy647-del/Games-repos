@@ -7,8 +7,9 @@
 #   tools/verify.sh duck_craft 0        (no fuzzing: the step says "skipped")
 #
 # It builds the game headless, runs its play tests, replays every
-# <game>/playthroughs/<game>.json and <game>-*.json with a contact sheet
-# and the debug overlay, fuzzes it, and prints one short report.
+# <game>/playthroughs/<game>.json, <game>-*.json and <game>_*.json (like
+# duck_craft_night.json, with the tune values it was recorded with), with a
+# contact sheet and the debug overlay, fuzzes it, and prints one short report.
 # Everything it saves goes in out/verify/<game>/. It stops with exit code 1
 # if anything failed.
 
@@ -71,14 +72,14 @@ fi
 
 # 3. Every playthrough, with a contact sheet of its events and the debug overlay.
 found=0
-for script in "$game/playthroughs/$game.json" "$game"/playthroughs/"$game"-*.json; do
+for script in "$game/playthroughs/$game.json" "$game"/playthroughs/"$game"-*.json "$game"/playthroughs/"$game"_*.json; do
     [ -f "$script" ] || continue
     found=1
     name=$(basename "$script" .json)
     folder="$out/$name"
     cargo run -q --no-default-features -p "$game" -- \
         --headless --inputs "$script" --sheet-events --debug --quiet --out "$folder" \
-        >"$folder.txt" 2>&1
+        </dev/null >"$folder.txt" 2>&1
     code=$?
     if [ $code -eq 0 ] && [ ! -s "$folder.txt" ]; then
         final=$(grep -E '^final: ' "$folder/summary.txt" | cut -c 8-)

@@ -70,11 +70,6 @@ game copes; the tool still has the gap.
     art, now 39 MB of `.wav`) takes the tests from 0.5 s to about 9 s. A
     load cache in `Wav::load` (or the engine sharing loaded files) would
     bring it back.
-31. **Replays don't use the tune values they were recorded with.** The
-    night showcase starts at dusk (`start_time_of_day`). A replay now
-    warns when its tune values differ from the recording's, but it still
-    needs `--set start_time_of_day=0.47` to play the same game. An option
-    to replay with the recorded values would finish it.
 32. **Labels under a menu make `verify` fail.** The title and pause
     screens are drawn over the world, and a duckling's label under a
     button counts as "spawned on top of each other". The game labels
@@ -123,31 +118,6 @@ game copes; the tool still has the gap.
     game builds itself (`hunt.rs`, a breadth-first search over the
     blocks). Any block game needs one: a `BlockWorld::flow_field(goal,
     can_stand, can_step)` would save every game writing its own.
-45. **`BlockWorld::draw` draws every chunk out to the horizon.**
-    `draw_mesh` skips a chunk that's off the screen, but not one past
-    the fog's far edge, where it would only be fog: a world 192 blocks
-    across is 144 chunks, most of them sea. The game culls by distance
-    itself (`draw_chunks`, with `chunk_mesh`); `draw` could skip chunks
-    past the fog (or a distance it's given).
-46. **A test can't call game code that needs a `Context`.** `Simulation`
-    only steps the whole game, so the Other's tricks had to take a bare
-    `Rng` instead of the `Context` they use in play, to be tested one
-    by one. Something like `sim.with_context(|game, ctx| ..)` would do.
-47. **`verify` only replays `<game>.json` and `<game>-*.json`.** The
-    night showcase (`duck_craft_night.json`, an underscore) is never
-    replayed, so it went stale unnoticed; and it needs a tune value
-    (`start_time_of_day`) that a replay can't carry (see 31).
-48. **Sound crackles and stutters in the window (Windows).** The mix
-    itself is right: a headless `audio.wav` of the title matches the
-    music file sample for sample. But in the window the music comes out
-    choppy, broken enough to sound like a different tune. On Windows the
-    speaker goes through tinyaudio's DirectSound double buffer, with
-    only 1024 frames (23 ms) a half (`BLOCK` in `speaker.rs`). Its feed
-    thread waits on two auto-reset events, so a refill that comes later
-    than one half (Windows timers tick every 15.6 ms; the game renders on
-    the CPU) writes into the half that's playing, or lets a half play
-    twice. Also: the mix is hard-clipped (`clamp`), and a loop's volume
-    jumps once a block instead of gliding.
 
 ## Duck Quill
 

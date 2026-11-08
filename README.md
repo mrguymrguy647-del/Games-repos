@@ -1,7 +1,7 @@
 # Games-repos
 
 Games made with **Duck Forge** (the engine, in
-[game-engine-rust-language](https://github.com/mrguymrguy647-del/game-engine-rust-language)),
+[Duck-Forge](https://github.com/mrguymrguy647-del/Duck-Forge)),
 with art from **Duck Quill**. One folder per game; the engine comes from its
 own repo, so the engine and the games change separately.
 
@@ -65,9 +65,12 @@ a game by surprise. To move to a newer engine, change the `rev` (or use
 `branch = "main"`), then run `tools/verify.sh` for each game.
 
 Right now the pinned commit is on the engine's `claude/duck-craft-audio`
-branch: the fixes Duck Craft needed (engine PR #6) plus stereo sound and
-cleaner resampling. Once those are merged into the engine's `main`, the
-`rev` can point at `main`'s commit.
+branch: the fixes Duck Craft needed (engine PR #6), stereo sound and
+cleaner resampling, then PR #7 (chunks lost in fog aren't drawn,
+`Simulation::with_context`, `verify` replays every playthrough with its
+recorded tune values) and PR #8 (smoother sound in a window, especially
+on Windows). Once those are merged into the engine's `main`, the `rev`
+can point at `main`'s commit.
 
 ## Add a game
 

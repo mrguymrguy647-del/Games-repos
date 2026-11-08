@@ -8,7 +8,7 @@ members = ["duck_craft"]
 # so a change to the engine never breaks a game by surprise: move the pin
 # on purpose (and run tools/verify.sh) when the engine moves on.
 [workspace.dependencies]
-duckforge = { git = "https://github.com/mrguymrguy647-del/game-engine-rust-language", rev = "422be8de5ad4823568216660e083522e05b6c4d0", default-features = false }
+duckforge = { git = "https://github.com/mrguymrguy647-del/Duck-Forge", rev = "1c52d497623cb291847fde81d06c6690c4cf7786", default-features = false }
 
 # Games run smoothly even while being worked on.
 [profile.dev]
