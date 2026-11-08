@@ -2323,3 +2323,14 @@ fn the_bread_is_a_photo_and_other_things_are_solid_and_the_apple_round() {
     let height = bread.vertices.iter().map(|v| v.y).fold(f32::MIN, f32::max) * 2.0;
     assert!((height - 188.0 / 256.0).abs() < 0.01, "as tall as the photo, for its width");
 }
+
+#[test]
+fn the_duck_in_the_inventory_looks_down_at_a_cursor_below_it() {
+    // A head's positive pitch tips it up (rotate_x turns forward to up).
+    let (_, below) = inventory::preview_look(vec2(0.0, 80.0));
+    let (_, above) = inventory::preview_look(vec2(0.0, -80.0));
+    assert!(below < 0.0, "a cursor below: the head tips down");
+    assert!(above > 0.0, "a cursor above: the head tips up");
+    let up = vec3(0.0, 0.0, 1.0).rotate_x(above);
+    assert!(up.y > 0.0, "positive pitch really is up");
+}

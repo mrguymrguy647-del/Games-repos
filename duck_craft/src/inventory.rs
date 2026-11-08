@@ -710,10 +710,10 @@ impl DuckCraft {
         let eyes = vec2(r.x + r.w / 2.0, r.y + 22.0);
         let look = look_at.map_or(Vec2::ZERO, |m| m - eyes);
         let idle = (self.time * 0.6).sin() * 0.25;
+        let (yaw, pitch) = preview_look(look);
         let pose = Pose {
-            // Facing out of the screen, turned a little towards the cursor.
-            yaw: std::f32::consts::PI - (look.x / 60.0).clamp(-1.0, 1.0) * 0.7 + idle,
-            pitch: (look.y / 60.0).clamp(-1.0, 1.0) * 0.5,
+            yaw: yaw + idle,
+            pitch,
             swing: 0.0,
             lift: 0.0,
         };
@@ -727,6 +727,16 @@ impl DuckCraft {
             canvas.draw_mesh_in_view(mesh, &place, camera);
         }
     }
+}
+
+/// Where the duck in the inventory's window turns its head, for a cursor
+/// `look` away from its eyes (in screen pixels, y down): facing out of the
+/// screen, turned a little towards the cursor, and tipped up (positive
+/// pitch) for a cursor above it, down for one below.
+pub fn preview_look(look: Vec2) -> (f32, f32) {
+    let yaw = std::f32::consts::PI - (look.x / 60.0).clamp(-1.0, 1.0) * 0.7;
+    let pitch = -(look.y / 60.0).clamp(-1.0, 1.0) * 0.5;
+    (yaw, pitch)
 }
 
 /// Puts `stack` into the first slots of `slots` it fits (same item with
