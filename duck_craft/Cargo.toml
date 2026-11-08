@@ -1,0 +1,18 @@
+[package]
+name = "duck_craft"
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.87"
+description = "A Minecraft-style island of blocks, made with Duck Forge and Duck Quill. Nothing lasts. Build anyway."
+publish = false
+
+[dependencies]
+duckforge = { workspace = true }
+
+# The same switches as the engine's: a window, the graphics card, sound.
+# Headless runs and tests turn them off (--no-default-features).
+[features]
+default = ["window", "gpu", "audio"]
+window = ["duckforge/window"]
+gpu = ["duckforge/gpu"]
+audio = ["duckforge/audio"]

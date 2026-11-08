@@ -1,0 +1,17 @@
+# Games made with Duck Forge (the duckforge engine), one folder each.
+# Add a game: make its folder (copy duck_craft's Cargo.toml), and list it here.
+[workspace]
+resolver = "3"
+members = ["duck_craft"]
+
+# Every game uses the same engine, from its own repo. Pinned to one commit
+# so a change to the engine never breaks a game by surprise: move the pin
+# on purpose (and run tools/verify.sh) when the engine moves on.
+[workspace.dependencies]
+duckforge = { git = "https://github.com/mrguymrguy647-del/game-engine-rust-language", rev = "422be8de5ad4823568216660e083522e05b6c4d0", default-features = false }
+
+# Games run smoothly even while being worked on.
+[profile.dev]
+opt-level = 1
+[profile.dev.package."*"]
+opt-level = 3
