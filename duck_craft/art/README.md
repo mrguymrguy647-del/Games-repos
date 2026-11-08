@@ -15,7 +15,6 @@ are in `../assets/`. Run the commands in `examples/duck_craft`.
 | `hollow.json`, `watcher.json` | `assets/hollow.png`, `assets/watcher.png` | `quill render art/hollow.json --out assets` (and the same for `watcher`) |
 | `make_duckling.py` | `duckling.json`: the ducklings' skin, the same kind of layout (body with tail, head with beak, legs; `ducklings.rs` uses the same numbers) | `python3 art/make_duckling.py` |
 | `duckling.json` | `assets/duckling.png` | `quill render art/duckling.json --out assets` |
-| Mini Craft's `hum.toml` (Duck Echo) | `hum.wav`, the wind | copied from `../mini_craft/assets` |
 
 To change a block, edit its function in `make_blocks.py` (a grid of palette
 names, `.` for see-through), then run both commands. Every tile is in one
@@ -24,21 +23,28 @@ The digging, building, footstep, crafting, thud and quack sounds are made in cod
 
 ## Music and sounds
 
-`../audio/make_sounds.py` makes every `.wav` in `../assets` except `hum.wav`
-(Mini Craft's wind), from nothing but sine waves, noise and arithmetic
-(numpy and scipy), because Duck Echo isn't ready yet:
+`../audio/make_sounds.py` makes every `.wav` in `../assets`, from nothing
+but sine waves, noise and arithmetic (numpy and scipy), because Duck Echo
+isn't ready yet. Everything is at 44100 samples a second, the engine's own
+rate, so nothing is resampled on loading; music, wind, bells and the sting
+are stereo; the Hollows' sounds are mono, because the game pans them toward
+the Hollow:
 
 | File | What |
 |---|---|
-| `music_day.wav` | "Still Water": slow felt piano over a soft pad, D minor, 64 s, loops with no seam |
-| `music_night.wav` | "Nothing Waits": a low drone, a minor second that comes and goes, wind, a far bell; 64 s |
-| `music_title.wav` | "The Island Doesn't Remember": a falling piano figure over the drone; 32 s |
-| `groan.wav`, `groan_far.wav` | a Hollow, near and far (the engine plays a file at one loudness, so distance is a second file) |
-| `hollow_hurt.wav`, `hollow_die.wav` | a Hollow hit, and coming apart into ash |
+| `music_day.wav` | "Still Water": slow felt piano over a soft pad, D minor, 64 s, stereo, loops with no seam |
+| `music_night.wav` | "Nothing Waits": a low drone, a minor second that comes and goes, wind, a far bell; 64 s, stereo |
+| `music_title.wav` | "The Island Doesn't Remember": a falling piano figure over the drone; 32 s, stereo |
+| `wind.wav` | the island's wind, gusting, a little different in each ear; 24 s, stereo |
+| `groan.wav`, `groan_far.wav` | a Hollow, near and far (the engine plays a file at one loudness, so distance is a second file); panned toward it |
+| `hollow_hurt.wav`, `hollow_die.wav` | a Hollow hit, and coming apart into ash; panned toward it |
 | `sting.wav` | the Watcher, seen |
 | `heartbeat.wav` | one beat, looped when the duck is badly hurt |
 | `bell_dusk.wav`, `bell_dawn.wav` | nightfall and morning |
 
-Run it in `examples/duck_craft`: `python3 audio/make_sounds.py` (about 40 s).
+Run it in `duck_craft/`: `python3 audio/make_sounds.py` (about 30 s). The
+script's docstring says what makes it sound clean (the reverb, the piano's
+strings, dither). The music is about 30 MB of `.wav`: big, but the engine
+reads only `.wav` (see ISSUES.md).
 The game fades the loops itself: the title's on the title screen, day and
 night by the light, the heartbeat by how hurt you are.

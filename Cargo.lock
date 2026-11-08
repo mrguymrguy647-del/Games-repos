@@ -430,7 +430,7 @@ dependencies = [
 [[package]]
 name = "duckforge"
 version = "0.1.0"
-source = "git+https://github.com/mrguymrguy647-del/game-engine-rust-language?rev=84d4a45014390ec0ee184a88feb106d831820afc#84d4a45014390ec0ee184a88feb106d831820afc"
+source = "git+https://github.com/mrguymrguy647-del/game-engine-rust-language?rev=422be8de5ad4823568216660e083522e05b6c4d0#422be8de5ad4823568216660e083522e05b6c4d0"
 dependencies = [
  "bytemuck",
  "gif",

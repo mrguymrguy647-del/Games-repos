@@ -211,6 +211,7 @@ impl DuckCraft {
 
         let hunting = self.mode == Mode::Survival && !self.vitals.fainted;
         let duck = self.position;
+        let yaw = self.yaw;
         let mut blows = Vec::new();
         for hollow in &mut self.hollows {
             if let Some(t) = &mut hollow.fading {
@@ -342,10 +343,11 @@ impl DuckCraft {
             if hollow.groan_wait <= 0.0 {
                 hollow.groan_wait = ctx.rng.range(5.0, 12.0);
                 let heard = position.distance(duck);
+                let side = pan_toward(duck, yaw, position);
                 if heard < 12.0 {
-                    ctx.play_wav(&art.sounds.groan);
+                    ctx.play_wav_panned(&art.sounds.groan, side);
                 } else if heard < 28.0 {
-                    ctx.play_wav(&art.sounds.groan_far);
+                    ctx.play_wav_panned(&art.sounds.groan_far, side);
                 }
             }
         }
@@ -360,7 +362,7 @@ impl DuckCraft {
         }
         for at in ash {
             if at.distance(duck) < 30.0 && daylight > 0.4 {
-                ctx.play_wav(&art.sounds.hollow_die);
+                ctx.play_wav_panned(&art.sounds.hollow_die, pan_toward(duck, yaw, at));
             }
             self.ash_cloud(ctx, at);
         }
@@ -494,7 +496,7 @@ impl DuckCraft {
             hollow.fading = Some(0.0);
             let at = hollow.position;
             self.kills += 1;
-            ctx.play_wav(&self.art.sounds.hollow_die);
+            ctx.play_wav_panned(&self.art.sounds.hollow_die, pan_toward(from, self.yaw, at));
             self.ash_cloud(ctx, at);
             if ctx.rng.range(0.0, 1.0) < COAL_CHANCE && self.mode == Mode::Survival {
                 self.give(Item::Coal, 1);
@@ -504,7 +506,8 @@ impl DuckCraft {
                 self.say(line);
             }
         } else {
-            ctx.play_wav(&self.art.sounds.hollow_hurt);
+            let at = self.hollows[i].position;
+            ctx.play_wav_panned(&self.art.sounds.hollow_hurt, pan_toward(from, self.yaw, at));
         }
         true
     }
@@ -677,3 +680,16 @@ impl DuckCraft {
 
 /// The chance, each night, that the Watcher comes.
 pub const WATCHER_CHANCE: f32 = 0.5;
+
+/// Where a sound at `at` sits between the ears of a duck at `duck` facing
+/// `yaw`: -1 left, 0 straight ahead (or behind), 1 right. Kept a little in
+/// from the edges, so nothing comes from one ear only.
+pub fn pan_toward(duck: Vec3, yaw: f32, at: Vec3) -> f32 {
+    let away = vec3(at.x - duck.x, 0.0, at.z - duck.z);
+    let distance = away.length();
+    if distance < 0.5 {
+        return 0.0;
+    }
+    let right = vec3(yaw.cos(), 0.0, -yaw.sin());
+    (away.dot(right) / distance * 0.8).clamp(-0.8, 0.8)
+}

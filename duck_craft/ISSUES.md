@@ -61,16 +61,19 @@ game copes; the tool still has the gap.
     game with menus.
 28. **`play_wav` has no volume.** A far-off Hollow should groan quietly,
     but a `.wav` plays at one loudness; the game ships a second, quieter,
-    muffled file (`groan_far.wav`). `ctx.play_wav_at(&wav, volume)` (and
-    one day a position for stereo) would do.
+    muffled file (`groan_far.wav`). `ctx.play_wav_panned` now puts a
+    Hollow's groan on the side it's on, but the side is fixed when it
+    starts: turn while it groans and it doesn't move. A
+    `ctx.play_wav_at(&wav, volume, pan)` (or sounds placed in the world,
+    followed as the listener turns) would do.
 29. **A `Wav` can't be made from samples in code.** The music had to be
-    made in Python and shipped as files (5 MB of `.wav`), where a
+    made in Python and shipped as files, where a
     `Wav::from_samples(&[f32], rate)` would let a game make sounds at
-    start. (The engine already resamples anything it loads, which made
-    16 kHz music files easy.)
-30. **Loading 5 MB of sound in every play test** (each `arena` loads the
-    art) took the tests from 0.5 s to about 4 s. A load cache in
-    `Wav::load` (or the engine sharing loaded files) would bring it back.
+    start.
+30. **Loading all the sound in every play test** (each `arena` loads the
+    art, now 36 MB of `.wav`) takes the tests from 0.5 s to about 7 s. A
+    load cache in `Wav::load` (or the engine sharing loaded files) would
+    bring it back.
 31. **Replays don't apply the tune values they were recorded with.** The
     night showcase starts at dusk (`start_time_of_day`); its recording
     notes the value, but the replay needs `--set start_time_of_day=0.47`
@@ -90,6 +93,11 @@ game copes; the tool still has the gap.
     only sends a change when it's bigger than 0.004. The engine could
     skip changes too small to hear.
 36. **`Simulation` has no `frame()`;** `sim.context().frame()` works.
+37. **Only `.wav` loads, so the music is big.** At full quality (44.1 kHz,
+    stereo, 16-bit) 64 s of music is 11 MB; the game's sounds are 36 MB,
+    nearly all music, where `.ogg` would be about 2 MB. Reading Ogg
+    Vorbis (or FLAC, lossless at about half) in `Wav::load` would keep
+    repos and downloads small.
 
 ## Duck Quill
 

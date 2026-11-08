@@ -64,6 +64,11 @@ Every game uses the same Duck Forge, from `[workspace.dependencies]` in
 a game by surprise. To move to a newer engine, change the `rev` (or use
 `branch = "main"`), then run `tools/verify.sh` for each game.
 
+Right now the pinned commit is on the engine's `claude/duck-craft-audio`
+branch: the fixes Duck Craft needed (engine PR #6) plus stereo sound and
+cleaner resampling. Once those are merged into the engine's `main`, the
+`rev` can point at `main`'s commit.
+
 ## Add a game
 
 1. Make a folder, like `my_game/`, with a `Cargo.toml` like

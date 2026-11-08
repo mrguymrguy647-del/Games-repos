@@ -2185,3 +2185,33 @@ fn the_watcher_comes_on_some_nights_and_finds_somewhere_to_stand() {
         "it found somewhere to stand {found} times in 16"
     );
 }
+
+#[test]
+fn a_hollow_on_the_right_is_heard_on_the_right() {
+    let duck = vec3(0.0, 10.0, 0.0);
+    for yaw in [0.0, 1.0, 2.5, 4.0] {
+        let ahead = vec3(f32::sin(yaw), 0.0, f32::cos(yaw));
+        let right = vec3(f32::cos(yaw), 0.0, -f32::sin(yaw)); // where D walks
+        assert!(night::pan_toward(duck, yaw, duck + right * 5.0) > 0.7, "right at yaw {yaw}");
+        assert!(night::pan_toward(duck, yaw, duck - right * 5.0) < -0.7, "left at yaw {yaw}");
+        assert!(night::pan_toward(duck, yaw, duck + ahead * 5.0).abs() < 0.01, "ahead at yaw {yaw}");
+    }
+    assert_eq!(night::pan_toward(duck, 0.0, duck), 0.0, "on top of the duck: both ears");
+}
+
+#[test]
+fn the_music_and_wind_are_stereo_at_the_engines_rate() {
+    for name in ["music_day", "music_night", "music_title", "wind", "sting", "bell_dusk", "bell_dawn"] {
+        let wav = Wav::load(format!("{ASSETS}/{name}.wav")).unwrap();
+        assert!(wav.is_stereo(), "{name} should be stereo");
+    }
+    for name in ["groan", "groan_far", "hollow_hurt", "hollow_die", "heartbeat"] {
+        let wav = Wav::load(format!("{ASSETS}/{name}.wav")).unwrap();
+        assert!(!wav.is_stereo(), "{name} should be mono, so the game can pan it");
+    }
+    for name in ["music_day", "wind", "groan"] {
+        let bytes = std::fs::read(format!("{ASSETS}/{name}.wav")).unwrap();
+        let rate = u32::from_le_bytes(bytes[24..28].try_into().unwrap());
+        assert_eq!(rate, 44_100, "{name} is at the engine's rate, so nothing is resampled");
+    }
+}

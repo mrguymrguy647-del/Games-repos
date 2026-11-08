@@ -804,7 +804,7 @@ impl Art {
             duckling: DucklingModel::load(Sprite::load_png(format!("{ASSETS}/duckling.png"))?),
             shadow: Mesh::cylinder(Color::BLACK, 16).glowing(),
             highlight: Mesh::cube(Color::WHITE).glowing(),
-            wind: Wav::load(format!("{ASSETS}/hum.wav"))?,
+            wind: Wav::load(format!("{ASSETS}/wind.wav"))?,
         })
     }
 }
