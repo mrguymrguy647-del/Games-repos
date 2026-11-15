@@ -534,7 +534,7 @@ fn build(file: WheelsFile, maps: MapsFile, names: NamesFile) -> Result<Data, Dat
             };
             let level = match of.level {
                 Some(level) => level,
-                None if kind == Kind::Number && wf.log => ((min.log10() + max.log10()) / 2.0),
+                None if kind == Kind::Number && wf.log => (min.log10() + max.log10()) / 2.0,
                 None => oi as f64,
             };
             let color = match &of.color {

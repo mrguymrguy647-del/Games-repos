@@ -235,3 +235,84 @@ fn odds_report() {
         }
     }
 }
+
+
+// ---------------------------------------------------------------------------
+// The screens, played with no window
+// ---------------------------------------------------------------------------
+
+use duckforge::prelude::{PlayTest, Simulation};
+
+fn game() -> crate::game::Lucky {
+    crate::new_game().unwrap_or_else(|e| panic!("{e}"))
+}
+
+#[test]
+fn the_playthrough_spins_all_sixteen_and_meets_the_rivals() {
+    let played = PlayTest::new(crate::config(), game()).inputs("playthroughs/lucky_world.json").run();
+    assert_eq!(played.text("screen"), "Rivals");
+    assert_eq!(played.number("wheels_landed"), 16.0);
+    assert_eq!(played.number("rivals"), 9.0);
+    let g = played.game();
+    let player = g.player.as_ref().unwrap();
+    assert_eq!(player.landed, g.landed, "the country card shows what the wheels landed on");
+    assert!(!g.skipped);
+    // Every spin ticked and landed with a sound.
+    assert!(played.sound_frames("tick").len() > 100);
+    assert_eq!(played.sound_frames("land").len(), 17); // 16 wheels and the full country card
+}
+
+#[test]
+fn skip_spin_on_the_title_rolls_every_wheel_at_once() {
+    let played = PlayTest::new(crate::config(), game())
+        .script(r#"{"events": [{"frame": 10, "press": "S"}, {"frame": 12, "release": "S"}]}"#)
+        .frames(30)
+        .run();
+    assert_eq!(played.text("screen"), "Final");
+    assert_eq!(played.number("wheels_landed"), 16.0);
+    assert!(played.game().skipped);
+}
+
+#[test]
+fn skip_spin_part_way_keeps_the_wheels_already_spun() {
+    let mut sim = Simulation::new(crate::config(), game());
+    sim.run(5);
+    sim.press(duckforge::prelude::Key::Space);
+    sim.step();
+    sim.release(duckforge::prelude::Key::Space);
+    // Land the first wheel, go on to the second and let it land too.
+    for _ in 0..2 {
+        sim.run(420);
+        sim.press(duckforge::prelude::Key::Space);
+        sim.step();
+        sim.release(duckforge::prelude::Key::Space);
+    }
+    let before = sim.game().landed.clone();
+    assert_eq!(before.len(), 2);
+    // The third wheel is spinning now: skip.
+    sim.run(150);
+    assert!(sim.game().view.as_ref().unwrap().spinning());
+    sim.press(duckforge::prelude::Key::S);
+    sim.step();
+    let g = sim.game();
+    assert_eq!(g.screen, crate::game::Screen::Final);
+    assert_eq!(&g.landed[..2], &before[..]);
+    assert_eq!(g.landed.len(), 16);
+    assert!(sim.failed_checks().is_empty(), "{:?}", sim.failed_checks());
+}
+
+#[test]
+fn the_island_map_never_lands_on_landlocked() {
+    // Choose The Thousand Isles, then spin the Land round many times over.
+    for seed in 1..=12 {
+        let played = PlayTest::new(crate::config(), game())
+            .seed(seed)
+            .script(r#"{"events": [{"frame": 5, "press": "Digit2"}, {"frame": 6, "release": "Digit2"}, {"frame": 10, "press": "S"}, {"frame": 11, "release": "S"}]}"#)
+            .frames(20)
+            .run();
+        assert_eq!(played.text("map"), "isles");
+        let g = played.game();
+        let p = g.player.as_ref().unwrap();
+        assert_ne!(p.option_id(&g.data, "coast"), "landlocked");
+    }
+}

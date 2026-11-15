@@ -43,10 +43,11 @@ min_share = 0.015
 # slices spread round the wheel (more pegs, more ticks), small ones get one.
 slices = 18
 
-# Slice colours, used in turn for options with no `color`.
+# Slice colours, used in turn for options with no `color`. Gold (#ffd23a) is
+# kept for rare slices, so it is not in this list.
 palette = [
-  "#e8505b", "#f9a03f", "#f6d55c", "#3caea3", "#20639b",
-  "#8e5ac8", "#ed6aa6", "#5cc8f0", "#9bd34d", "#ff7b39",
+  "#e8505b", "#f9a03f", "#3caea3", "#20639b", "#8e5ac8",
+  "#ed6aa6", "#5cc8f0", "#9bd34d", "#b5654a", "#7d8597",
 ]
 
 [[round]]

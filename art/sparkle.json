@@ -1,0 +1,81 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Sparkle",
+  "seed": 1,
+  "palette": {
+    "core": "#FFFDF0",
+    "warm": "#FFE07A"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 48,
+      "height": 48
+    },
+    {
+      "cmd": "layer",
+      "name": "Sparkle"
+    },
+    {
+      "cmd": "group",
+      "name": "s",
+      "filter": {
+        "glow": {
+          "radius": 6,
+          "threshold": 0.5,
+          "strength": 1
+        }
+      },
+      "commands": [
+        {
+          "cmd": "polygon",
+          "points": [
+            [
+              24,
+              4
+            ],
+            [
+              27,
+              21
+            ],
+            [
+              44,
+              24
+            ],
+            [
+              27,
+              27
+            ],
+            [
+              24,
+              44
+            ],
+            [
+              21,
+              27
+            ],
+            [
+              4,
+              24
+            ],
+            [
+              21,
+              21
+            ]
+          ],
+          "fill": "core"
+        },
+        {
+          "cmd": "ellipse",
+          "center": [
+            24,
+            24
+          ],
+          "radius": 4,
+          "fill": "warm"
+        }
+      ]
+    }
+  ]
+}

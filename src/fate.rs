@@ -31,6 +31,9 @@ pub struct Odds {
     pub chances: Vec<f64>,
     /// Where this wheel's follow points (its level scale), if it has one.
     pub target: Option<(f64, f64)>,
+    /// The earlier wheels that changed these odds (a rule that held, or a
+    /// follow), to show the player why.
+    pub because: Vec<usize>,
 }
 
 impl Odds {
@@ -69,10 +72,12 @@ pub fn odds(
     let mut weight: Vec<f64> = options.iter().map(|o| o.weight).collect();
     let mut share: Vec<Option<f64>> = options.iter().map(|o| o.share).collect();
     let mut shift = 0.0;
+    let mut because = Vec::new();
     for rule in &def.rules {
         if !rule.conditions.iter().all(|c| holds(data, map, c, landed)) {
             continue;
         }
+        because.extend(rule.conditions.iter().map(|c| c.wheel));
         for (name, factor) in &rule.times {
             for (i, o) in options.iter().enumerate() {
                 let hit = match name.strip_prefix('#') {
@@ -100,6 +105,7 @@ pub fn odds(
     // 2. Follows pull the levels towards a target.
     let mut target = None;
     for follow in &def.follows {
+        because.extend(follow.from.iter().map(|&(w, _)| w));
         let t = follow.shift
             + shift
             + follow
@@ -160,11 +166,14 @@ pub fn odds(
         *c /= total;
     }
 
+    because.sort();
+    because.dedup();
     Odds {
         wheel,
         options,
         chances,
         target,
+        because,
     }
 }
 

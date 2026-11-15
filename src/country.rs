@@ -303,7 +303,7 @@ pub fn draw_emblem(canvas: &mut Canvas, center: Vec2, r: f32, shape: EmblemShape
                 center + vec2(a.cos(), a.sin()) * radius
             };
             for i in 0..10 {
-                let radius = |k: usize| if k % 2 == 0 { r } else { r * 0.42 };
+                let radius = |k: usize| if k.is_multiple_of(2) { r } else { r * 0.42 };
                 canvas.fill_triangle(center, point(i, radius(i)), point(i + 1, radius(i + 1)), color);
             }
         }

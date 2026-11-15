@@ -1,0 +1,24 @@
+# Spin start: band-passed noise sweeping up and back, a swish.
+version = 0
+name = "wheel_whoosh"
+description = "Whoosh as the wheel is flung into a spin."
+tags = ["movement", "swish", "noisy"]
+
+seed = 7
+
+[master]
+normalize_lufs = -20
+trim_silence = true
+
+[[layers]]
+name = "air"
+source = "noise"
+envelope = { attack = 0.12, hold = 0.05, decay = 0.35 }
+filter = { kind = "bandpass", cutoff = 500, cutoff_end = 3500, curve = "ease_out", sweep_time = 0.25, resonance = 2.5 }
+
+[[layers]]
+name = "body"
+source = "noise"
+volume = 0.5
+envelope = { attack = 0.08, hold = 0.05, decay = 0.3 }
+filter = { kind = "lowpass", cutoff = 300, cutoff_end = 1200, curve = "exponential" }

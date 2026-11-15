@@ -1,0 +1,36 @@
+# Wheel lands: a bright two-partial bell ding with a short room.
+version = 0
+name = "wheel_land"
+description = "Bright chime when the wheel stops on a slot."
+tags = ["ui", "confirm", "positive", "chime"]
+
+[master]
+normalize_lufs = -19
+trim_silence = true
+
+[[layers]]
+name = "body"
+source = "sine"
+volume = 0.6
+envelope = { attack = 0.002, hold = 0.02, decay = 0.5 }
+pitch = { start = "E6" }
+
+[[layers]]
+name = "shimmer"
+source = "sine"
+volume = 0.3
+envelope = { attack = 0.002, hold = 0.01, decay = 0.3 }
+pitch = { start = "B7" }
+
+[[layers]]
+name = "strike"
+source = "triangle"
+volume = 0.35
+envelope = { attack = 0.001, decay = 0.06 }
+pitch = { start = "E7" }
+
+[[effects]]
+type = "reverb"
+size = 0.3
+decay = 0.4
+mix = 0.2
