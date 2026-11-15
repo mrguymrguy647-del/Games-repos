@@ -1,0 +1,127 @@
+# Landmark: a red-and-white striped lighthouse on a rock.
+version = 0
+name = "lighthouse"
+description = "Lighthouse landmark: striped tower with a glowing lantern on a rocky islet, about 0.6 across and 0.85 tall."
+
+[palette]
+rock = "#8C8378"
+rock_dark = "#6F675E"
+rock_top = "#9E9488"
+stone = "#C9C2B4"
+white = "#F4F1EA"
+red = "#D23C32"
+iron = "#3B3F46"
+light = "#FFE27A"
+
+[[parts]]
+name = "rock"
+shape = "cylinder"
+radius = 0.27
+height = 0.1
+segments = 7
+taper = 0.72
+color = "rock"
+colors = { top = "rock_top" }
+move = [0, 0.05, 0]
+
+[[parts]]
+name = "boulder1"
+shape = "sphere"
+radius = 0.09
+segments = 6
+scale = [1, 0.7, 1]
+color = "rock_dark"
+move = [0.2, 0.04, 0.12]
+
+[[parts]]
+name = "boulder2"
+shape = "sphere"
+radius = 0.075
+segments = 6
+scale = [1, 0.7, 1]
+color = "rock_dark"
+move = [-0.17, 0.035, -0.18]
+
+[[parts]]
+name = "base"
+shape = "cylinder"
+radius = 0.14
+height = 0.04
+segments = 10
+color = "stone"
+move = [0, 0.12, 0]
+
+[[parts]]
+name = "band1"
+shape = "cylinder"
+radius = 0.115
+height = 0.125
+segments = 10
+taper = 0.9065
+color = "white"
+move = [0, 0.2025, 0]
+
+[[parts]]
+name = "band2"
+shape = "cylinder"
+radius = 0.1043
+height = 0.125
+segments = 10
+taper = 0.8969
+color = "red"
+move = [0, 0.3275, 0]
+
+[[parts]]
+name = "band3"
+shape = "cylinder"
+radius = 0.0935
+height = 0.125
+segments = 10
+taper = 0.885
+color = "white"
+move = [0, 0.4525, 0]
+
+[[parts]]
+name = "band4"
+shape = "cylinder"
+radius = 0.0827
+height = 0.125
+segments = 10
+taper = 0.8701
+color = "red"
+move = [0, 0.5775, 0]
+
+[[parts]]
+name = "gallery"
+shape = "cylinder"
+radius = 0.1
+height = 0.025
+segments = 10
+color = "iron"
+move = [0, 0.6525, 0]
+
+[[parts]]
+name = "lantern"
+shape = "cylinder"
+radius = 0.055
+height = 0.08
+segments = 8
+color = "light"
+move = [0, 0.705, 0]
+
+[[parts]]
+name = "cap"
+shape = "cone"
+radius = 0.078
+height = 0.09
+segments = 8
+color = "red"
+move = [0, 0.79, 0]
+
+[[parts]]
+name = "vane"
+shape = "sphere"
+radius = 0.018
+segments = 6
+color = "iron"
+move = [0, 0.835, 0]

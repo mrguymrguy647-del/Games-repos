@@ -1,0 +1,611 @@
+# isles: provinces, rivers and landmarks. The terrain is isles.txt beside this file.
+#
+# A province is every land hex nearer (walking over land) to its `at` hex than to
+# any other province's. Move `at` to move its borders; add or remove provinces freely.
+# `at` is [column, row] in the terrain grid, counting from 0 at the top left.
+# `continent` must be one of this map's continents in data/maps.toml.
+
+[[province]]
+id = "tulapa"
+name = "Tulapa"
+continent = "coral_chain"
+at = [6, 38]
+
+[[province]]
+id = "ixima"
+name = "Ixima"
+continent = "coral_chain"
+at = [11, 34]
+
+[[province]]
+id = "verna"
+name = "Verna"
+continent = "coral_chain"
+at = [17, 36]
+
+[[province]]
+id = "verma"
+name = "Verma"
+continent = "coral_chain"
+at = [15, 33]
+
+[[province]]
+id = "marahuac"
+name = "Marahuac"
+continent = "coral_chain"
+at = [13, 36]
+
+[[province]]
+id = "panama"
+name = "Panama"
+continent = "coral_chain"
+at = [31, 37]
+
+[[province]]
+id = "orotlan"
+name = "Orotlan"
+continent = "coral_chain"
+at = [21, 39]
+
+[[province]]
+id = "yucaca"
+name = "Yucaca"
+continent = "coral_chain"
+at = [26, 34]
+
+[[province]]
+id = "vertepec"
+name = "Vertepec"
+continent = "coral_chain"
+at = [27, 38]
+
+[[province]]
+id = "oropa"
+name = "Oropa"
+continent = "coral_chain"
+at = [36, 34]
+
+[[province]]
+id = "coalan"
+name = "Coalan"
+continent = "coral_chain"
+at = [29, 33]
+
+[[province]]
+id = "amana"
+name = "Amana"
+continent = "coral_chain"
+at = [22, 36]
+
+[[province]]
+id = "selando"
+name = "Selando"
+continent = "coral_chain"
+at = [29, 37]
+
+[[province]]
+id = "yucahuac"
+name = "Yucahuac"
+continent = "coral_chain"
+at = [36, 36]
+
+[[province]]
+id = "ixindo"
+name = "Ixindo"
+continent = "coral_chain"
+at = [33, 34]
+
+[[province]]
+id = "panapa"
+name = "Panapa"
+continent = "coral_chain"
+at = [24, 39]
+
+[[province]]
+id = "coana"
+name = "Coana"
+continent = "coral_chain"
+at = [35, 29]
+
+[[province]]
+id = "nahupa"
+name = "Nahupa"
+continent = "coral_chain"
+at = [40, 40]
+
+[[province]]
+id = "chalzal"
+name = "Chalzal"
+continent = "coral_chain"
+at = [44, 36]
+
+[[province]]
+id = "amatepec"
+name = "Amatepec"
+continent = "coral_chain"
+at = [50, 35]
+
+[[province]]
+id = "panaca"
+name = "Panaca"
+continent = "coral_chain"
+at = [47, 34]
+
+[[province]]
+id = "selazal"
+name = "Selazal"
+continent = "coral_chain"
+at = [47, 37]
+
+[[province]]
+id = "yucama"
+name = "Yucama"
+continent = "coral_chain"
+at = [45, 38]
+
+[[province]]
+id = "nahuma"
+name = "Nahuma"
+continent = "coral_chain"
+at = [58, 38]
+
+[[province]]
+id = "tulalan"
+name = "Tulalan"
+continent = "coral_chain"
+at = [60, 38]
+
+[[province]]
+id = "coahuac"
+name = "Coahuac"
+continent = "coral_chain"
+at = [66, 34]
+
+[[province]]
+id = "falib"
+name = "Falib"
+continent = "ember_atolls"
+at = [41, 27]
+
+[[province]]
+id = "falun"
+name = "Falun"
+continent = "ember_atolls"
+at = [44, 14]
+
+[[province]]
+id = "qasul"
+name = "Qasul"
+continent = "ember_atolls"
+at = [49, 23]
+
+[[province]]
+id = "jabul"
+name = "Jabul"
+continent = "ember_atolls"
+at = [61, 29]
+
+[[province]]
+id = "zanib"
+name = "Zanib"
+continent = "ember_atolls"
+at = [57, 23]
+
+[[province]]
+id = "khaoum"
+name = "Khaoum"
+continent = "ember_atolls"
+at = [45, 19]
+
+[[province]]
+id = "tamar"
+name = "Tamar"
+continent = "ember_atolls"
+at = [53, 18]
+
+[[province]]
+id = "sahesh"
+name = "Sahesh"
+continent = "ember_atolls"
+at = [58, 29]
+
+[[province]]
+id = "faliya"
+name = "Faliya"
+continent = "ember_atolls"
+at = [52, 25]
+
+[[province]]
+id = "sahiya"
+name = "Sahiya"
+continent = "ember_atolls"
+at = [49, 18]
+
+[[province]]
+id = "wadar"
+name = "Wadar"
+continent = "ember_atolls"
+at = [54, 22]
+
+[[province]]
+id = "rasiya"
+name = "Rasiya"
+continent = "ember_atolls"
+at = [60, 27]
+
+[[province]]
+id = "rasoum"
+name = "Rasoum"
+continent = "ember_atolls"
+at = [47, 22]
+
+[[province]]
+id = "mirul"
+name = "Mirul"
+continent = "ember_atolls"
+at = [56, 20]
+
+[[province]]
+id = "tamun"
+name = "Tamun"
+continent = "ember_atolls"
+at = [50, 26]
+
+[[province]]
+id = "zanesh"
+name = "Zanesh"
+continent = "ember_atolls"
+at = [55, 25]
+
+[[province]]
+id = "jabiya"
+name = "Jabiya"
+continent = "ember_atolls"
+at = [51, 20]
+
+[[province]]
+id = "falul"
+name = "Falul"
+continent = "ember_atolls"
+at = [62, 19]
+
+[[province]]
+id = "tamib"
+name = "Tamib"
+continent = "ember_atolls"
+at = [63, 22]
+
+[[province]]
+id = "nimah"
+name = "Nimah"
+continent = "ember_atolls"
+at = [65, 20]
+
+[[province]]
+id = "lormere"
+name = "Lormere"
+continent = "jade_islands"
+at = [3, 19]
+
+[[province]]
+id = "dorshire"
+name = "Dorshire"
+continent = "jade_islands"
+at = [6, 27]
+
+[[province]]
+id = "rosbury"
+name = "Rosbury"
+continent = "jade_islands"
+at = [5, 28]
+
+[[province]]
+id = "belmore"
+name = "Belmore"
+continent = "jade_islands"
+at = [17, 20]
+
+[[province]]
+id = "valbury"
+name = "Valbury"
+continent = "jade_islands"
+at = [8, 21]
+
+[[province]]
+id = "aurhaven"
+name = "Aurhaven"
+continent = "jade_islands"
+at = [11, 27]
+
+[[province]]
+id = "fenford"
+name = "Fenford"
+continent = "jade_islands"
+at = [21, 18]
+
+[[province]]
+id = "belwick"
+name = "Belwick"
+continent = "jade_islands"
+at = [10, 18]
+
+[[province]]
+id = "valfield"
+name = "Valfield"
+continent = "jade_islands"
+at = [16, 24]
+
+[[province]]
+id = "wilbrook"
+name = "Wilbrook"
+continent = "jade_islands"
+at = [11, 22]
+
+[[province]]
+id = "althaven"
+name = "Althaven"
+continent = "jade_islands"
+at = [19, 21]
+
+[[province]]
+id = "aurmont"
+name = "Aurmont"
+continent = "jade_islands"
+at = [17, 17]
+
+[[province]]
+id = "lorton"
+name = "Lorton"
+continent = "jade_islands"
+at = [14, 17]
+
+[[province]]
+id = "ashmere"
+name = "Ashmere"
+continent = "jade_islands"
+at = [9, 25]
+
+[[province]]
+id = "fenton"
+name = "Fenton"
+continent = "jade_islands"
+at = [12, 19]
+
+[[province]]
+id = "vermore"
+name = "Vermore"
+continent = "jade_islands"
+at = [13, 25]
+
+[[province]]
+id = "ashwick"
+name = "Ashwick"
+continent = "jade_islands"
+at = [22, 27]
+
+[[province]]
+id = "valbrook"
+name = "Valbrook"
+continent = "jade_islands"
+at = [26, 27]
+
+[[province]]
+id = "wilfield"
+name = "Wilfield"
+continent = "jade_islands"
+at = [24, 25]
+
+[[province]]
+id = "belmont"
+name = "Belmont"
+continent = "jade_islands"
+at = [25, 16]
+
+[[province]]
+id = "rosfield"
+name = "Rosfield"
+continent = "jade_islands"
+at = [35, 19]
+
+[[province]]
+id = "wilbury"
+name = "Wilbury"
+continent = "jade_islands"
+at = [36, 21]
+
+[[province]]
+id = "wilton"
+name = "Wilton"
+continent = "jade_islands"
+at = [32, 19]
+
+[[province]]
+id = "caswick"
+name = "Caswick"
+continent = "jade_islands"
+at = [33, 21]
+
+[[province]]
+id = "haldvik"
+name = "Haldvik"
+continent = "storm_isles"
+at = [5, 11]
+
+[[province]]
+id = "ulvby"
+name = "Ulvby"
+continent = "storm_isles"
+at = [12, 3]
+
+[[province]]
+id = "svalholm"
+name = "Svalholm"
+continent = "storm_isles"
+at = [16, 4]
+
+[[province]]
+id = "jarnfjord"
+name = "Jarnfjord"
+continent = "storm_isles"
+at = [10, 5]
+
+[[province]]
+id = "iskdal"
+name = "Iskdal"
+continent = "storm_isles"
+at = [13, 6]
+
+[[province]]
+id = "vintmark"
+name = "Vintmark"
+continent = "storm_isles"
+at = [20, 16]
+
+[[province]]
+id = "svalfell"
+name = "Svalfell"
+continent = "storm_isles"
+at = [21, 10]
+
+[[province]]
+id = "iskholm"
+name = "Iskholm"
+continent = "storm_isles"
+at = [33, 9]
+
+[[province]]
+id = "vintfell"
+name = "Vintfell"
+continent = "storm_isles"
+at = [23, 6]
+
+[[province]]
+id = "ranmark"
+name = "Ranmark"
+continent = "storm_isles"
+at = [28, 5]
+
+[[province]]
+id = "haldheim"
+name = "Haldheim"
+continent = "storm_isles"
+at = [36, 4]
+
+[[province]]
+id = "kaldby"
+name = "Kaldby"
+continent = "storm_isles"
+at = [38, 8]
+
+[[province]]
+id = "halddal"
+name = "Halddal"
+continent = "storm_isles"
+at = [26, 6]
+
+[[province]]
+id = "svalheim"
+name = "Svalheim"
+continent = "storm_isles"
+at = [30, 8]
+
+[[province]]
+id = "vintby"
+name = "Vintby"
+continent = "storm_isles"
+at = [33, 6]
+
+[[province]]
+id = "hvitfjord"
+name = "Hvitfjord"
+continent = "storm_isles"
+at = [35, 7]
+
+[[province]]
+id = "skarmark"
+name = "Skarmark"
+continent = "storm_isles"
+at = [32, 4]
+
+[[province]]
+id = "vintholm"
+name = "Vintholm"
+continent = "storm_isles"
+at = [45, 9]
+
+[[province]]
+id = "ulvholm"
+name = "Ulvholm"
+continent = "storm_isles"
+at = [53, 4]
+
+[[province]]
+id = "jarnstad"
+name = "Jarnstad"
+continent = "storm_isles"
+at = [49, 4]
+
+[[province]]
+id = "grimstad"
+name = "Grimstad"
+continent = "storm_isles"
+at = [56, 6]
+
+[[province]]
+id = "hvitheim"
+name = "Hvitheim"
+continent = "storm_isles"
+at = [51, 6]
+
+[[province]]
+id = "iskmark"
+name = "Iskmark"
+continent = "storm_isles"
+at = [53, 7]
+
+[[province]]
+id = "vintheim"
+name = "Vintheim"
+continent = "storm_isles"
+at = [61, 11]
+
+[[river]]
+name = "River Jade"
+cells = [[10, 19], [11, 20], [11, 21], [12, 21]]
+
+[[river]]
+name = "River Tern"
+cells = [[31, 6], [31, 7], [31, 8], [31, 9], [32, 10]]
+
+[[river]]
+name = "River Cinder"
+cells = [[53, 22], [54, 22], [54, 23], [55, 24], [56, 24], [56, 25]]
+
+[[river]]
+name = "River Palm"
+cells = [[27, 36], [26, 37], [27, 38], [26, 39]]
+
+[[landmark]]
+kind = "lighthouse"
+name = "Storm Light"
+at = [24, 7]
+
+[[landmark]]
+kind = "colossus"
+name = "The Jade Colossus"
+at = [16, 17]
+
+[[landmark]]
+kind = "temple"
+name = "Fire Temple"
+at = [54, 19]
+
+[[landmark]]
+kind = "arch"
+name = "Coral Arch"
+at = [34, 35]
+
+[[landmark]]
+kind = "great_tower"
+name = "Tern Watch"
+at = [38, 7]

@@ -9,8 +9,11 @@ mod country;
 mod data;
 mod fate;
 mod game;
+mod hex;
+mod mapdata;
 mod ui;
 mod wheel;
+mod world;
 #[cfg(test)]
 mod tests;
 

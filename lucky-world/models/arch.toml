@@ -1,0 +1,153 @@
+# Landmark: a great triumphal arch with columns, an inscribed attic and a bronze statue on top.
+version = 0
+name = "arch"
+description = "Triumphal arch landmark: about 0.92 x 0.34 and 0.86 tall, the doorway runs front to back."
+
+[palette]
+stone = "#E2D6BC"
+stone_light = "#F2EADA"
+stone_shade = "#B9AB90"
+stone_dark = "#A8997C"
+plaque = "#C9A64B"
+bronze = "#B9783C"
+gold = "#F2C230"
+
+[[parts]]
+name = "step"
+shape = "box"
+size = [0.92, 0.04, 0.34]
+color = "stone_dark"
+move = [0, 0.02, 0]
+
+[[parts]]
+name = "arch"
+shape = "arch"
+size = [0.8, 0.5, 0.26]
+wall = 0.2
+segments = 8
+color = "stone"
+colors = { inside = "stone_shade" }
+move = [0, 0.29, 0]
+
+[[parts]]
+name = "cornice"
+shape = "box"
+size = [0.86, 0.03, 0.3]
+color = "stone_dark"
+move = [0, 0.555, 0]
+
+[[parts]]
+name = "attic"
+shape = "box"
+size = [0.8, 0.13, 0.26]
+color = "stone"
+colors = { front = "plaque", back = "plaque" }
+move = [0, 0.635, 0]
+
+[[parts]]
+name = "top_cornice"
+shape = "box"
+size = [0.84, 0.025, 0.28]
+color = "stone_dark"
+move = [0, 0.7125, 0]
+
+[[parts]]
+name = "column1"
+shape = "cylinder"
+radius = 0.022
+height = 0.5
+segments = 6
+color = "stone_light"
+move = [-0.36, 0.29, 0.145]
+
+[[parts]]
+name = "column2"
+shape = "cylinder"
+radius = 0.022
+height = 0.5
+segments = 6
+color = "stone_light"
+move = [-0.24, 0.29, 0.145]
+
+[[parts]]
+name = "column3"
+shape = "cylinder"
+radius = 0.022
+height = 0.5
+segments = 6
+color = "stone_light"
+move = [0.24, 0.29, 0.145]
+
+[[parts]]
+name = "column4"
+shape = "cylinder"
+radius = 0.022
+height = 0.5
+segments = 6
+color = "stone_light"
+move = [0.36, 0.29, 0.145]
+
+[[parts]]
+name = "column5"
+shape = "cylinder"
+radius = 0.022
+height = 0.5
+segments = 6
+color = "stone_light"
+move = [-0.36, 0.29, -0.145]
+
+[[parts]]
+name = "column6"
+shape = "cylinder"
+radius = 0.022
+height = 0.5
+segments = 6
+color = "stone_light"
+move = [-0.24, 0.29, -0.145]
+
+[[parts]]
+name = "column7"
+shape = "cylinder"
+radius = 0.022
+height = 0.5
+segments = 6
+color = "stone_light"
+move = [0.24, 0.29, -0.145]
+
+[[parts]]
+name = "column8"
+shape = "cylinder"
+radius = 0.022
+height = 0.5
+segments = 6
+color = "stone_light"
+move = [0.36, 0.29, -0.145]
+
+[[parts]]
+name = "statue_base"
+shape = "box"
+size = [0.2, 0.05, 0.14]
+color = "stone_dark"
+move = [0, 0.75, 0]
+
+[[parts]]
+name = "orb"
+shape = "sphere"
+radius = 0.065
+segments = 8
+color = "gold"
+move = [0, 0.835, 0]
+
+[[parts]]
+name = "left_obelisk"
+shape = "pyramid"
+size = [0.07, 0.16, 0.07]
+color = "bronze"
+move = [-0.35, 0.805, 0]
+
+[[parts]]
+name = "right_obelisk"
+shape = "pyramid"
+size = [0.07, 0.16, 0.07]
+color = "bronze"
+move = [0.35, 0.805, 0]

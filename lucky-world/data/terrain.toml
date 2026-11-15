@@ -1,0 +1,111 @@
+# LUCKY WORLD: the terrain letters used in the map grids (data/maps/*.txt).
+#
+# kind       sea, lake or land. Sea makes a province coastal; a lake doesn't.
+# color      the hex's colour on the map.
+# height     how high the top of the hex stands (sea level is 0).
+# land_type  the Land Type wheel option this terrain counts as, so a nation
+#            that rolled "Desert" prefers desert provinces.
+# decor      a model from assets/models/ dotted on the hex (optional), and
+# decor_count how many (a fraction is a chance: 0.4 = on 4 hexes in 10).
+
+[terrain."~"]
+name = "Deep Sea"
+kind = "sea"
+color = "#1c3c7a"
+height = -0.08
+
+[terrain."-"]
+name = "Shallow Sea"
+kind = "sea"
+color = "#2f6fb2"
+height = -0.04
+
+[terrain."o"]
+name = "Lake"
+kind = "lake"
+color = "#3f8fd0"
+height = -0.02
+
+[terrain.P]
+name = "Plains"
+kind = "land"
+color = "#9cc45a"
+height = 0.10
+land_type = "plains"
+
+[terrain.F]
+name = "Forest"
+kind = "land"
+color = "#4a8f44"
+height = 0.11
+land_type = "forest"
+decor = "tree"
+decor_count = 2
+
+[terrain.J]
+name = "Jungle"
+kind = "land"
+color = "#2f7d3c"
+height = 0.11
+land_type = "jungle"
+decor = "palm"
+decor_count = 2
+
+[terrain.D]
+name = "Desert"
+kind = "land"
+color = "#e6cb8c"
+height = 0.08
+land_type = "desert"
+decor = "cactus"
+decor_count = 0.35
+
+[terrain.S]
+name = "Steppe"
+kind = "land"
+color = "#c9b96a"
+height = 0.09
+land_type = "steppe"
+
+[terrain.T]
+name = "Tundra"
+kind = "land"
+color = "#a9b9a6"
+height = 0.12
+land_type = "tundra"
+decor = "pine"
+decor_count = 1
+
+[terrain.M]
+name = "Mountains"
+kind = "land"
+color = "#8c7b69"
+height = 0.30
+land_type = "mountains"
+decor = "peak"
+decor_count = 1
+
+[terrain.H]
+name = "Hills"
+kind = "land"
+color = "#a7a463"
+height = 0.18
+land_type = "mountains"
+decor = "hill"
+decor_count = 1
+
+[terrain.W]
+name = "Marsh"
+kind = "land"
+color = "#5f9178"
+height = 0.06
+land_type = "marsh"
+decor = "reeds"
+decor_count = 1.5
+
+[terrain.I]
+name = "Glacier"
+kind = "land"
+color = "#eef3f8"
+height = 0.16
+land_type = "tundra"

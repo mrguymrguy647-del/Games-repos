@@ -1,0 +1,303 @@
+# The capital city for the world map: a walled compound with four corner towers,
+# a gate, and a domed palace in the middle.
+#
+# Everything the game recolours per nation is in the assembly "roofs" (tower
+# roofs, wing roofs and flags), all in the palette colour "banner". In Duck
+# Forge, GlbModel::part("roofs").range() is its triangle range.
+version = 0
+name = "capital"
+description = "Capital city: walled palace compound, about 0.9 x 0.9 and 0.8 tall. The 'roofs' part is in the nation colour 'banner'."
+
+[palette]
+banner = "#D0453A"
+stone = "#D8CDB8"
+stone_dark = "#B3A58C"
+wall_top = "#EDE5D4"
+paving = "#A89A82"
+palace = "#F6EEDC"
+gold = "#E8B83A"
+wood = "#6E4628"
+pole = "#5A4A3A"
+
+[[parts]]
+name = "floor"
+shape = "box"
+size = [0.74, 0.012, 0.74]
+color = "paving"
+move = [0, 0.006, 0]
+
+[[parts]]
+name = "wall_back"
+shape = "box"
+size = [0.74, 0.17, 0.045]
+color = "stone"
+colors = { top = "wall_top" }
+move = [0, 0.085, -0.37]
+
+[[parts]]
+name = "wall_left"
+shape = "box"
+size = [0.045, 0.17, 0.74]
+color = "stone"
+colors = { top = "wall_top" }
+move = [-0.37, 0.085, 0]
+
+[[parts]]
+name = "wall_right"
+shape = "box"
+size = [0.045, 0.17, 0.74]
+color = "stone"
+colors = { top = "wall_top" }
+move = [0.37, 0.085, 0]
+
+[[parts]]
+name = "wall_front_left"
+shape = "box"
+size = [0.28, 0.17, 0.045]
+color = "stone"
+colors = { top = "wall_top" }
+move = [-0.23, 0.085, 0.37]
+
+[[parts]]
+name = "wall_front_right"
+shape = "box"
+size = [0.28, 0.17, 0.045]
+color = "stone"
+colors = { top = "wall_top" }
+move = [0.23, 0.085, 0.37]
+
+[[parts]]
+name = "gate"
+shape = "arch"
+size = [0.2, 0.23, 0.075]
+wall = 0.05
+segments = 4
+color = "stone_dark"
+move = [0, 0.115, 0.37]
+
+[[parts]]
+name = "gate_door"
+shape = "box"
+size = [0.1, 0.14, 0.02]
+color = "wood"
+move = [0, 0.07, 0.37]
+
+[[parts]]
+name = "tower1"
+shape = "cylinder"
+radius = 0.06
+height = 0.4
+segments = 8
+color = "stone"
+colors = { top = "wall_top" }
+move = [-0.37, 0.2, -0.37]
+
+[[parts]]
+name = "tower2"
+shape = "cylinder"
+radius = 0.06
+height = 0.4
+segments = 8
+color = "stone"
+colors = { top = "wall_top" }
+move = [0.37, 0.2, -0.37]
+
+[[parts]]
+name = "tower3"
+shape = "cylinder"
+radius = 0.06
+height = 0.4
+segments = 8
+color = "stone"
+colors = { top = "wall_top" }
+move = [-0.37, 0.2, 0.37]
+
+[[parts]]
+name = "tower4"
+shape = "cylinder"
+radius = 0.06
+height = 0.4
+segments = 8
+color = "stone"
+colors = { top = "wall_top" }
+move = [0.37, 0.2, 0.37]
+
+[[parts]]
+name = "pole1"
+shape = "cylinder"
+radius = 0.005
+height = 0.12
+segments = 3
+color = "pole"
+move = [-0.37, 0.61, -0.37]
+
+[[parts]]
+name = "pole2"
+shape = "cylinder"
+radius = 0.005
+height = 0.12
+segments = 3
+color = "pole"
+move = [0.37, 0.61, -0.37]
+
+[[parts]]
+name = "pole3"
+shape = "cylinder"
+radius = 0.005
+height = 0.12
+segments = 3
+color = "pole"
+move = [-0.37, 0.61, 0.37]
+
+[[parts]]
+name = "pole4"
+shape = "cylinder"
+radius = 0.005
+height = 0.12
+segments = 3
+color = "pole"
+move = [0.37, 0.61, 0.37]
+
+[[parts]]
+name = "palace"
+shape = "box"
+size = [0.3, 0.17, 0.3]
+color = "palace"
+move = [0, 0.085, -0.05]
+
+[[parts]]
+name = "palace_door"
+shape = "box"
+size = [0.07, 0.1, 0.012]
+color = "wood"
+move = [0, 0.05, 0.1]
+
+[[parts]]
+name = "wing_left"
+shape = "box"
+size = [0.14, 0.13, 0.24]
+color = "palace"
+move = [-0.22, 0.065, -0.05]
+
+[[parts]]
+name = "wing_right"
+shape = "box"
+size = [0.14, 0.13, 0.24]
+color = "palace"
+move = [0.22, 0.065, -0.05]
+
+[[parts]]
+name = "upper"
+shape = "box"
+size = [0.22, 0.1, 0.22]
+color = "palace"
+colors = { top = "stone_dark" }
+move = [0, 0.22, -0.05]
+
+[[parts]]
+name = "drum"
+shape = "cylinder"
+radius = 0.12
+height = 0.14
+segments = 12
+color = "stone"
+move = [0, 0.34, -0.05]
+
+[[parts]]
+name = "dome"
+shape = "sphere"
+radius = 0.115
+segments = 12
+scale = [1, 1.45, 1]
+color = "gold"
+move = [0, 0.41, -0.05]
+
+[[parts]]
+name = "finial"
+shape = "cone"
+radius = 0.025
+height = 0.18
+segments = 6
+color = "gold"
+move = [0, 0.655, -0.05]
+
+[[parts]]
+name = "orb"
+shape = "sphere"
+radius = 0.024
+segments = 6
+color = "gold"
+move = [0, 0.765, -0.05]
+
+# The nation-coloured part: one assembly, so its triangles are one range.
+[[parts]]
+name = "roofs"
+color = "banner"
+
+[[parts.parts]]
+name = "tower_roof1"
+shape = "cone"
+radius = 0.082
+height = 0.17
+segments = 8
+move = [-0.37, 0.485, -0.37]
+
+[[parts.parts]]
+name = "tower_roof2"
+shape = "cone"
+radius = 0.082
+height = 0.17
+segments = 8
+move = [0.37, 0.485, -0.37]
+
+[[parts.parts]]
+name = "tower_roof3"
+shape = "cone"
+radius = 0.082
+height = 0.17
+segments = 8
+move = [-0.37, 0.485, 0.37]
+
+[[parts.parts]]
+name = "tower_roof4"
+shape = "cone"
+radius = 0.082
+height = 0.17
+segments = 8
+move = [0.37, 0.485, 0.37]
+
+[[parts.parts]]
+name = "wing_roof_left"
+shape = "prism"
+size = [0.152, 0.065, 0.252]
+move = [-0.22, 0.1625, -0.05]
+
+[[parts.parts]]
+name = "wing_roof_right"
+shape = "prism"
+size = [0.152, 0.065, 0.252]
+move = [0.22, 0.1625, -0.05]
+
+[[parts.parts]]
+name = "flag1"
+shape = "box"
+size = [0.07, 0.042, 0.006]
+move = [-0.332, 0.65, -0.37]
+
+[[parts.parts]]
+name = "flag2"
+shape = "box"
+size = [0.07, 0.042, 0.006]
+move = [0.408, 0.65, -0.37]
+
+[[parts.parts]]
+name = "flag3"
+shape = "box"
+size = [0.07, 0.042, 0.006]
+move = [-0.332, 0.65, 0.37]
+
+[[parts.parts]]
+name = "flag4"
+shape = "box"
+size = [0.07, 0.042, 0.006]
+move = [0.408, 0.65, 0.37]

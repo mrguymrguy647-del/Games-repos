@@ -1,0 +1,112 @@
+# World map ambience: soft distant sea waves, light wind and a very quiet low pad.
+#
+# A SEAMLESS LOOP for Duck Forge's play_loop. It is a song with `loop = true`:
+# the file is exactly 3 bars at 60 BPM = 12.000 s (529,200 samples at 44.1 kHz),
+# and whatever still rings after the last bar (the last waves' decay, the wind
+# and pad releases) is folded back onto the start, so the end runs straight
+# into the beginning with no fade, no gap and no bump.
+#
+# The pad notes are whole numbers of Hz (110, 165, 220), so each makes a whole
+# number of cycles in 12 s: its release folded onto the start is in phase with
+# the next note's attack, and the two linear ramps (3 s each) add up to a
+# perfectly steady tone across the join.
+version = 0
+name = "world_ambience"
+description = "Calm 12 s seamless loop for the world map: distant surf, light wind, a faint low pad."
+tags = ["ambient", "loop", "sea", "wind"]
+tempo = 60
+beats_per_bar = 4
+bars = 3
+loop = true
+seed = 11
+channels = 2
+
+[master]
+normalize_lufs = -26
+
+# ---- instruments ---------------------------------------------------------
+
+# One distant wave: a slow low rumble swelling up and draining away, with a
+# little foam hiss as it breaks.
+[instruments.wave]
+version = 0
+
+[[instruments.wave.layers]]
+name = "swell"
+source = "noise"
+volume = 0.9
+envelope = { attack = 1.6, hold = 0.3, decay = 2.6 }
+filter = { kind = "lowpass", cutoff = 380, cutoff_end = 650, curve = "ease_in", sweep_time = 1.9, resonance = 0.8 }
+
+[[instruments.wave.layers]]
+name = "foam"
+source = "noise"
+offset = 1.2
+volume = 0.22
+envelope = { attack = 0.7, decay = 2.2 }
+filter = { kind = "bandpass", cutoff = 2200, cutoff_end = 1200, curve = "ease_out", resonance = 0.9 }
+
+# Light wind: band-passed noise whose band drifts slowly.
+[instruments.wind]
+version = 0
+
+[[instruments.wind.layers]]
+name = "air"
+source = "noise"
+volume = 0.35
+envelope = { attack = 4, decay = 0, sustain = 1, release = 4 }
+filter = { kind = "bandpass", cutoff = 700, resonance = 1.6 }
+lfo = { target = "cutoff", rate = 0.125, depth = 0.7 }
+
+# A very soft low tone. Its pitch is set by each note (whole Hz, see top).
+[instruments.pad]
+version = 0
+
+[[instruments.pad.layers]]
+name = "tone"
+source = "sine"
+volume = 0.5
+envelope = { attack = 3, decay = 0, sustain = 1, release = 3 }
+pitch = { start = 110 }
+
+# ---- tracks --------------------------------------------------------------
+
+# Waves come in from both sides, at uneven times so the pattern is not obvious.
+[[tracks]]
+name = "waves_left"
+instrument = "wave"
+pan = -0.45
+notes = [
+  { beat = 0.0, note = "C4", velocity = 0.9 },
+  { beat = 4.4, note = "C4", velocity = 0.7 },
+  { beat = 8.1, note = "C4", velocity = 0.85 },
+]
+
+[[tracks]]
+name = "waves_right"
+instrument = "wave"
+pan = 0.45
+notes = [
+  { beat = 2.2, note = "C4", velocity = 0.75 },
+  { beat = 6.3, note = "C4", velocity = 0.9 },
+  { beat = 10.2, note = "C4", velocity = 0.65 },
+]
+
+# Two overlapping wind notes, each 6 beats, crossfading into each other.
+[[tracks]]
+name = "wind"
+instrument = "wind"
+volume = 0.8
+notes = [
+  { beat = 0, note = "C4", length = 6 },
+  { beat = 6, note = "C4", length = 6 },
+]
+
+# The pad holds an open fifth for the whole loop.
+[[tracks]]
+name = "pad"
+instrument = "pad"
+volume = 0.18
+notes = [
+  { beat = 0, note = [110, 165, 220], length = 12 },
+]

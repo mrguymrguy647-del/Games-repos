@@ -1,0 +1,73 @@
+# Landmark: a stepped desert pyramid with a stair up the front and a gold capstone.
+version = 0
+name = "pyramid"
+description = "Stepped pyramid landmark, 0.9 across and about 0.68 tall, stair facing +z."
+
+[palette]
+sand = "#D9B36C"
+sand_light = "#E6C584"
+sand_top = "#F0D69E"
+sand_dark = "#B88F4E"
+gold = "#F2C230"
+
+[[parts]]
+name = "tier1"
+shape = "box"
+size = [0.9, 0.11, 0.9]
+color = "sand"
+colors = { top = "sand_top" }
+move = [0, 0.055, 0]
+
+[[parts]]
+name = "tier2"
+shape = "box"
+size = [0.74, 0.11, 0.74]
+color = "sand_light"
+colors = { top = "sand_top" }
+move = [0, 0.165, 0]
+
+[[parts]]
+name = "tier3"
+shape = "box"
+size = [0.58, 0.11, 0.58]
+color = "sand"
+colors = { top = "sand_top" }
+move = [0, 0.275, 0]
+
+[[parts]]
+name = "tier4"
+shape = "box"
+size = [0.42, 0.11, 0.42]
+color = "sand_light"
+colors = { top = "sand_top" }
+move = [0, 0.385, 0]
+
+[[parts]]
+name = "tier5"
+shape = "box"
+size = [0.26, 0.11, 0.26]
+color = "sand"
+colors = { top = "sand_top" }
+move = [0, 0.495, 0]
+
+[[parts]]
+name = "capstone"
+shape = "pyramid"
+size = [0.2, 0.13, 0.2]
+color = "gold"
+move = [0, 0.615, 0]
+
+[[parts]]
+name = "shrine"
+shape = "box"
+size = [0.14, 0.05, 0.14]
+color = "sand_dark"
+move = [0, 0.54, 0]
+
+[[parts]]
+name = "stairs"
+shape = "stairs"
+size = [0.15, 0.55, 0.4]
+steps = 10
+color = "sand_dark"
+move = [0, 0.275, 0.33]

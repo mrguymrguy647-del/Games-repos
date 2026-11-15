@@ -1,0 +1,47 @@
+# A mountain for the world map: a rocky main peak with a snow cap and a smaller side peak.
+version = 0
+name = "peak"
+description = "Snow-capped mountain, about 0.8 across and 0.6 tall, for mountain tiles on the world map."
+
+[palette]
+rock = "#8A7F74"
+rock_dark = "#6E645B"
+snow = "#F4F7FB"
+
+[[parts]]
+name = "main"
+shape = "cone"
+radius = 0.33
+height = 0.6
+segments = 7
+color = "rock"
+move = [-0.07, 0.3, -0.02]
+
+[[parts]]
+name = "main_snow"
+shape = "cone"
+radius = 0.145
+height = 0.255
+segments = 7
+color = "snow"
+move = [-0.07, 0.4775, -0.02]
+
+[[parts]]
+name = "side"
+shape = "cone"
+radius = 0.22
+height = 0.36
+segments = 6
+color = "rock_dark"
+rotate = [0, 20, 0]
+move = [0.2, 0.18, 0.1]
+
+[[parts]]
+name = "side_snow"
+shape = "cone"
+radius = 0.088
+height = 0.14
+segments = 6
+color = "snow"
+rotate = [0, 20, 0]
+move = [0.2, 0.293, 0.1]

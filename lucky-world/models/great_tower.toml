@@ -1,0 +1,102 @@
+# Landmark: a tall square stone tower with a windowed belfry and a slate spire.
+version = 0
+name = "great_tower"
+description = "Great tower landmark: about 0.42 across and 1.0 tall."
+
+[palette]
+stone = "#CFC3A8"
+stone_dark = "#A8997C"
+shadow = "#2E2A33"
+slate = "#4C6A9C"
+gold = "#F2C230"
+
+[[parts]]
+name = "plinth"
+shape = "box"
+size = [0.42, 0.07, 0.42]
+color = "stone_dark"
+move = [0, 0.035, 0]
+
+[[parts]]
+name = "shaft"
+shape = "box"
+size = [0.27, 0.42, 0.27]
+taper = 0.8
+color = "stone"
+move = [0, 0.28, 0]
+
+[[parts]]
+name = "ring"
+shape = "box"
+size = [0.25, 0.03, 0.25]
+color = "stone_dark"
+move = [0, 0.505, 0]
+
+[[parts]]
+name = "belfry"
+shape = "box"
+size = [0.2, 0.17, 0.2]
+taper = 0.9
+color = "stone"
+changes = [{ inset = ["front", "back", "left", "right"], by = 0.045, name = "window" }, { pull = "window", by = -0.012 }]
+colors = { window = "shadow", window_side = "stone_dark" }
+move = [0, 0.605, 0]
+
+[[parts]]
+name = "cornice"
+shape = "box"
+size = [0.23, 0.03, 0.23]
+color = "stone_dark"
+move = [0, 0.705, 0]
+
+[[parts]]
+name = "pinnacle1"
+shape = "cone"
+radius = 0.02
+height = 0.07
+segments = 4
+color = "gold"
+move = [-0.095, 0.755, -0.095]
+
+[[parts]]
+name = "pinnacle2"
+shape = "cone"
+radius = 0.02
+height = 0.07
+segments = 4
+color = "gold"
+move = [0.095, 0.755, -0.095]
+
+[[parts]]
+name = "pinnacle3"
+shape = "cone"
+radius = 0.02
+height = 0.07
+segments = 4
+color = "gold"
+move = [-0.095, 0.755, 0.095]
+
+[[parts]]
+name = "pinnacle4"
+shape = "cone"
+radius = 0.02
+height = 0.07
+segments = 4
+color = "gold"
+move = [0.095, 0.755, 0.095]
+
+[[parts]]
+name = "spire"
+shape = "pyramid"
+size = [0.19, 0.21, 0.19]
+color = "slate"
+move = [0, 0.825, 0]
+
+[[parts]]
+name = "tip"
+shape = "cone"
+radius = 0.012
+height = 0.06
+segments = 4
+color = "gold"
+move = [0, 0.95, 0]

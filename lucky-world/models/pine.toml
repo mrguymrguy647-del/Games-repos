@@ -1,0 +1,46 @@
+# A conifer for the world map: three stacked cones on a short trunk.
+version = 0
+name = "pine"
+description = "Pine tree, 0.36 tall, for northern forest tiles on the world map."
+
+[palette]
+bark = "#6B4429"
+needles = "#2E7D4F"
+needles_light = "#3C9A5E"
+
+[[parts]]
+name = "trunk"
+shape = "cylinder"
+radius = 0.02
+height = 0.07
+segments = 4
+color = "bark"
+move = [0, 0.035, 0]
+
+[[parts]]
+name = "low"
+shape = "cone"
+radius = 0.125
+height = 0.16
+segments = 6
+color = "needles"
+move = [0, 0.13, 0]
+
+[[parts]]
+name = "middle"
+shape = "cone"
+radius = 0.097
+height = 0.14
+segments = 6
+color = "needles_light"
+rotate = [0, 30, 0]
+move = [0, 0.21, 0]
+
+[[parts]]
+name = "top"
+shape = "cone"
+radius = 0.068
+height = 0.12
+segments = 6
+color = "needles"
+move = [0, 0.30, 0]

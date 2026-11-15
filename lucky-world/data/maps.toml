@@ -10,7 +10,11 @@
 #   rich, poor - nudges HDI
 #
 # `islands = true` on a map gives every one of its continents the `island` tag.
-# `rivals` is how many NPC nations spin their wheels after the player.
+# `rivals` is how many NPC nations spin their wheels right after the player.
+#   More nations are then made to fill the empty land, up to max_nations in
+#   data/world.toml.
+# Each map's terrain is data/maps/<id>.txt, and its provinces, rivers and
+#   landmarks are data/maps/<id>.toml.
 # `style` picks the name syllables in names.toml.
 # `weight` is how often the Continent wheel lands there (bigger = more often).
 

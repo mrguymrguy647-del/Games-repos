@@ -1,0 +1,938 @@
+# five_shores: provinces, rivers and landmarks. The terrain is five_shores.txt beside this file.
+#
+# A province is every land hex nearer (walking over land) to its `at` hex than to
+# any other province's. Move `at` to move its borders; add or remove provinces freely.
+# `at` is [column, row] in the terrain grid, counting from 0 at the top left.
+# `continent` must be one of this map's continents in data/maps.toml.
+
+[[province]]
+id = "altmere"
+name = "Altmere"
+continent = "aurel"
+at = [15, 21]
+
+[[province]]
+id = "vermere"
+name = "Vermere"
+continent = "aurel"
+at = [4, 16]
+
+[[province]]
+id = "valmont"
+name = "Valmont"
+continent = "aurel"
+at = [7, 26]
+
+[[province]]
+id = "ashmont"
+name = "Ashmont"
+continent = "aurel"
+at = [9, 17]
+
+[[province]]
+id = "belshire"
+name = "Belshire"
+continent = "aurel"
+at = [15, 28]
+
+[[province]]
+id = "dormore"
+name = "Dormore"
+continent = "aurel"
+at = [19, 17]
+
+[[province]]
+id = "altfield"
+name = "Altfield"
+continent = "aurel"
+at = [20, 21]
+
+[[province]]
+id = "casbury"
+name = "Casbury"
+continent = "aurel"
+at = [4, 22]
+
+[[province]]
+id = "wilton"
+name = "Wilton"
+continent = "aurel"
+at = [14, 16]
+
+[[province]]
+id = "dorvale"
+name = "Dorvale"
+continent = "aurel"
+at = [11, 22]
+
+[[province]]
+id = "wilhaven"
+name = "Wilhaven"
+continent = "aurel"
+at = [17, 24]
+
+[[province]]
+id = "monwick"
+name = "Monwick"
+continent = "aurel"
+at = [7, 19]
+
+[[province]]
+id = "aurwick"
+name = "Aurwick"
+continent = "aurel"
+at = [7, 16]
+
+[[province]]
+id = "belfield"
+name = "Belfield"
+continent = "aurel"
+at = [10, 27]
+
+[[province]]
+id = "selmore"
+name = "Selmore"
+continent = "aurel"
+at = [13, 25]
+
+[[province]]
+id = "selfield"
+name = "Selfield"
+continent = "aurel"
+at = [18, 20]
+
+[[province]]
+id = "dormont"
+name = "Dormont"
+continent = "aurel"
+at = [13, 18]
+
+[[province]]
+id = "valwick"
+name = "Valwick"
+continent = "aurel"
+at = [16, 17]
+
+[[province]]
+id = "rosmont"
+name = "Rosmont"
+continent = "aurel"
+at = [10, 19]
+
+[[province]]
+id = "fenwick"
+name = "Fenwick"
+continent = "aurel"
+at = [6, 23]
+
+[[province]]
+id = "altmont"
+name = "Altmont"
+continent = "aurel"
+at = [4, 19]
+
+[[province]]
+id = "selshire"
+name = "Selshire"
+continent = "aurel"
+at = [9, 25]
+
+[[province]]
+id = "selmere"
+name = "Selmere"
+continent = "aurel"
+at = [12, 8]
+
+[[province]]
+id = "aurbrook"
+name = "Aurbrook"
+continent = "aurel"
+at = [15, 10]
+
+[[province]]
+id = "yerorda"
+name = "Yerorda"
+continent = "kesh_isles"
+at = [22, 18]
+
+[[province]]
+id = "khororda"
+name = "Khororda"
+continent = "kesh_isles"
+at = [27, 28]
+
+[[province]]
+id = "ozsu"
+name = "Ozsu"
+continent = "kesh_isles"
+at = [27, 9]
+
+[[province]]
+id = "bekabad"
+name = "Bekabad"
+continent = "kesh_isles"
+at = [28, 17]
+
+[[province]]
+id = "baistan"
+name = "Baistan"
+continent = "kesh_isles"
+at = [28, 35]
+
+[[province]]
+id = "uraorda"
+name = "Uraorda"
+continent = "kesh_isles"
+at = [30, 23]
+
+[[province]]
+id = "bekbulak"
+name = "Bekbulak"
+continent = "kesh_isles"
+at = [33, 22]
+
+[[province]]
+id = "temkul"
+name = "Temkul"
+continent = "kesh_isles"
+at = [30, 36]
+
+[[province]]
+id = "keshgol"
+name = "Keshgol"
+continent = "kesh_isles"
+at = [33, 29]
+
+[[province]]
+id = "yersai"
+name = "Yersai"
+continent = "kesh_isles"
+at = [38, 22]
+
+[[province]]
+id = "ozgol"
+name = "Ozgol"
+continent = "kesh_isles"
+at = [39, 29]
+
+[[province]]
+id = "khorkul"
+name = "Khorkul"
+continent = "kesh_isles"
+at = [40, 34]
+
+[[province]]
+id = "tormoor"
+name = "Tormoor"
+continent = "norvane"
+at = [27, 4]
+
+[[province]]
+id = "svalheim"
+name = "Svalheim"
+continent = "norvane"
+at = [59, 8]
+
+[[province]]
+id = "vintstad"
+name = "Vintstad"
+continent = "norvane"
+at = [43, 9]
+
+[[province]]
+id = "vintholm"
+name = "Vintholm"
+continent = "norvane"
+at = [13, 4]
+
+[[province]]
+id = "svalholm"
+name = "Svalholm"
+continent = "norvane"
+at = [50, 3]
+
+[[province]]
+id = "ulvmoor"
+name = "Ulvmoor"
+continent = "norvane"
+at = [19, 10]
+
+[[province]]
+id = "svalmark"
+name = "Svalmark"
+continent = "norvane"
+at = [34, 10]
+
+[[province]]
+id = "kaldmark"
+name = "Kaldmark"
+continent = "norvane"
+at = [38, 4]
+
+[[province]]
+id = "haldvik"
+name = "Haldvik"
+continent = "norvane"
+at = [53, 10]
+
+[[province]]
+id = "torheim"
+name = "Torheim"
+continent = "norvane"
+at = [20, 4]
+
+[[province]]
+id = "jarnmoor"
+name = "Jarnmoor"
+continent = "norvane"
+at = [43, 5]
+
+[[province]]
+id = "iskmark"
+name = "Iskmark"
+continent = "norvane"
+at = [24, 9]
+
+[[province]]
+id = "vintfell"
+name = "Vintfell"
+continent = "norvane"
+at = [55, 5]
+
+[[province]]
+id = "grimmark"
+name = "Grimmark"
+continent = "norvane"
+at = [32, 5]
+
+[[province]]
+id = "jarnvik"
+name = "Jarnvik"
+continent = "norvane"
+at = [48, 8]
+
+[[province]]
+id = "kaldby"
+name = "Kaldby"
+continent = "norvane"
+at = [38, 9]
+
+[[province]]
+id = "vintheim"
+name = "Vintheim"
+continent = "norvane"
+at = [17, 8]
+
+[[province]]
+id = "frostby"
+name = "Frostby"
+continent = "norvane"
+at = [29, 8]
+
+[[province]]
+id = "skarheim"
+name = "Skarheim"
+continent = "norvane"
+at = [21, 8]
+
+[[province]]
+id = "hvitgard"
+name = "Hvitgard"
+continent = "norvane"
+at = [51, 7]
+
+[[province]]
+id = "jarnstad"
+name = "Jarnstad"
+continent = "norvane"
+at = [56, 9]
+
+[[province]]
+id = "vintdal"
+name = "Vintdal"
+continent = "norvane"
+at = [40, 7]
+
+[[province]]
+id = "svalvik"
+name = "Svalvik"
+continent = "norvane"
+at = [47, 4]
+
+[[province]]
+id = "ulvgard"
+name = "Ulvgard"
+continent = "norvane"
+at = [16, 4]
+
+[[province]]
+id = "ranfjord"
+name = "Ranfjord"
+continent = "norvane"
+at = [36, 7]
+
+[[province]]
+id = "tormark"
+name = "Tormark"
+continent = "norvane"
+at = [45, 7]
+
+[[province]]
+id = "kaldstad"
+name = "Kaldstad"
+continent = "norvane"
+at = [50, 10]
+
+[[province]]
+id = "ulvholm"
+name = "Ulvholm"
+continent = "norvane"
+at = [23, 4]
+
+[[province]]
+id = "frostgard"
+name = "Frostgard"
+continent = "norvane"
+at = [14, 7]
+
+[[province]]
+id = "frostfjord"
+name = "Frostfjord"
+continent = "norvane"
+at = [32, 8]
+
+[[province]]
+id = "torstad"
+name = "Torstad"
+continent = "norvane"
+at = [35, 5]
+
+[[province]]
+id = "haldnes"
+name = "Haldnes"
+continent = "norvane"
+at = [41, 4]
+
+[[province]]
+id = "hvitstad"
+name = "Hvitstad"
+continent = "norvane"
+at = [53, 4]
+
+[[province]]
+id = "jarnmark"
+name = "Jarnmark"
+continent = "norvane"
+at = [54, 7]
+
+[[province]]
+id = "hvitfjord"
+name = "Hvitfjord"
+continent = "norvane"
+at = [58, 6]
+
+[[province]]
+id = "hvitvik"
+name = "Hvitvik"
+continent = "norvane"
+at = [29, 5]
+
+[[province]]
+id = "torfjord"
+name = "Torfjord"
+continent = "norvane"
+at = [26, 7]
+
+[[province]]
+id = "jarnnes"
+name = "Jarnnes"
+continent = "norvane"
+at = [51, 13]
+
+[[province]]
+id = "vintvik"
+name = "Vintvik"
+continent = "norvane"
+at = [64, 5]
+
+[[province]]
+id = "wadir"
+name = "Wadir"
+continent = "sahrun"
+at = [49, 23]
+
+[[province]]
+id = "nimun"
+name = "Nimun"
+continent = "sahrun"
+at = [61, 36]
+
+[[province]]
+id = "sahesh"
+name = "Sahesh"
+continent = "sahrun"
+at = [61, 16]
+
+[[province]]
+id = "rasib"
+name = "Rasib"
+continent = "sahrun"
+at = [46, 37]
+
+[[province]]
+id = "falah"
+name = "Falah"
+continent = "sahrun"
+at = [40, 16]
+
+[[province]]
+id = "tamabad"
+name = "Tamabad"
+continent = "sahrun"
+at = [58, 26]
+
+[[province]]
+id = "khaabad"
+name = "Khaabad"
+continent = "sahrun"
+at = [41, 25]
+
+[[province]]
+id = "falib"
+name = "Falib"
+continent = "sahrun"
+at = [54, 15]
+
+[[province]]
+id = "darara"
+name = "Darara"
+continent = "sahrun"
+at = [52, 31]
+
+[[province]]
+id = "mirun"
+name = "Mirun"
+continent = "sahrun"
+at = [41, 33]
+
+[[province]]
+id = "sahar"
+name = "Sahar"
+continent = "sahrun"
+at = [48, 16]
+
+[[province]]
+id = "mirena"
+name = "Mirena"
+continent = "sahrun"
+at = [46, 30]
+
+[[province]]
+id = "sahul"
+name = "Sahul"
+continent = "sahrun"
+at = [63, 23]
+
+[[province]]
+id = "tamara"
+name = "Tamara"
+continent = "sahrun"
+at = [63, 30]
+
+[[province]]
+id = "rasena"
+name = "Rasena"
+continent = "sahrun"
+at = [57, 20]
+
+[[province]]
+id = "wadesh"
+name = "Wadesh"
+continent = "sahrun"
+at = [44, 20]
+
+[[province]]
+id = "rasul"
+name = "Rasul"
+continent = "sahrun"
+at = [52, 37]
+
+[[province]]
+id = "wadoum"
+name = "Wadoum"
+continent = "sahrun"
+at = [55, 26]
+
+[[province]]
+id = "jabib"
+name = "Jabib"
+continent = "sahrun"
+at = [57, 32]
+
+[[province]]
+id = "sulib"
+name = "Sulib"
+continent = "sahrun"
+at = [40, 20]
+
+[[province]]
+id = "jabar"
+name = "Jabar"
+continent = "sahrun"
+at = [58, 15]
+
+[[province]]
+id = "rasara"
+name = "Rasara"
+continent = "sahrun"
+at = [52, 19]
+
+[[province]]
+id = "darir"
+name = "Darir"
+continent = "sahrun"
+at = [44, 25]
+
+[[province]]
+id = "jabun"
+name = "Jabun"
+continent = "sahrun"
+at = [47, 34]
+
+[[province]]
+id = "nimar"
+name = "Nimar"
+continent = "sahrun"
+at = [61, 20]
+
+[[province]]
+id = "sahena"
+name = "Sahena"
+continent = "sahrun"
+at = [56, 36]
+
+[[province]]
+id = "sahiya"
+name = "Sahiya"
+continent = "sahrun"
+at = [44, 34]
+
+[[province]]
+id = "falir"
+name = "Falir"
+continent = "sahrun"
+at = [42, 29]
+
+[[province]]
+id = "qasar"
+name = "Qasar"
+continent = "sahrun"
+at = [43, 16]
+
+[[province]]
+id = "zanib"
+name = "Zanib"
+continent = "sahrun"
+at = [59, 31]
+
+[[province]]
+id = "sulir"
+name = "Sulir"
+continent = "sahrun"
+at = [48, 19]
+
+[[province]]
+id = "daroum"
+name = "Daroum"
+continent = "sahrun"
+at = [63, 26]
+
+[[province]]
+id = "falabad"
+name = "Falabad"
+continent = "sahrun"
+at = [55, 23]
+
+[[province]]
+id = "zanun"
+name = "Zanun"
+continent = "sahrun"
+at = [55, 29]
+
+[[province]]
+id = "tamul"
+name = "Tamul"
+continent = "sahrun"
+at = [49, 37]
+
+[[province]]
+id = "ashesh"
+name = "Ashesh"
+continent = "sahrun"
+at = [48, 31]
+
+[[province]]
+id = "zanabad"
+name = "Zanabad"
+continent = "sahrun"
+at = [51, 16]
+
+[[province]]
+id = "qasir"
+name = "Qasir"
+continent = "sahrun"
+at = [53, 22]
+
+[[province]]
+id = "darun"
+name = "Darun"
+continent = "sahrun"
+at = [55, 17]
+
+[[province]]
+id = "rasir"
+name = "Rasir"
+continent = "sahrun"
+at = [61, 33]
+
+[[province]]
+id = "zanul"
+name = "Zanul"
+continent = "sahrun"
+at = [58, 23]
+
+[[province]]
+id = "ashul"
+name = "Ashul"
+continent = "sahrun"
+at = [46, 22]
+
+[[province]]
+id = "jabir"
+name = "Jabir"
+continent = "sahrun"
+at = [42, 22]
+
+[[province]]
+id = "ashun"
+name = "Ashun"
+continent = "sahrun"
+at = [42, 18]
+
+[[province]]
+id = "nimesh"
+name = "Nimesh"
+continent = "sahrun"
+at = [45, 17]
+
+[[province]]
+id = "jabara"
+name = "Jabara"
+continent = "sahrun"
+at = [54, 34]
+
+[[province]]
+id = "qasesh"
+name = "Qasesh"
+continent = "sahrun"
+at = [58, 35]
+
+[[province]]
+id = "tamar"
+name = "Tamar"
+continent = "sahrun"
+at = [60, 28]
+
+[[province]]
+id = "nimir"
+name = "Nimir"
+continent = "sahrun"
+at = [63, 20]
+
+[[province]]
+id = "sular"
+name = "Sular"
+continent = "sahrun"
+at = [59, 18]
+
+[[province]]
+id = "zanar"
+name = "Zanar"
+continent = "sahrun"
+at = [61, 24]
+
+[[province]]
+id = "jaboum"
+name = "Jaboum"
+continent = "sahrun"
+at = [51, 34]
+
+[[province]]
+id = "ashoum"
+name = "Ashoum"
+continent = "sahrun"
+at = [47, 26]
+
+[[province]]
+id = "marama"
+name = "Marama"
+continent = "verdane"
+at = [2, 35]
+
+[[province]]
+id = "tulana"
+name = "Tulana"
+continent = "verdane"
+at = [7, 28]
+
+[[province]]
+id = "panaco"
+name = "Panaco"
+continent = "verdane"
+at = [10, 34]
+
+[[province]]
+id = "amalan"
+name = "Amalan"
+continent = "verdane"
+at = [28, 37]
+
+[[province]]
+id = "yucama"
+name = "Yucama"
+continent = "verdane"
+at = [19, 39]
+
+[[province]]
+id = "maratepec"
+name = "Maratepec"
+continent = "verdane"
+at = [18, 32]
+
+[[province]]
+id = "selatepec"
+name = "Selatepec"
+continent = "verdane"
+at = [23, 34]
+
+[[province]]
+id = "vertlan"
+name = "Vertlan"
+continent = "verdane"
+at = [12, 39]
+
+[[province]]
+id = "coahuac"
+name = "Coahuac"
+continent = "verdane"
+at = [25, 38]
+
+[[province]]
+id = "challan"
+name = "Challan"
+continent = "verdane"
+at = [8, 39]
+
+[[province]]
+id = "tulahuac"
+name = "Tulahuac"
+continent = "verdane"
+at = [15, 35]
+
+[[province]]
+id = "nahutlan"
+name = "Nahutlan"
+continent = "verdane"
+at = [19, 35]
+
+[[province]]
+id = "marapa"
+name = "Marapa"
+continent = "verdane"
+at = [26, 35]
+
+[[province]]
+id = "chalpa"
+name = "Chalpa"
+continent = "verdane"
+at = [16, 38]
+
+[[province]]
+id = "oroca"
+name = "Oroca"
+continent = "verdane"
+at = [27, 39]
+
+[[province]]
+id = "chaltlan"
+name = "Chaltlan"
+continent = "verdane"
+at = [11, 37]
+
+[[province]]
+id = "tulatepec"
+name = "Tulatepec"
+continent = "verdane"
+at = [22, 38]
+
+[[province]]
+id = "quetna"
+name = "Quetna"
+continent = "verdane"
+at = [13, 33]
+
+[[province]]
+id = "chalco"
+name = "Chalco"
+continent = "verdane"
+at = [8, 36]
+
+[[river]]
+name = "River Norr"
+cells = [[33, 8], [32, 9], [33, 10], [32, 11]]
+
+[[river]]
+name = "River Aur"
+cells = [[11, 22], [11, 23], [12, 24], [13, 24], [13, 25], [14, 25], [15, 26], [16, 26], [15, 27], [16, 27], [17, 28]]
+
+[[river]]
+name = "River Sah"
+cells = [[54, 27], [53, 27]]
+
+[[river]]
+name = "River Mosi"
+cells = [[46, 29], [46, 30], [45, 31], [45, 32], [44, 33], [44, 34], [43, 35], [44, 36], [43, 37]]
+
+[[river]]
+name = "River Verd"
+cells = [[15, 37], [16, 38], [15, 38], [15, 39], [15, 40], [14, 41]]
+
+[[landmark]]
+kind = "pyramid"
+name = "The Great Pyramid"
+at = [46, 24]
+
+[[landmark]]
+kind = "lighthouse"
+name = "Kesh Light"
+at = [30, 22]
+
+[[landmark]]
+kind = "great_tower"
+name = "Norr Spire"
+at = [36, 8]
+
+[[landmark]]
+kind = "temple"
+name = "Temple of Verd"
+at = [18, 38]
+
+[[landmark]]
+kind = "colossus"
+name = "The Aurel Colossus"
+at = [7, 15]
+
+[[landmark]]
+kind = "arch"
+name = "Oasis Gate"
+at = [55, 23]

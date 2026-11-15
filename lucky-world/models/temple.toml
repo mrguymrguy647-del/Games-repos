@@ -1,0 +1,198 @@
+# Landmark: a columned temple on a three-step platform, with a pediment roof.
+version = 0
+name = "temple"
+description = "Temple landmark: about 0.9 x 0.62 and 0.56 tall, front facing +z."
+
+[palette]
+marble = "#F3EFE4"
+marble_shade = "#D9D2C2"
+frieze = "#6C8FBF"
+roof = "#C65A3A"
+
+[[parts]]
+name = "step1"
+shape = "box"
+size = [0.9, 0.04, 0.62]
+color = "marble_shade"
+move = [0, 0.02, 0]
+
+[[parts]]
+name = "step2"
+shape = "box"
+size = [0.84, 0.04, 0.56]
+color = "marble_shade"
+move = [0, 0.06, 0]
+
+[[parts]]
+name = "step3"
+shape = "box"
+size = [0.78, 0.04, 0.5]
+color = "marble"
+move = [0, 0.1, 0]
+
+[[parts]]
+name = "cella"
+shape = "box"
+size = [0.46, 0.27, 0.26]
+color = "marble_shade"
+move = [0, 0.255, 0]
+
+[[parts]]
+name = "column1"
+shape = "cylinder"
+radius = 0.026
+height = 0.27
+segments = 6
+color = "marble"
+move = [-0.33, 0.255, 0.21]
+
+[[parts]]
+name = "column2"
+shape = "cylinder"
+radius = 0.026
+height = 0.27
+segments = 6
+color = "marble"
+move = [-0.198, 0.255, 0.21]
+
+[[parts]]
+name = "column3"
+shape = "cylinder"
+radius = 0.026
+height = 0.27
+segments = 6
+color = "marble"
+move = [-0.066, 0.255, 0.21]
+
+[[parts]]
+name = "column4"
+shape = "cylinder"
+radius = 0.026
+height = 0.27
+segments = 6
+color = "marble"
+move = [0.066, 0.255, 0.21]
+
+[[parts]]
+name = "column5"
+shape = "cylinder"
+radius = 0.026
+height = 0.27
+segments = 6
+color = "marble"
+move = [0.198, 0.255, 0.21]
+
+[[parts]]
+name = "column6"
+shape = "cylinder"
+radius = 0.026
+height = 0.27
+segments = 6
+color = "marble"
+move = [0.33, 0.255, 0.21]
+
+[[parts]]
+name = "column7"
+shape = "cylinder"
+radius = 0.026
+height = 0.27
+segments = 6
+color = "marble"
+move = [-0.33, 0.255, -0.21]
+
+[[parts]]
+name = "column8"
+shape = "cylinder"
+radius = 0.026
+height = 0.27
+segments = 6
+color = "marble"
+move = [-0.198, 0.255, -0.21]
+
+[[parts]]
+name = "column9"
+shape = "cylinder"
+radius = 0.026
+height = 0.27
+segments = 6
+color = "marble"
+move = [-0.066, 0.255, -0.21]
+
+[[parts]]
+name = "column10"
+shape = "cylinder"
+radius = 0.026
+height = 0.27
+segments = 6
+color = "marble"
+move = [0.066, 0.255, -0.21]
+
+[[parts]]
+name = "column11"
+shape = "cylinder"
+radius = 0.026
+height = 0.27
+segments = 6
+color = "marble"
+move = [0.198, 0.255, -0.21]
+
+[[parts]]
+name = "column12"
+shape = "cylinder"
+radius = 0.026
+height = 0.27
+segments = 6
+color = "marble"
+move = [0.33, 0.255, -0.21]
+
+[[parts]]
+name = "column13"
+shape = "cylinder"
+radius = 0.026
+height = 0.27
+segments = 6
+color = "marble"
+move = [-0.33, 0.255, -0.07]
+
+[[parts]]
+name = "column14"
+shape = "cylinder"
+radius = 0.026
+height = 0.27
+segments = 6
+color = "marble"
+move = [-0.33, 0.255, 0.07]
+
+[[parts]]
+name = "column15"
+shape = "cylinder"
+radius = 0.026
+height = 0.27
+segments = 6
+color = "marble"
+move = [0.33, 0.255, -0.07]
+
+[[parts]]
+name = "column16"
+shape = "cylinder"
+radius = 0.026
+height = 0.27
+segments = 6
+color = "marble"
+move = [0.33, 0.255, 0.07]
+
+[[parts]]
+name = "beam"
+shape = "box"
+size = [0.78, 0.05, 0.5]
+color = "marble"
+colors = { front = "frieze", back = "frieze" }
+move = [0, 0.415, 0]
+
+[[parts]]
+name = "roof"
+shape = "prism"
+size = [0.8, 0.12, 0.52]
+color = "roof"
+colors = { front = "marble", back = "marble" }
+move = [0, 0.5, 0]

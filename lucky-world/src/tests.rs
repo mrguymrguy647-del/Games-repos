@@ -316,3 +316,185 @@ fn the_island_map_never_lands_on_landlocked() {
         assert_ne!(p.option_id(&g.data, "coast"), "landlocked");
     }
 }
+
+// ---------------------------------------------------------------------------
+// Phase 2: the maps and who owns what
+// ---------------------------------------------------------------------------
+
+use crate::mapdata::Atlas;
+use crate::world::{Coast, World};
+
+fn atlas(d: &Data) -> Atlas {
+    Atlas::load(d).unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// A whole world on one map, from one seed.
+fn world_on(d: &Data, a: &Atlas, map: usize, seed: u32) -> World {
+    let mut rng = Rng::new(seed);
+    let player = roll_country(d, map, Vec::new(), &[], true, &mut rng);
+    let rivals = roll_rivals(d, &player, &mut rng);
+    World::build(d, a, player, rivals, &mut rng)
+}
+
+#[test]
+fn the_three_maps_load_and_every_land_hex_has_a_province() {
+    let d = data();
+    let a = atlas(&d);
+    assert_eq!(a.maps.len(), 3);
+    for m in &a.maps {
+        for i in 0..m.cells.len() {
+            let land = a.terrain_of(m, i).kind == crate::mapdata::TerrainKind::Land;
+            assert_eq!(land, m.province_of[i].is_some(), "{} hex {:?}", m.id, m.cell(i));
+        }
+        for (p, prov) in m.provinces.iter().enumerate() {
+            assert!(!prov.cells.is_empty(), "{} has an empty province {}", m.id, prov.id);
+            for &q in &prov.neighbours {
+                assert!(m.provinces[q].neighbours.contains(&p), "{}: {} and {} aren't neighbours both ways", m.id, prov.id, m.provinces[q].id);
+            }
+        }
+        // Each map plays differently: the Grand Continent is mostly one landmass, the isles are many.
+        let biggest = (0..m.landmass_count).map(|l| m.provinces_on(l).len()).max().unwrap();
+        println!("{}: {} provinces, {} landmasses, biggest {}", m.id, m.provinces.len(), m.landmass_count, biggest);
+        match m.id.as_str() {
+            "grand" => assert!(biggest * 10 >= m.provinces.len() * 8),
+            "isles" => assert!(m.landmass_count >= 15 && biggest * 4 <= m.provinces.len()),
+            _ => assert!(m.landmass_count >= 5),
+        }
+    }
+}
+
+#[test]
+fn a_mistake_in_a_map_is_one_clear_sentence() {
+    let d = data();
+    let a = atlas(&d);
+    let terrains = a.terrains.clone();
+    let grid = std::fs::read_to_string("data/maps/grand.txt").unwrap();
+    let file = std::fs::read_to_string("data/maps/grand.toml").unwrap();
+    let bad_letter = grid.replacen('P', "Q", 1);
+    let e = crate::mapdata::parse_map(&d, 0, &terrains, &bad_letter, &file).unwrap_err();
+    assert!(e.0.contains("\"Q\" isn't a terrain"), "{e}");
+    let bad_continent = file.replacen("continent = \"heartland\"", "continent = \"atlantis\"", 1);
+    let e = crate::mapdata::parse_map(&d, 0, &terrains, &grid, &bad_continent).unwrap_err();
+    assert!(e.0.contains("atlantis"), "{e}");
+}
+
+#[test]
+fn every_province_belongs_to_at_most_one_nation() {
+    let d = data();
+    let a = atlas(&d);
+    for map in 0..3 {
+        for seed in 1..=8 {
+            let w = world_on(&d, &a, map, seed);
+            let mut claimed = vec![0usize; w.owner.len()];
+            for n in 0..w.nations.len() {
+                let mine = w.provinces_of(n);
+                assert!(!mine.is_empty(), "{} has no land", w.nations[n].name);
+                assert!(mine.contains(&w.capital[n]), "{}'s capital isn't its own", w.nations[n].name);
+                for p in mine {
+                    claimed[p] += 1;
+                }
+            }
+            assert!(claimed.iter().all(|&k| k <= 1));
+            assert!(w.nations.len() <= a.settings.max_nations);
+        }
+    }
+}
+
+#[test]
+fn landlocked_nations_never_touch_the_sea() {
+    let d = data();
+    let a = atlas(&d);
+    let mut seen = 0;
+    for map in 0..3 {
+        for seed in 1..=15 {
+            let w = world_on(&d, &a, map, seed);
+            for n in 0..w.nations.len() {
+                if Coast::of(&d, &w.nations[n]) == Coast::Landlocked {
+                    seen += 1;
+                    assert!(!w.touches_sea(a.map(map), n), "{} is landlocked but touches the sea", w.nations[n].name);
+                }
+            }
+        }
+    }
+    assert!(seen > 10, "only {seen} landlocked nations: the test proves little");
+}
+
+#[test]
+fn the_island_map_never_has_a_landlocked_nation() {
+    let d = data();
+    let a = atlas(&d);
+    let isles = d.maps.iter().position(|m| m.id == "isles").unwrap();
+    for seed in 1..=25 {
+        let w = world_on(&d, &a, isles, seed);
+        for n in 0..w.nations.len() {
+            assert_ne!(Coast::of(&d, &w.nations[n]), Coast::Landlocked, "{}", w.nations[n].name);
+            assert!(w.touches_sea(a.map(isles), n));
+        }
+    }
+}
+
+#[test]
+fn island_nations_share_no_land_border() {
+    let d = data();
+    let a = atlas(&d);
+    let mut seen = 0;
+    for map in 0..3 {
+        for seed in 1..=15 {
+            let w = world_on(&d, &a, map, seed);
+            for n in 0..w.nations.len() {
+                if Coast::of(&d, &w.nations[n]) == Coast::Island {
+                    seen += 1;
+                    assert!(w.land_neighbours(a.map(map), n).is_empty(), "{} is an island nation with land neighbours", w.nations[n].name);
+                }
+            }
+        }
+    }
+    assert!(seen > 5, "only {seen} island nations");
+}
+
+#[test]
+fn the_same_seed_gives_the_same_world() {
+    let d = data();
+    let a = atlas(&d);
+    for map in 0..3 {
+        let one = world_on(&d, &a, map, 99);
+        let two = world_on(&d, &a, map, 99);
+        assert_eq!(one.owner, two.owner);
+        assert_eq!(one.capital, two.capital);
+        let names = |w: &World| w.nations.iter().map(|c| c.name.clone()).collect::<Vec<_>>();
+        assert_eq!(names(&one), names(&two));
+        let other = world_on(&d, &a, map, 100);
+        assert_ne!(one.owner, other.owner, "a different seed should give a different world");
+    }
+}
+
+#[test]
+fn nations_sit_where_their_wheels_say_and_the_land_gets_covered() {
+    let d = data();
+    let a = atlas(&d);
+    for map in 0..3 {
+        let mut placed = 0;
+        let mut on_wheel_continent = 0;
+        let mut coverage = 0.0;
+        for seed in 1..=12 {
+            let w = world_on(&d, &a, map, seed);
+            coverage += w.coverage() / 12.0;
+            assert!(w.nations.len() > w.main_count, "no nations were made to fill the land");
+            let m = a.map(map);
+            for n in 0..w.nations.len() {
+                placed += 1;
+                if m.provinces[w.capital[n]].continent == w.nations[n].landed[0].option {
+                    on_wheel_continent += 1;
+                } else {
+                    assert!(w.notes[n].is_some(), "{} isn't on its continent and nobody said why", w.nations[n].name);
+                }
+            }
+            // Bigger wheels, bigger countries: the biggest nation by provinces is at least medium.
+            let biggest = (0..w.nations.len()).max_by_key(|&n| w.provinces_of(n).len()).unwrap();
+            assert!(w.provinces_of(biggest).len() >= 4);
+        }
+        println!("map {map}: {:.0}% of nations on their wheel's continent, {:.1}% of land owned", 100.0 * on_wheel_continent as f64 / placed as f64, coverage * 100.0);
+        assert!(on_wheel_continent * 10 >= placed * 8);
+        assert!(coverage > 0.9, "only {:.0}% of the land owned", coverage * 100.0);
+    }
+}

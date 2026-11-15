@@ -1,0 +1,76 @@
+# A clump of marsh reeds for the world map: thin blades and two cattail heads.
+version = 0
+name = "reeds"
+description = "Clump of five marsh reeds, 0.15 tall, for marsh tiles on the world map."
+
+[palette]
+reed = "#8FAF4A"
+reed_dark = "#6E8F36"
+cattail = "#6B4426"
+
+[[parts]]
+name = "blade1"
+shape = "cone"
+radius = 0.012
+height = 0.15
+segments = 3
+color = "reed"
+move = [0, 0.075, 0]
+
+[[parts]]
+name = "blade2"
+shape = "cone"
+radius = 0.011
+height = 0.12
+segments = 3
+color = "reed_dark"
+rotate = [0, 0, 14]
+move = [-0.03, 0.055, 0.012]
+
+[[parts]]
+name = "blade3"
+shape = "cone"
+radius = 0.011
+height = 0.13
+segments = 3
+color = "reed"
+rotate = [0, 0, -12]
+move = [0.03, 0.06, -0.01]
+
+[[parts]]
+name = "blade4"
+shape = "cone"
+radius = 0.01
+height = 0.1
+segments = 3
+color = "reed_dark"
+rotate = [12, 0, 0]
+move = [0.008, 0.044, 0.03]
+
+[[parts]]
+name = "blade5"
+shape = "cone"
+radius = 0.01
+height = 0.11
+segments = 3
+color = "reed"
+rotate = [-12, 0, 0]
+move = [-0.01, 0.049, -0.03]
+
+[[parts]]
+name = "stalk1"
+shape = "cylinder"
+radius = 0.004
+height = 0.1
+segments = 3
+color = "reed_dark"
+move = [0.016, 0.05, 0.008]
+
+[[parts]]
+name = "head1"
+shape = "cylinder"
+radius = 0.0065
+height = 0.042
+segments = 3
+color = "cattail"
+move = [0.016, 0.12, 0.008]

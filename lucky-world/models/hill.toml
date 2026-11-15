@@ -1,0 +1,27 @@
+# A low grassy mound for the world map.
+version = 0
+name = "hill"
+description = "Low grassy hill, 0.6 across and 0.12 tall, for hill tiles on the world map."
+
+[palette]
+grass = "#6FB04A"
+grass_light = "#86C55C"
+
+[[parts]]
+name = "mound"
+shape = "cylinder"
+radius = 0.28
+height = 0.07
+segments = 7
+taper = 0.62
+color = "grass"
+
+[[parts]]
+name = "crest"
+shape = "cone"
+radius = 0.174
+height = 0.05
+segments = 7
+color = "grass_light"
+attach = "bottom"
+to = "mound.top"

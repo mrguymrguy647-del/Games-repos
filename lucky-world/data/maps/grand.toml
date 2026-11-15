@@ -1,0 +1,1069 @@
+# grand: provinces, rivers and landmarks. The terrain is grand.txt beside this file.
+#
+# A province is every land hex nearer (walking over land) to its `at` hex than to
+# any other province's. Move `at` to move its borders; add or remove provinces freely.
+# `at` is [column, row] in the terrain grid, counting from 0 at the top left.
+# `continent` must be one of this map's continents in data/maps.toml.
+
+[[province]]
+id = "temgol"
+name = "Temgol"
+continent = "eastern_steppe"
+at = [49, 23]
+
+[[province]]
+id = "tartau"
+name = "Tartau"
+continent = "eastern_steppe"
+at = [55, 9]
+
+[[province]]
+id = "bektau"
+name = "Bektau"
+continent = "eastern_steppe"
+at = [40, 16]
+
+[[province]]
+id = "ozsai"
+name = "Ozsai"
+continent = "eastern_steppe"
+at = [61, 21]
+
+[[province]]
+id = "baibulak"
+name = "Baibulak"
+continent = "eastern_steppe"
+at = [56, 28]
+
+[[province]]
+id = "sartash"
+name = "Sartash"
+continent = "eastern_steppe"
+at = [40, 23]
+
+[[province]]
+id = "urasu"
+name = "Urasu"
+continent = "eastern_steppe"
+at = [47, 15]
+
+[[province]]
+id = "baisai"
+name = "Baisai"
+continent = "eastern_steppe"
+at = [55, 17]
+
+[[province]]
+id = "sarsai"
+name = "Sarsai"
+continent = "eastern_steppe"
+at = [58, 13]
+
+[[province]]
+id = "urasai"
+name = "Urasai"
+continent = "eastern_steppe"
+at = [53, 12]
+
+[[province]]
+id = "altynkul"
+name = "Altynkul"
+continent = "eastern_steppe"
+at = [57, 23]
+
+[[province]]
+id = "khortau"
+name = "Khortau"
+continent = "eastern_steppe"
+at = [45, 19]
+
+[[province]]
+id = "tarkent"
+name = "Tarkent"
+continent = "eastern_steppe"
+at = [51, 27]
+
+[[province]]
+id = "bekorda"
+name = "Bekorda"
+continent = "eastern_steppe"
+at = [51, 18]
+
+[[province]]
+id = "tolsai"
+name = "Tolsai"
+continent = "eastern_steppe"
+at = [45, 25]
+
+[[province]]
+id = "altynbulak"
+name = "Altynbulak"
+continent = "eastern_steppe"
+at = [40, 20]
+
+[[province]]
+id = "ozstan"
+name = "Ozstan"
+continent = "eastern_steppe"
+at = [53, 23]
+
+[[province]]
+id = "khororda"
+name = "Khororda"
+continent = "eastern_steppe"
+at = [42, 15]
+
+[[province]]
+id = "baistan"
+name = "Baistan"
+continent = "eastern_steppe"
+at = [60, 18]
+
+[[province]]
+id = "ozorda"
+name = "Ozorda"
+continent = "eastern_steppe"
+at = [56, 12]
+
+[[province]]
+id = "keshgol"
+name = "Keshgol"
+continent = "eastern_steppe"
+at = [42, 18]
+
+[[province]]
+id = "karaabad"
+name = "Karaabad"
+continent = "eastern_steppe"
+at = [48, 18]
+
+[[province]]
+id = "ozkul"
+name = "Ozkul"
+continent = "eastern_steppe"
+at = [58, 26]
+
+[[province]]
+id = "keshkent"
+name = "Keshkent"
+continent = "eastern_steppe"
+at = [55, 26]
+
+[[province]]
+id = "altyngol"
+name = "Altyngol"
+continent = "eastern_steppe"
+at = [43, 22]
+
+[[province]]
+id = "baitau"
+name = "Baitau"
+continent = "eastern_steppe"
+at = [57, 20]
+
+[[province]]
+id = "temorda"
+name = "Temorda"
+continent = "eastern_steppe"
+at = [50, 15]
+
+[[province]]
+id = "urakent"
+name = "Urakent"
+continent = "eastern_steppe"
+at = [53, 20]
+
+[[province]]
+id = "oztash"
+name = "Oztash"
+continent = "eastern_steppe"
+at = [51, 25]
+
+[[province]]
+id = "zhanabad"
+name = "Zhanabad"
+continent = "eastern_steppe"
+at = [58, 16]
+
+[[province]]
+id = "tarsai"
+name = "Tarsai"
+continent = "eastern_steppe"
+at = [53, 16]
+
+[[province]]
+id = "zhansu"
+name = "Zhansu"
+continent = "eastern_steppe"
+at = [45, 16]
+
+[[province]]
+id = "karatash"
+name = "Karatash"
+continent = "eastern_steppe"
+at = [47, 21]
+
+[[province]]
+id = "sarbulak"
+name = "Sarbulak"
+continent = "eastern_steppe"
+at = [65, 4]
+
+[[province]]
+id = "sarstan"
+name = "Sarstan"
+continent = "eastern_steppe"
+at = [65, 16]
+
+[[province]]
+id = "bekkent"
+name = "Bekkent"
+continent = "eastern_steppe"
+at = [66, 20]
+
+[[province]]
+id = "ixitepec"
+name = "Ixitepec"
+continent = "green_south"
+at = [44, 35]
+
+[[province]]
+id = "coando"
+name = "Coando"
+continent = "green_south"
+at = [59, 35]
+
+[[province]]
+id = "yucatepec"
+name = "Yucatepec"
+continent = "green_south"
+at = [41, 26]
+
+[[province]]
+id = "orotepec"
+name = "Orotepec"
+continent = "green_south"
+at = [51, 30]
+
+[[province]]
+id = "panatepec"
+name = "Panatepec"
+continent = "green_south"
+at = [53, 35]
+
+[[province]]
+id = "tepahuac"
+name = "Tepahuac"
+continent = "green_south"
+at = [44, 27]
+
+[[province]]
+id = "yucalan"
+name = "Yucalan"
+continent = "green_south"
+at = [56, 31]
+
+[[province]]
+id = "yucatlan"
+name = "Yucatlan"
+continent = "green_south"
+at = [40, 31]
+
+[[province]]
+id = "selalan"
+name = "Selalan"
+continent = "green_south"
+at = [47, 33]
+
+[[province]]
+id = "amapa"
+name = "Amapa"
+continent = "green_south"
+at = [41, 37]
+
+[[province]]
+id = "verco"
+name = "Verco"
+continent = "green_south"
+at = [42, 29]
+
+[[province]]
+id = "panaco"
+name = "Panaco"
+continent = "green_south"
+at = [50, 34]
+
+[[province]]
+id = "quetna"
+name = "Quetna"
+continent = "green_south"
+at = [47, 27]
+
+[[province]]
+id = "oroma"
+name = "Oroma"
+continent = "green_south"
+at = [44, 31]
+
+[[province]]
+id = "panazal"
+name = "Panazal"
+continent = "green_south"
+at = [56, 35]
+
+[[province]]
+id = "tulapa"
+name = "Tulapa"
+continent = "green_south"
+at = [54, 32]
+
+[[province]]
+id = "yucaco"
+name = "Yucaco"
+continent = "green_south"
+at = [48, 30]
+
+[[province]]
+id = "tulana"
+name = "Tulana"
+continent = "green_south"
+at = [41, 34]
+
+[[province]]
+id = "nahulan"
+name = "Nahulan"
+continent = "green_south"
+at = [58, 33]
+
+[[province]]
+id = "dorbrook"
+name = "Dorbrook"
+continent = "heartland"
+at = [3, 25]
+
+[[province]]
+id = "casshire"
+name = "Casshire"
+continent = "heartland"
+at = [3, 21]
+
+[[province]]
+id = "belhaven"
+name = "Belhaven"
+continent = "heartland"
+at = [4, 23]
+
+[[province]]
+id = "selhaven"
+name = "Selhaven"
+continent = "heartland"
+at = [15, 21]
+
+[[province]]
+id = "altton"
+name = "Altton"
+continent = "heartland"
+at = [38, 22]
+
+[[province]]
+id = "dorhaven"
+name = "Dorhaven"
+continent = "heartland"
+at = [27, 16]
+
+[[province]]
+id = "verbury"
+name = "Verbury"
+continent = "heartland"
+at = [29, 26]
+
+[[province]]
+id = "belmere"
+name = "Belmere"
+continent = "heartland"
+at = [8, 19]
+
+[[province]]
+id = "selshire"
+name = "Selshire"
+continent = "heartland"
+at = [9, 25]
+
+[[province]]
+id = "aurford"
+name = "Aurford"
+continent = "heartland"
+at = [21, 16]
+
+[[province]]
+id = "belshire"
+name = "Belshire"
+continent = "heartland"
+at = [35, 17]
+
+[[province]]
+id = "selfield"
+name = "Selfield"
+continent = "heartland"
+at = [22, 21]
+
+[[province]]
+id = "valwick"
+name = "Valwick"
+continent = "heartland"
+at = [13, 16]
+
+[[province]]
+id = "casmere"
+name = "Casmere"
+continent = "heartland"
+at = [31, 21]
+
+[[province]]
+id = "lorwick"
+name = "Lorwick"
+continent = "heartland"
+at = [19, 25]
+
+[[province]]
+id = "belton"
+name = "Belton"
+continent = "heartland"
+at = [33, 25]
+
+[[province]]
+id = "selmont"
+name = "Selmont"
+continent = "heartland"
+at = [13, 24]
+
+[[province]]
+id = "lorfield"
+name = "Lorfield"
+continent = "heartland"
+at = [10, 22]
+
+[[province]]
+id = "aurfield"
+name = "Aurfield"
+continent = "heartland"
+at = [26, 20]
+
+[[province]]
+id = "dorfield"
+name = "Dorfield"
+continent = "heartland"
+at = [19, 19]
+
+[[province]]
+id = "monton"
+name = "Monton"
+continent = "heartland"
+at = [24, 18]
+
+[[province]]
+id = "rosshire"
+name = "Rosshire"
+continent = "heartland"
+at = [11, 19]
+
+[[province]]
+id = "lorhaven"
+name = "Lorhaven"
+continent = "heartland"
+at = [31, 17]
+
+[[province]]
+id = "lorbury"
+name = "Lorbury"
+continent = "heartland"
+at = [36, 19]
+
+[[province]]
+id = "wilton"
+name = "Wilton"
+continent = "heartland"
+at = [35, 22]
+
+[[province]]
+id = "fenfield"
+name = "Fenfield"
+continent = "heartland"
+at = [25, 14]
+
+[[province]]
+id = "rosford"
+name = "Rosford"
+continent = "heartland"
+at = [15, 18]
+
+[[province]]
+id = "fenford"
+name = "Fenford"
+continent = "heartland"
+at = [21, 25]
+
+[[province]]
+id = "valford"
+name = "Valford"
+continent = "heartland"
+at = [15, 25]
+
+[[province]]
+id = "rosbury"
+name = "Rosbury"
+continent = "heartland"
+at = [10, 15]
+
+[[province]]
+id = "aurvale"
+name = "Aurvale"
+continent = "heartland"
+at = [29, 23]
+
+[[province]]
+id = "altmore"
+name = "Altmore"
+continent = "heartland"
+at = [33, 19]
+
+[[province]]
+id = "selmore"
+name = "Selmore"
+continent = "heartland"
+at = [19, 22]
+
+[[province]]
+id = "belbrook"
+name = "Belbrook"
+continent = "heartland"
+at = [31, 26]
+
+[[province]]
+id = "casford"
+name = "Casford"
+continent = "heartland"
+at = [36, 24]
+
+[[province]]
+id = "wilmere"
+name = "Wilmere"
+continent = "heartland"
+at = [29, 19]
+
+[[province]]
+id = "valvale"
+name = "Valvale"
+continent = "heartland"
+at = [23, 14]
+
+[[province]]
+id = "altshire"
+name = "Altshire"
+continent = "heartland"
+at = [24, 25]
+
+[[province]]
+id = "rosmont"
+name = "Rosmont"
+continent = "heartland"
+at = [18, 17]
+
+[[province]]
+id = "haldheim"
+name = "Haldheim"
+continent = "northern_wilds"
+at = [49, 7]
+
+[[province]]
+id = "ranfjord"
+name = "Ranfjord"
+continent = "northern_wilds"
+at = [11, 9]
+
+[[province]]
+id = "haldfell"
+name = "Haldfell"
+continent = "northern_wilds"
+at = [30, 14]
+
+[[province]]
+id = "randal"
+name = "Randal"
+continent = "northern_wilds"
+at = [21, 6]
+
+[[province]]
+id = "frostfell"
+name = "Frostfell"
+continent = "northern_wilds"
+at = [38, 6]
+
+[[province]]
+id = "haldmark"
+name = "Haldmark"
+continent = "northern_wilds"
+at = [17, 14]
+
+[[province]]
+id = "jarnmoor"
+name = "Jarnmoor"
+continent = "northern_wilds"
+at = [43, 12]
+
+[[province]]
+id = "tormoor"
+name = "Tormoor"
+continent = "northern_wilds"
+at = [29, 6]
+
+[[province]]
+id = "vintmark"
+name = "Vintmark"
+continent = "northern_wilds"
+at = [23, 11]
+
+[[province]]
+id = "skarmark"
+name = "Skarmark"
+continent = "northern_wilds"
+at = [37, 14]
+
+[[province]]
+id = "iskby"
+name = "Iskby"
+continent = "northern_wilds"
+at = [15, 6]
+
+[[province]]
+id = "jarndal"
+name = "Jarndal"
+continent = "northern_wilds"
+at = [49, 12]
+
+[[province]]
+id = "grimdal"
+name = "Grimdal"
+continent = "northern_wilds"
+at = [44, 7]
+
+[[province]]
+id = "svalfell"
+name = "Svalfell"
+continent = "northern_wilds"
+at = [54, 8]
+
+[[province]]
+id = "ulvstad"
+name = "Ulvstad"
+continent = "northern_wilds"
+at = [33, 9]
+
+[[province]]
+id = "iskvik"
+name = "Iskvik"
+continent = "northern_wilds"
+at = [16, 9]
+
+[[province]]
+id = "kalddal"
+name = "Kalddal"
+continent = "northern_wilds"
+at = [13, 12]
+
+[[province]]
+id = "svalgard"
+name = "Svalgard"
+continent = "northern_wilds"
+at = [28, 9]
+
+[[province]]
+id = "grimfjord"
+name = "Grimfjord"
+continent = "northern_wilds"
+at = [40, 10]
+
+[[province]]
+id = "frostheim"
+name = "Frostheim"
+continent = "northern_wilds"
+at = [26, 6]
+
+[[province]]
+id = "torvik"
+name = "Torvik"
+continent = "northern_wilds"
+at = [47, 9]
+
+[[province]]
+id = "torheim"
+name = "Torheim"
+continent = "northern_wilds"
+at = [14, 8]
+
+[[province]]
+id = "torholm"
+name = "Torholm"
+continent = "northern_wilds"
+at = [35, 6]
+
+[[province]]
+id = "isknes"
+name = "Isknes"
+continent = "northern_wilds"
+at = [20, 12]
+
+[[province]]
+id = "kaldmoor"
+name = "Kaldmoor"
+continent = "northern_wilds"
+at = [51, 10]
+
+[[province]]
+id = "hvitvik"
+name = "Hvitvik"
+continent = "northern_wilds"
+at = [27, 12]
+
+[[province]]
+id = "svalvik"
+name = "Svalvik"
+continent = "northern_wilds"
+at = [34, 14]
+
+[[province]]
+id = "vintnes"
+name = "Vintnes"
+continent = "northern_wilds"
+at = [21, 9]
+
+[[province]]
+id = "ranfell"
+name = "Ranfell"
+continent = "northern_wilds"
+at = [37, 10]
+
+[[province]]
+id = "vintholm"
+name = "Vintholm"
+continent = "northern_wilds"
+at = [18, 6]
+
+[[province]]
+id = "kaldheim"
+name = "Kaldheim"
+continent = "northern_wilds"
+at = [47, 6]
+
+[[province]]
+id = "kaldnes"
+name = "Kaldnes"
+continent = "northern_wilds"
+at = [16, 12]
+
+[[province]]
+id = "frostvik"
+name = "Frostvik"
+continent = "northern_wilds"
+at = [24, 9]
+
+[[province]]
+id = "svalfjord"
+name = "Svalfjord"
+continent = "northern_wilds"
+at = [41, 6]
+
+[[province]]
+id = "ranheim"
+name = "Ranheim"
+continent = "northern_wilds"
+at = [31, 7]
+
+[[province]]
+id = "ulvfjord"
+name = "Ulvfjord"
+continent = "northern_wilds"
+at = [30, 11]
+
+[[province]]
+id = "haldby"
+name = "Haldby"
+continent = "northern_wilds"
+at = [50, 4]
+
+[[province]]
+id = "brannstad"
+name = "Brannstad"
+continent = "northern_wilds"
+at = [43, 10]
+
+[[province]]
+id = "brannfjord"
+name = "Brannfjord"
+continent = "northern_wilds"
+at = [39, 13]
+
+[[province]]
+id = "iskgard"
+name = "Iskgard"
+continent = "northern_wilds"
+at = [46, 12]
+
+[[province]]
+id = "vintheim"
+name = "Vintheim"
+continent = "northern_wilds"
+at = [52, 7]
+
+[[province]]
+id = "nimesh"
+name = "Nimesh"
+continent = "sunward_coast"
+at = [3, 37]
+
+[[province]]
+id = "sahesh"
+name = "Sahesh"
+continent = "sunward_coast"
+at = [15, 30]
+
+[[province]]
+id = "rasesh"
+name = "Rasesh"
+continent = "sunward_coast"
+at = [38, 33]
+
+[[province]]
+id = "sahah"
+name = "Sahah"
+continent = "sunward_coast"
+at = [27, 36]
+
+[[province]]
+id = "sulena"
+name = "Sulena"
+continent = "sunward_coast"
+at = [33, 28]
+
+[[province]]
+id = "tamun"
+name = "Tamun"
+continent = "sunward_coast"
+at = [23, 27]
+
+[[province]]
+id = "qasesh"
+name = "Qasesh"
+continent = "sunward_coast"
+at = [18, 37]
+
+[[province]]
+id = "nimar"
+name = "Nimar"
+continent = "sunward_coast"
+at = [11, 34]
+
+[[province]]
+id = "falesh"
+name = "Falesh"
+continent = "sunward_coast"
+at = [38, 26]
+
+[[province]]
+id = "tamib"
+name = "Tamib"
+continent = "sunward_coast"
+at = [31, 35]
+
+[[province]]
+id = "zanabad"
+name = "Zanabad"
+continent = "sunward_coast"
+at = [10, 28]
+
+[[province]]
+id = "falir"
+name = "Falir"
+continent = "sunward_coast"
+at = [21, 34]
+
+[[province]]
+id = "rasir"
+name = "Rasir"
+continent = "sunward_coast"
+at = [28, 32]
+
+[[province]]
+id = "qasir"
+name = "Qasir"
+continent = "sunward_coast"
+at = [17, 27]
+
+[[province]]
+id = "jabib"
+name = "Jabib"
+continent = "sunward_coast"
+at = [36, 32]
+
+[[province]]
+id = "jaboum"
+name = "Jaboum"
+continent = "sunward_coast"
+at = [14, 34]
+
+[[province]]
+id = "ashar"
+name = "Ashar"
+continent = "sunward_coast"
+at = [21, 37]
+
+[[province]]
+id = "wadib"
+name = "Wadib"
+continent = "sunward_coast"
+at = [26, 27]
+
+[[province]]
+id = "sahir"
+name = "Sahir"
+continent = "sunward_coast"
+at = [11, 31]
+
+[[province]]
+id = "rasar"
+name = "Rasar"
+continent = "sunward_coast"
+at = [13, 28]
+
+[[province]]
+id = "darir"
+name = "Darir"
+continent = "sunward_coast"
+at = [25, 32]
+
+[[province]]
+id = "zanoum"
+name = "Zanoum"
+continent = "sunward_coast"
+at = [19, 30]
+
+[[province]]
+id = "tamara"
+name = "Tamara"
+continent = "sunward_coast"
+at = [32, 31]
+
+[[province]]
+id = "sahib"
+name = "Sahib"
+continent = "sunward_coast"
+at = [18, 34]
+
+[[province]]
+id = "zanara"
+name = "Zanara"
+continent = "sunward_coast"
+at = [35, 27]
+
+[[province]]
+id = "mirib"
+name = "Mirib"
+continent = "sunward_coast"
+at = [29, 35]
+
+[[province]]
+id = "jabiya"
+name = "Jabiya"
+continent = "sunward_coast"
+at = [38, 30]
+
+[[province]]
+id = "sahiya"
+name = "Sahiya"
+continent = "sunward_coast"
+at = [30, 29]
+
+[[province]]
+id = "zanena"
+name = "Zanena"
+continent = "sunward_coast"
+at = [35, 30]
+
+[[province]]
+id = "tamul"
+name = "Tamul"
+continent = "sunward_coast"
+at = [24, 36]
+
+[[province]]
+id = "wadir"
+name = "Wadir"
+continent = "sunward_coast"
+at = [21, 29]
+
+[[province]]
+id = "falabad"
+name = "Falabad"
+continent = "sunward_coast"
+at = [26, 30]
+
+[[province]]
+id = "ashabad"
+name = "Ashabad"
+continent = "sunward_coast"
+at = [33, 40]
+
+[[province]]
+id = "sulesh"
+name = "Sulesh"
+continent = "sunward_coast"
+at = [39, 38]
+
+[[river]]
+name = "River Ister"
+cells = [[29, 17], [30, 18], [29, 18], [29, 19], [28, 19], [29, 20], [28, 20], [28, 21], [27, 21], [27, 22]]
+
+[[river]]
+name = "River Sunwater"
+cells = [[26, 26], [26, 27], [26, 28], [25, 29], [26, 30], [25, 30], [25, 31], [24, 31], [24, 32], [23, 33], [23, 34], [23, 35], [23, 36], [22, 37], [23, 38], [22, 38]]
+
+[[river]]
+name = "River Calder"
+cells = [[38, 19], [39, 20], [39, 21], [40, 22], [40, 23], [41, 23], [41, 24], [41, 25], [42, 26], [42, 27], [43, 28], [43, 29], [44, 30], [43, 31], [44, 31], [44, 32], [44, 33], [44, 34], [44, 35], [44, 36], [44, 37]]
+
+[[river]]
+name = "River Frost"
+cells = [[20, 15], [21, 14], [20, 14], [20, 13], [20, 12], [19, 11], [19, 10], [18, 10], [18, 9], [17, 9], [17, 8], [16, 7], [15, 7], [15, 6], [14, 5], [14, 4]]
+
+[[river]]
+name = "River Khan"
+cells = [[47, 14], [47, 13], [48, 13], [49, 13], [50, 12], [51, 12], [51, 11], [52, 11], [53, 10], [54, 10], [55, 10], [55, 9], [56, 9], [57, 8]]
+
+[[river]]
+name = "River Weald"
+cells = [[12, 17], [13, 18], [12, 18], [12, 19], [12, 20], [11, 21], [11, 22], [10, 21], [10, 22], [9, 22], [8, 23], [7, 23]]
+
+[[landmark]]
+kind = "great_tower"
+name = "The Spine Tower"
+at = [26, 16]
+
+[[landmark]]
+kind = "pyramid"
+name = "Tomb of the Salt Kings"
+at = [55, 16]
+
+[[landmark]]
+kind = "lighthouse"
+name = "Gulf Light"
+at = [35, 33]
+
+[[landmark]]
+kind = "temple"
+name = "Temple of the Lake"
+at = [24, 22]
+
+[[landmark]]
+kind = "arch"
+name = "The Frost Gate"
+at = [40, 8]

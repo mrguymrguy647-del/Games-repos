@@ -1,0 +1,81 @@
+# A jungle palm for the world map: a leaning trunk, five drooping leaves and coconuts.
+version = 0
+name = "palm"
+description = "Palm tree, 0.35 tall, for jungle and coast tiles on the world map."
+
+[palette]
+trunk = "#9C6B3F"
+trunk_dark = "#7E5330"
+leaf = "#3DB548"
+coconut = "#5A3A1E"
+
+[[parts]]
+name = "trunk_low"
+shape = "cylinder"
+radius = 0.022
+height = 0.16
+segments = 4
+taper = 0.85
+color = "trunk_dark"
+move = [0, 0.08, 0]
+
+[[parts]]
+name = "trunk_high"
+shape = "cylinder"
+radius = 0.019
+height = 0.15
+segments = 4
+taper = 0.8
+color = "trunk"
+rotate = [0, 0, -8]
+move = [0.01, 0.23, 0]
+
+[[parts]]
+name = "nuts"
+shape = "sphere"
+radius = 0.022
+segments = 4
+color = "coconut"
+move = [0.022, 0.288, 0]
+
+# Leaves: thick at the trunk, thin at the tip, drooping outwards.
+
+[[parts]]
+name = "leaf1"
+shape = "wedge"
+size = [0.06, 0.02, 0.17]
+color = "leaf"
+rotate = [-28, 0, 0]
+move = [0.020, 0.297, 0.055]
+
+[[parts]]
+name = "leaf2"
+shape = "wedge"
+size = [0.06, 0.02, 0.17]
+color = "leaf"
+rotate = [-28, 72, 0]
+move = [0.072, 0.297, 0.017]
+
+[[parts]]
+name = "leaf3"
+shape = "wedge"
+size = [0.06, 0.02, 0.17]
+color = "leaf"
+rotate = [-28, 144, 0]
+move = [0.052, 0.297, -0.044]
+
+[[parts]]
+name = "leaf4"
+shape = "wedge"
+size = [0.06, 0.02, 0.17]
+color = "leaf"
+rotate = [-28, 216, 0]
+move = [-0.012, 0.297, -0.044]
+
+[[parts]]
+name = "leaf5"
+shape = "wedge"
+size = [0.06, 0.02, 0.17]
+color = "leaf"
+rotate = [-28, 288, 0]
+move = [-0.032, 0.297, 0.017]

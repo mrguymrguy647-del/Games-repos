@@ -1,0 +1,45 @@
+# LUCKY WORLD: how the nations are laid on the map.
+#
+# The player and the rivals from the rival reveal are placed first. Then
+# extra nations spin the same 16 wheels (instantly) and fill the land that is
+# left, until the map is covered or there are `max_nations` nations.
+
+# The most nations on one map, the player included.
+max_nations = 25
+
+# Border colours, given out in turn (the player gets the first).
+nation_colors = [
+  "#f5c542", "#e8505b", "#3fa7d6", "#59c36a", "#9b5de5", "#f9844a",
+  "#ff6fb5", "#2ec4b6", "#c0c0c0", "#b5651d", "#6a4c93", "#e9ff70",
+  "#ff9f1c", "#1982c4", "#8ac926", "#d62828", "#7bdff2", "#f7aef8",
+  "#43aa8b", "#ffd6a5", "#577590", "#f94144", "#90be6d", "#b388eb",
+  "#ff70a6", "#06d6a0", "#ef476f", "#118ab2",
+]
+
+# How many provinces a nation gets, by its Country Size wheel, as a share of
+# the map's land provinces: "Huge" is huge for whichever map you play.
+# Every nation gets at least `min_provinces`.
+min_provinces = 1
+
+[size_share]
+tiny = 0.006
+small = 0.016
+medium = 0.03
+large = 0.05
+huge = 0.08
+colossal = 0.12
+
+[placement]
+# How much a capital likes a province of the nation's own Land Type.
+terrain_match = 3.0
+# How much a capital likes being far from capitals already placed.
+spread = 1.5
+# How much a capital likes having room around it to grow to full size.
+room = 2.0
+# A little chance in where capitals go, so maps don't repeat.
+jitter = 0.6
+# An island nation takes a whole island; it may be at most this many times
+# its size, or it is placed as a coastal nation instead.
+island_slack = 2.5
+# Rolls of the wheels an extra nation may try, to fit the land it fills.
+fill_tries = 40
