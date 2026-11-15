@@ -202,3 +202,123 @@ ordered by how much they cost.
    covered the whole stage. Ordering parts needs a mental model of the
    sockets. A `duck-mold render` before export catches it; the Forge game
    was where I saw it.
+
+---
+
+# Phase 2 (the 3D world map)
+
+Found while building the world map, against the same commits. Numbering
+carries on from Phase 1 for each tool. Nothing here blocked the work, so
+Duck Forge itself is unchanged.
+
+## Duck Forge (engine)
+
+17. **Canvas effects are sticky, so one screen's settings silently move the
+    next screen onto the CPU.** `set_supersample`, `set_bloom`, `set_lamps`
+    and the rest stay on the canvas until changed. The wheel screen sets
+    supersample 2. Without an explicit `set_supersample(1)` and
+    `set_bloom(None)` at the start of every map frame, the map would be drawn
+    by the CPU lit renderer even on a real GPU, with nothing saying so.
+    - There's no `canvas.reset_effects()`.
+    - There's no way to ask which renderer drew the last frame.
+    - The "can't use the GPU" line prints only once, at start.
+    - Fix: reset effects every frame (like the camera stack), or add
+      `reset_effects()` plus a `renderer_used()` the debug overlay shows.
+18. **The fuzzer only finds keys the first screens read.** `--fuzz`'s
+    practice runs never reach the world map, so the map's keys (Tab, M, Q/E,
+    R/F, T/G, C, H) weren't pressed: coverage said `camera_yaw always 0`.
+    `--fuzz-keys` fixes it by hand.
+    Fix: grow the key list during the fuzz runs themselves (keys read on any
+    frame), or let a game declare its keys.
+19. **The `Key` enum has no `+`, `-`, `=`, Home, End, PageUp, PageDown or
+    Delete**, so zoom couldn't be the usual +/- and is on R/F instead.
+20. **No text in 3D.** Nation names and flags are projected by hand each
+    frame (`camera.project`), with the game's own overlap test so names don't
+    sit on each other. A `canvas.draw_font_text_at(&font, text, world_point,
+    &camera, ..)` with optional collision culling would save every map game
+    the same work.
+21. **`draw_line` is always 1 pixel**, with no width. The camera's box on the
+    minimap is drawn twice, one pixel apart, with a dark copy to be seen.
+22. **`Mesh::bounds()` returns a bare `(Vec3, Vec3)`**, while Duck Mold's
+    `inspect --json` says `bounds.min`/`bounds.max`. `b.min` doesn't compile
+    (found by the helper checking the models).
+23. **No `Mesh` part ranges after `merge`.** The capital's "roofs" are
+    recoloured per nation before merging. After a merge there is no way to
+    find a model's parts again: to recolour one nation's capital later
+    (a captured city), the whole cities mesh must be rebuilt.
+    Fix: `merge` could return the triangle range it added.
+
+Worth keeping as they are:
+- The GPU path works: with a Vulkan driver (lavapipe here), the map is drawn
+  by wgpu and looks the same as on the CPU.
+- The GPU mesh cache (address plus fingerprint) means static meshes upload
+  once.
+- `--time` shows the drawing cost.
+
+## Duck Quill (art)
+
+12. **Field names differ between shape commands.** `rect`, `ellipse` and
+    `polygon` take `outline` for a border, but `path` takes `color` and
+    `size` and refuses `outline`
+    (`command 4 (path): unknown field 'outline'`). The error is clear, but
+    the names should match.
+13. **9-slice again (Phase 1 item 5).** The map needed 4 more fixed-size
+    card and panel scripts (`card_small`, `card_small_on`, `card_small_new`,
+    `map_panel`): 11 card scripts in all, which differ only in size and
+    border colour.
+
+## Duck Echo (sound)
+
+7. **Song notes cut one-shot sounds short without a warning.** A note's
+   `length` defaults to 1 beat, and the sound stops 5 ms after the note
+   ends. 4.5 s wave sounds came out about 1 s long, and neither `validate`
+   nor `render` warned. This is documented in RECIPE_SPEC ("How a note plays
+   an instrument"), but it needs a warning when an instrument's envelope is
+   longer than its note.
+8. **Plain recipes can't loop.** Only songs have `loop = true`, so the
+   ambience loop had to be a song with tempo, bars and notes, every noise
+   note carrying a dummy `note = "C4"`.
+9. **False "ENDS WITH A CLICK" on loops.**
+   - `analyze` on the looping ambience WAV says it ends with a click, and
+     `loop_seam` is null.
+   - There's no `--loop` flag to check a WAV's seam.
+   - `analyze --per-track` says the same of a loop song's stems.
+
+   Only the song render's own `loop_seam` ("joins cleanly") looked at the
+   join.
+10. **Noise notes are checked as pitched.** `analyze --per-track` reports
+    `wrong_pitch` for noise-only notes (written C4, "heard" A2/F3/B3), and the
+    summary says "8 of 11 notes heard".
+11. **Onsets on a steady pad.** "sharp attack, 88 onsets" for a sustained
+    chord, plus an `extra_onsets` entry just before the loop end.
+12. **`render --json` points at keys that aren't there.** Its summary says
+    "per_track describes each" (or "per_layer") when neither `--per-track`
+    nor `--per-layer` was given, and the JSON has no such key.
+
+## Duck Mold (3D models)
+
+6. **No top view for still models.** `duck-mold render x.toml --view top`
+   fails ("required arguments were not provided: --animation"), and the
+   default sheet has no top view. Map props are mostly seen from above.
+7. **`move` on an assembly places its zero, not its middle.**
+   `docs/recipe-format.md:102` says `move` is "where the part's middle
+   goes". For a `use` of an assembly it places the assembly's zero (the
+   centre of its first, unmoved part), so the town's houses floated by half
+   a roof.
+8. **"touches nothing" when the real problem is that the group floats.** The
+   palm's five leaves overlapped each other but sat 0.01 above the trunk.
+   Each got "the part "leafN" touches nothing", while `overlapping` listed
+   them inside each other. It should say the group floats.
+9. **`inset` is the same distance from every edge**, so a door on the
+   bottom edge of a wall is impossible ("must be less than 0.085 m"). The
+   door had to be a separate box.
+10. **No way to scale a whole recipe.** Shrinking the capital by 7% meant
+    editing every `move` by hand.
+11. **`origin = "bottom"` can hide a buried part.** A tower attached to the
+    wrong socket sank half into the ground. The whole model was silently
+    lifted, still "rests on the ground", and nothing warned.
+12. **Stale and missing docs.**
+    - `docs/AI_GUIDE.md:1115` and the `reserved` error (`AI_GUIDE.md:500`)
+      still call `colliders` reserved, though it works.
+    - Sphere triangle counts are only given for even segment counts
+      (`recipe-format.md:266`).

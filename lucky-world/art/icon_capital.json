@@ -1,0 +1,82 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Capital icon",
+  "seed": 1,
+  "palette": {
+    "ink": "#1A1030",
+    "gold": "#F5C542",
+    "gold_dark": "#A8740E",
+    "gold_hi": "#FFF1B8",
+    "white": "#FFFFFF",
+    "red": "#E8304A"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 28,
+      "height": 28
+    },
+    {
+      "cmd": "layer",
+      "name": "Icon"
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        14,
+        14
+      ],
+      "radius": 12,
+      "fill": "ink",
+      "outline": "gold",
+      "outline_size": 2
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          14.0,
+          6.5
+        ],
+        [
+          16.0,
+          11.7
+        ],
+        [
+          21.6,
+          12.0
+        ],
+        [
+          17.2,
+          15.6
+        ],
+        [
+          18.7,
+          21.0
+        ],
+        [
+          14.0,
+          17.9
+        ],
+        [
+          9.3,
+          21.0
+        ],
+        [
+          10.8,
+          15.6
+        ],
+        [
+          6.4,
+          12.0
+        ],
+        [
+          12.0,
+          11.7
+        ]
+      ],
+      "fill": "gold"
+    }
+  ]
+}

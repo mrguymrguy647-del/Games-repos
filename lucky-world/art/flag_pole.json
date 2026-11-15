@@ -1,0 +1,61 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Flag pole",
+  "seed": 1,
+  "palette": {
+    "ink": "#1A1030",
+    "gold": "#F5C542",
+    "gold_dark": "#A8740E",
+    "gold_hi": "#FFF1B8",
+    "white": "#FFFFFF"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 8,
+      "height": 64
+    },
+    {
+      "cmd": "layer",
+      "name": "Pole"
+    },
+    {
+      "cmd": "rect",
+      "x": 2.5,
+      "y": 6,
+      "width": 3,
+      "height": 58,
+      "fill": {
+        "gradient": "linear",
+        "from": [
+          2,
+          0
+        ],
+        "to": [
+          6,
+          0
+        ],
+        "colors": [
+          "#E8E0D0",
+          "#7A6A50"
+        ]
+      }
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        4,
+        4.5
+      ],
+      "radius": 3.5,
+      "fill": "gold",
+      "outline": "ink",
+      "outline_size": 1
+    }
+  ],
+  "pivot": [
+    4,
+    64
+  ]
+}

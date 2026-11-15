@@ -1,0 +1,45 @@
+# Selecting a province on the world map: a warm wooden "tock" with a gentle
+# plucked note ringing just after it, about 0.25 s.
+version = 0
+name = "select"
+description = "Warm wooden tock plus a soft pluck, for selecting a province."
+tags = ["ui", "confirm", "wood", "pluck"]
+seed = 3
+
+[master]
+normalize_lufs = -22
+trim_silence = true
+
+# The knock of wood: a short resonant band of noise...
+[[layers]]
+name = "knock"
+source = "noise"
+volume = 0.6
+envelope = { attack = 0.0005, decay = 0.02 }
+filter = { kind = "bandpass", cutoff = 1300, resonance = 4 }
+
+# ...and the hollow body of the block, a quick falling sine.
+[[layers]]
+name = "block"
+source = "sine"
+volume = 0.9
+envelope = { attack = 0.001, hold = 0.01, decay = 0.07 }
+pitch = { start = 620, end = 470, curve = "exponential", sweep_time = 0.05 }
+
+# The pluck: a triangle string whose brightness fades as it rings.
+[[layers]]
+name = "pluck"
+source = "triangle"
+offset = 0.012
+volume = 0.55
+envelope = { attack = 0.002, decay = 0.22 }
+pitch = { start = "E5" }
+filter = { kind = "lowpass", cutoff = 3500, cutoff_end = 900, curve = "exponential" }
+
+[[layers]]
+name = "pluck octave"
+source = "sine"
+offset = 0.012
+volume = 0.2
+envelope = { attack = 0.002, decay = 0.12 }
+pitch = { start = "E6" }

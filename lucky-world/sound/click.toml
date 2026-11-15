@@ -1,0 +1,24 @@
+# Soft UI click for world-map buttons: a muted tap, about 40 ms.
+version = 0
+name = "click"
+description = "Soft, rounded interface click, about 40 ms."
+tags = ["ui", "click", "short", "soft"]
+seed = 5
+
+[master]
+normalize_lufs = -24
+trim_silence = true
+
+[[layers]]
+name = "tap"
+source = "noise"
+volume = 0.5
+envelope = { attack = 0.0005, decay = 0.012 }
+filter = { kind = "bandpass", cutoff = 1800, resonance = 1.2 }
+
+[[layers]]
+name = "body"
+source = "sine"
+volume = 0.8
+envelope = { attack = 0.001, hold = 0.004, decay = 0.034 }
+pitch = { start = 1100, end = 760, curve = "exponential" }

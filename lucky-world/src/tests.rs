@@ -248,18 +248,24 @@ fn game() -> crate::game::Lucky {
 }
 
 #[test]
-fn the_playthrough_spins_all_sixteen_and_meets_the_rivals() {
+fn the_playthrough_spins_all_sixteen_and_goes_onto_the_map() {
     let played = PlayTest::new(crate::config(), game()).inputs("playthroughs/lucky_world.json").run();
-    assert_eq!(played.text("screen"), "Rivals");
+    assert_eq!(played.text("screen"), "Map");
     assert_eq!(played.number("wheels_landed"), 16.0);
-    assert_eq!(played.number("rivals"), 9.0);
+    assert_eq!(played.number("main_nations"), 10.0); // the player and the 9 rivals of the Grand Continent
+    assert!(played.number("nations") > 10.0 && played.number("nations") <= 25.0);
     let g = played.game();
     let player = g.player.as_ref().unwrap();
     assert_eq!(player.landed, g.landed, "the country card shows what the wheels landed on");
     assert!(!g.skipped);
-    // Every spin ticked and landed with a sound.
+    // Every spin ticked and landed with a sound; the map opened with its own.
     assert!(played.sound_frames("tick").len() > 100);
     assert_eq!(played.sound_frames("land").len(), 17); // 16 wheels and the full country card
+    assert_eq!(played.sound_frames("open_map").len(), 1);
+    assert!(!played.sound_frames("select").is_empty(), "clicking the map selected a province");
+    // On the map: a card was opened and closed, and the camera moved.
+    assert_eq!(played.text("card"), "none");
+    assert_eq!(played.text("map_mode"), "Political");
 }
 
 #[test]

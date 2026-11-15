@@ -335,6 +335,7 @@ fn parse_settings(text: &str, data: &Data) -> Result<Settings, DataError> {
 }
 
 /// Reads one map from its grid and province file.
+#[allow(clippy::needless_range_loop)]
 pub fn parse_map(data: &Data, m: usize, terrains: &[Terrain], grid: &str, file: &str) -> Result<WorldMap, DataError> {
     let def = &data.maps[m];
     let g = format!("data/maps/{}.txt", def.id);

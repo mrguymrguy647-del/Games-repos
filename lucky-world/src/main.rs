@@ -10,6 +10,7 @@ mod data;
 mod fate;
 mod game;
 mod hex;
+mod map_view;
 mod mapdata;
 mod ui;
 mod wheel;
@@ -37,8 +38,10 @@ pub fn config() -> Config {
 
 pub fn new_game() -> Result<game::Lucky, Box<dyn std::error::Error>> {
     let data = data::Data::load()?;
+    let atlas = mapdata::Atlas::load(&data)?;
     let assets = ui::Assets::load()?;
-    Ok(game::Lucky::new(data, assets))
+    let models = map_view::Models::load()?;
+    Ok(game::Lucky::new(data, atlas, assets, models))
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -1,0 +1,63 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Map top bar",
+  "seed": 1,
+  "palette": {
+    "ink": "#1A1030",
+    "gold": "#F5C542",
+    "gold_dark": "#A8740E",
+    "gold_hi": "#FFF1B8",
+    "white": "#FFFFFF"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 1280,
+      "height": 58
+    },
+    {
+      "cmd": "layer",
+      "name": "Bar"
+    },
+    {
+      "cmd": "gradient",
+      "kind": "linear",
+      "from": [
+        0,
+        0
+      ],
+      "to": [
+        0,
+        58
+      ],
+      "stops": [
+        [
+          0,
+          "#0C0620F0"
+        ],
+        [
+          1,
+          "#1A1040D8"
+        ]
+      ]
+    },
+    {
+      "cmd": "rect",
+      "x": 0,
+      "y": 54,
+      "width": 1280,
+      "height": 3,
+      "fill": "gold_dark"
+    },
+    {
+      "cmd": "rect",
+      "x": 0,
+      "y": 53,
+      "width": 1280,
+      "height": 1,
+      "fill": "gold_hi",
+      "opacity": 0.6
+    }
+  ]
+}

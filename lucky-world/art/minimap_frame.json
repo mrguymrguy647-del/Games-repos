@@ -1,0 +1,60 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Minimap frame",
+  "seed": 1,
+  "palette": {
+    "ink": "#1A1030",
+    "gold": "#F5C542",
+    "gold_dark": "#A8740E",
+    "gold_hi": "#FFF1B8",
+    "white": "#FFFFFF"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 292,
+      "height": 176
+    },
+    {
+      "cmd": "layer",
+      "name": "Frame"
+    },
+    {
+      "cmd": "group",
+      "name": "f",
+      "filter": {
+        "shadow": {
+          "offset": [
+            0,
+            3
+          ],
+          "blur": 4,
+          "color": "#00000090"
+        }
+      },
+      "commands": [
+        {
+          "cmd": "rect",
+          "x": 4,
+          "y": 4,
+          "width": 284,
+          "height": 168,
+          "radius": 10,
+          "outline": "gold",
+          "outline_size": 5
+        },
+        {
+          "cmd": "rect",
+          "x": 8,
+          "y": 8,
+          "width": 276,
+          "height": 160,
+          "radius": 7,
+          "outline": "ink",
+          "outline_size": 2
+        }
+      ]
+    }
+  ]
+}

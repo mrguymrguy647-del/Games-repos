@@ -5,13 +5,17 @@ A mostly-3D strategy game where fate deals your nation. At the start you spin
 have, how rich and how armed you are, who leads you and what luck follows
 you. Then every rival nation spins the same wheels, and the game begins.
 
-This repository holds the opening of the game: **the wheel screen**. It is
-built with Duck Forge (engine), Duck Quill (art), Duck Echo (sound) and
-Duck Mold (3D model).
+So far it has **the wheel screen** (phase 1) and **the 3D world map**
+(phase 2): every nation laid on one of three hand-made maps, from its
+wheels. Economy, war and diplomacy come later. It is built with Duck Forge
+(engine), Duck Quill (art), Duck Echo (sound) and Duck Mold (3D models).
 
 <p>
 <img src="docs/wheel.png" width="49%" alt="A wheel spinning on its stage, with the odds panel">
-<img src="docs/rivals.png" width="49%" alt="The rival reveal: nine nations with their flags and stats">
+<img src="docs/map_closeup.png" width="49%" alt="The 3D map up close: provinces, borders, rivers, capitals with flags, a province panel and the minimap">
+<img src="docs/map_grand.png" width="32%" alt="The Grand Continent with 25 nations">
+<img src="docs/map_isles.png" width="32%" alt="The Thousand Isles with 25 nations">
+<img src="docs/map_five_shores.png" width="32%" alt="Five Shores with 25 nations">
 </p>
 
 ## Run it
@@ -28,7 +32,8 @@ after that it starts in seconds. Always run it **from this folder**: it reads
 
 ### If it runs slowly
 
-The wheel's smooth edges are worked out on the CPU. `lucky_world.tune.json`
+The world map is drawn by your graphics card (it uses no CPU-only
+effects). The wheel screen's smooth edges are worked out on the CPU. `lucky_world.tune.json`
 sets the picture quality. A running game re-reads it when you save it:
 
 ```json
@@ -49,7 +54,8 @@ sets the picture quality. A running game re-reads it when you save it:
 | A wheel | **Space** spin (while spinning: faster), Space again for the next wheel, **S** Skip Spin | buttons |
 | Round card | **Space** next round, **S** Skip Spin | buttons |
 | Country card | **Space** meet your rivals | button |
-| Rivals | 1-9 or click a nation for its full card, Esc or Space back | click a card |
+| Rivals | 1-9 or click a nation for its full card, Esc or Space back, Left / Right turn pages, **Space** Begin | click a card |
+| World map | WASD / arrows pan, Q / E turn, R / F zoom, T / G tilt, Tab next nation, H home, M terrain / nations view, C country card, Esc deselect | drag pans, right-drag turns, wheel zooms, click a province, click a name or flag for its country card, click the minimap to jump |
 | Anywhere | **F5** start over (for trying it out), **Esc** quit, F12 screenshot, F10 record | |
 
 ### What happens
@@ -62,8 +68,47 @@ sets the picture quality. A running game re-reads it when you save it:
    - **Power**: GDP, Main resource, Army strength, Active duty, Secret service
    - **Fate**: Leader, Regional impact, Blessing or curse
 3. **Your country card**, with a generated name and flag and all 16 results.
-4. **The rival reveal**: the NPC nations spin the same wheels (instantly),
-   and all of them are shown on one screen.
+4. **The rival reveal**: the map's rivals spin the same wheels (instantly),
+   everyone is placed on the map, and more nations spin to fill the empty
+   land, up to 25 in all. All of them are shown, on pages if needed.
+5. **Begin** takes you onto **the 3D world map**: provinces, borders in each
+   nation's colour, names, flags, capitals, towns, landmarks, rivers, a
+   minimap, and a panel for any province you click.
+
+### The world
+
+The three maps play differently:
+
+- **The Grand Continent**: one big landmass (169 provinces), long land
+  borders, a lake and two mountain ranges in the middle, a few islands.
+- **The Thousand Isles**: 25 islands (94 provinces); every nation has a
+  coast, and island nations have the sea all round.
+- **Five Shores**: five continents and an island chain (147 provinces), from
+  the frozen north to the desert of Sahrun round its Oasis Sea.
+
+Each map is a hex grid of terrain (plains, forest, jungle, desert, steppe,
+tundra, hills, mountains, marsh, glacier, lakes, shallow and deep sea),
+rivers and landmarks, split into provinces. Every province knows its
+terrain, whether it is on the coast, its neighbours, its rivers and its
+continent; later phases build on these.
+
+Nations are placed from their wheels:
+
+- **Continent**: where it sits.
+- **Country Size**: how many provinces, as a share of this map
+  (`data/world.toml`), so "Huge" is huge for the map you play.
+- **Landlocked / Coastal / Peninsula / Island Nation**: its border.
+  Landlocked nations never touch the sea; island nations take a whole
+  island and share no land border.
+- **Land Type**: it prefers provinces of that terrain.
+
+Island nations go first, then landlocked ones, then the rest, bigger
+before smaller. The player gets no favours. When the land can't give a
+nation what it rolled (no free island the right size, say), the card says
+so in blue. Then extra nations roll the same 16 wheels for the biggest
+empty stretch, until the land is covered or there are `max_nations`. Land
+still left joins a neighbour, and stray islets join the nearest nation
+across the sea.
 
 Each slice's size **is** its chance, and the panel lists the exact odds. The
 wheels are linked: Continent is spun first, and later wheels follow from
@@ -95,6 +140,28 @@ game again; no rebuild is needed.
 - `data/names.toml`: name syllables per region, name forms per ideology
   ("Kingdom of {}"), and flag colours.
 
+## Edit the maps
+
+The maps are plain text too, read when the game starts (no rebuild):
+
+- `data/maps/<map>.txt`: the terrain, one letter per hex. Odd rows sit half
+  a hex to the right. The letters are in `data/terrain.toml`, with each
+  terrain's colour, height, Land Type and decoration (trees, palms,
+  peaks...).
+- `data/maps/<map>.toml`: the provinces. Each is a name, a continent and
+  the hex it is centred on (`at = [column, row]`). Every land hex belongs to
+  the province nearest it over land, so moving `at` moves the borders, and
+  adding a province splits its neighbours. The file also holds the rivers
+  (a line of hexes ending in water) and the landmarks.
+- `data/world.toml`: `max_nations` (25), the province share for each
+  Country Size, the placement weights and the border colours.
+
+A mistake (a letter that isn't a terrain, a province centred in the sea, a
+continent the map doesn't have, a river that jumps) is one sentence with the
+file, line and column. `tools/sketch_maps.py` is the sketch the maps were
+first drawn from. Running it again overwrites them, so edit the map files
+instead.
+
 A mistake in these files is reported as one sentence naming the file and
 the wheel. `cargo test` checks them too, and checks the promises above over
 tens of thousands of rolled countries. To see how often each option comes
@@ -108,9 +175,9 @@ cargo test --release odds_report -- --ignored --nocapture
 
 | Source | Tool | Becomes |
 |---|---|---|
-| `art/*.json` | Duck Quill scripts | `assets/art/*.png` (pointer, hub, glow, sparkle, cards, buttons, logo, backdrop, RARE! badge) |
-| `sound/*.toml` | Duck Echo recipes | `assets/sound/*.wav` (two ticks, land chime, whoosh, rare sting, card swoosh, fanfare) |
-| `models/wheel_stand.toml` | Duck Mold recipe | `assets/models/wheel_stand.glb` (the stage and post) |
+| `art/*.json` | Duck Quill scripts | `assets/art/*.png` (pointer, hub, glow, sparkle, cards, buttons, logo, backdrop, RARE! badge; map: top bar, province panel, minimap frame, small cards, flag cloth and pole, capital, town, landmark and river icons) |
+| `sound/*.toml` | Duck Echo recipes | `assets/sound/*.wav` (two ticks, land chime, whoosh, rare sting, card swoosh, fanfare; map: a seamless sea-and-wind ambience loop, click, select, open-map swell, zoom tick) |
+| `models/*.toml` | Duck Mold recipes | `assets/models/*.glb` (the wheel's stand; capital, town, tree, pine, palm, cactus, peak, hill, reeds; landmarks: lighthouse, pyramid, great tower, temple, arch, colossus) |
 
 The wheel itself is built in code from triangles, because its slices change
 with every spin. Its labels are text painted onto textures.
@@ -130,7 +197,11 @@ cargo run --release --no-default-features -- --headless --inputs playthroughs/lu
 cargo run --release --no-default-features -- --fuzz 40
 ```
 
-The playthrough spins all 16 wheels, opens a rival's card and presses Begin.
+The playthrough spins all 16 wheels and opens a rival's card. It presses
+Begin, then on the map it visits nations, clicks a province, opens and closes
+a country card, pans, zooms, tilts and switches views. The fuzz runs reach
+the map too. For the map's own keys:
+`-- --fuzz 40 --fuzz-keys S,Space,Enter,Left,Right,Up,Down,Tab,M,H,C,Q,E,R,F,T,G,W,A,D`.
 `out/look/sheet.png` shows the run, and `audio.wav` has every tick.
 
 ## Files
@@ -142,6 +213,11 @@ The playthrough spins all 16 wheels, opens a rival's card and presses Begin.
 | `src/country.rs` | A country: results, name, flag, numbers in words; rolling rivals |
 | `src/wheel.rs` | The 3D wheel: slices sized by odds, labels, the spin, ticks, the glow |
 | `src/game.rs` | The screens: title, wheels, round cards, country card, rivals |
+| `src/game/map_screen.rs` | The world map screen: camera keys and mouse, picking, names and flags, province panel, minimap |
+| `src/hex.rs` | Hex grid maths: neighbours, corners, which hex a point is in |
+| `src/mapdata.rs` | Reads and checks the maps; works out provinces, coasts, neighbours, rivers, landmasses |
+| `src/world.rs` | Who owns what: placing nations from their wheels, filling the land |
+| `src/map_view.rs` | The 3D map's meshes (terrain, sea, borders, rivers, trees, cities), the orbit camera, picking |
 | `src/ui.rs` | Loading assets, text, buttons, sparkles and confetti |
-| `src/tests.rs` | Data checks, linking rules over many countries, play tests |
+| `src/tests.rs` | Data checks, linking rules over many countries, map and placement rules, play tests |
 | `ISSUES.md` | Problems and missing features found in the four Duck tools |

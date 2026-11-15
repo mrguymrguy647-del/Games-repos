@@ -1,5 +1,8 @@
-//! The opening of LUCKY WORLD: pick a world, spin 16 wheels in 4 rounds
-//! (a summary card after each), see your country's card, meet your rivals.
+//! LUCKY WORLD: pick a world, spin 16 wheels in 4 rounds (a summary card
+//! after each), see your country's card, meet your rivals, then go onto the
+//! 3D world map (in `map_screen`).
+
+mod map_screen;
 
 use duckforge::prelude::*;
 
@@ -8,6 +11,10 @@ use crate::data::Data;
 use crate::fate::{self, Landed};
 use crate::ui::{self, Assets, Button, ButtonKind, Particle, GOLD, MUTED, SOFT};
 use crate::wheel::{self, Event, WheelView};
+use crate::map_view::{MapView, Models};
+use crate::mapdata::Atlas;
+use crate::world::World;
+use map_screen::MapUi;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Screen {
@@ -17,6 +24,8 @@ pub enum Screen {
     Round(usize),
     Final,
     Rivals,
+    /// The 3D world map.
+    Map,
 }
 
 const TITLE_SPIN: Button = Button::new(370.0, 572.0, "SPIN THE WHEELS", "SPACE", ButtonKind::Gold);
@@ -62,10 +71,19 @@ pub struct Lucky {
     /// Picture quality, from `lucky_world.tune.json` (or `--set supersample=1`).
     supersample: u32,
     bloom: f32,
+    /// The maps, provinces and placement settings.
+    pub atlas: Atlas,
+    models: Models,
+    /// Who owns what, once the rivals are met.
+    pub world: Option<World>,
+    pub map_view: Option<MapView>,
+    pub map_ui: MapUi,
+    /// The page of the rival reveal (24 nations to a page).
+    rival_page: usize,
 }
 
 impl Lucky {
-    pub fn new(data: Data, assets: Assets) -> Lucky {
+    pub fn new(data: Data, atlas: Atlas, assets: Assets, models: Models) -> Lucky {
         let mut game = Lucky {
             data,
             assets,
@@ -91,6 +109,12 @@ impl Lucky {
             skipped: false,
             supersample: 2,
             bloom: 0.0,
+            atlas,
+            models,
+            world: None,
+            map_view: None,
+            map_ui: MapUi::default(),
+            rival_page: 0,
         };
         game.make_title_wheel();
         game
@@ -113,6 +137,10 @@ impl Lucky {
         self.view = None;
         self.player = None;
         self.rivals.clear();
+        self.world = None;
+        self.map_view = None;
+        self.map_ui = MapUi::default();
+        self.rival_page = 0;
         self.inspect = None;
         self.particles.clear();
         self.skipped = false;
@@ -310,20 +338,36 @@ impl Lucky {
                 self.screen_time = 10.0;
                 return;
             }
-            let player = self.player.as_ref().expect("the final card has a country");
-            self.rivals = country::roll_rivals(&self.data, player, &mut ctx.rng);
+            self.build_world(ctx);
             ctx.play_with(&self.assets.whoosh, 0.8, 0.0);
             self.go(Screen::Rivals);
         }
     }
 
+    /// The rivals spin, everyone is placed on the map, and extra nations
+    /// fill the empty land.
+    fn build_world(&mut self, ctx: &mut Context) {
+        let player = self.player.clone().expect("the final card has a country");
+        let rivals = country::roll_rivals(&self.data, &player, &mut ctx.rng);
+        let world = World::build(&self.data, &self.atlas, player, rivals, &mut ctx.rng);
+        // Placement can redraw a border the land couldn't give (and says so).
+        self.player = Some(world.nations[0].clone());
+        self.landed = world.nations[0].landed.clone();
+        self.rivals = world.nations[1..].to_vec();
+        self.map_view = Some(MapView::new(&self.atlas, &world, &self.models));
+        self.world = Some(world);
+        self.rival_page = 0;
+    }
+
     fn update_rivals(&mut self, ctx: &mut Context) {
         ctx.idle_ok();
         let n = self.rivals.len();
-        let due = (((self.screen_time - 0.2) / 0.14).max(0.0) as usize + 1).min(n);
+        let pages = n.div_ceil(rivals_per_page(n)).max(1);
+        let on_page = (n - self.rival_page * rivals_per_page(n)).min(rivals_per_page(n));
+        let due = (((self.screen_time - 0.2) / rival_delay(n)).max(0.0) as usize + 1).min(on_page);
         if due > self.revealed {
             self.revealed = due;
-            ctx.play_with(&self.assets.card_sound, 0.7, 0.0);
+            ctx.play_with(&self.assets.card_sound, if n > 9 { 0.35 } else { 0.7 }, 0.0);
         }
         if self.inspect.is_some() {
             if ctx.input.was_pressed(Key::Escape)
@@ -335,6 +379,20 @@ impl Lucky {
             }
             return;
         }
+        if pages > 1 {
+            let before = self.rival_page;
+            if ctx.input.was_pressed(Key::Right) {
+                self.rival_page = (self.rival_page + 1) % pages;
+            }
+            if ctx.input.was_pressed(Key::Left) {
+                self.rival_page = (self.rival_page + pages - 1) % pages;
+            }
+            if self.rival_page != before {
+                ctx.play_with(&self.assets.click, 0.8, 0.0);
+                self.screen_time = 10.0;
+            }
+        }
+        let first = self.rival_page * rivals_per_page(n);
         let digits = [
             Key::Digit1,
             Key::Digit2,
@@ -347,13 +405,13 @@ impl Lucky {
             Key::Digit9,
         ];
         for (i, key) in digits.into_iter().enumerate() {
-            if i < n && ctx.input.was_pressed(key) {
-                self.inspect = Some(i);
+            if first + i < n && ctx.input.was_pressed(key) {
+                self.inspect = Some(first + i);
             }
         }
         if ctx.input.was_mouse_pressed(MouseButton::Left) {
-            for i in 0..n {
-                if self.mouse.is_some_and(|m| rival_rect(i).contains(m)) {
+            for i in first..(first + on_page) {
+                if self.mouse.is_some_and(|m| rival_rect(i - first, n).contains(m)) {
                     self.inspect = Some(i);
                 }
             }
@@ -361,7 +419,7 @@ impl Lucky {
         if self.inspect.is_some() {
             ctx.play_with(&self.assets.card_sound, 0.8, 0.0);
         } else if self.confirm(ctx, &RIVALS_GO) {
-            self.toast = Some(("The strategy game starts here: coming in the next build!".to_string(), 3.0));
+            self.enter_map(ctx);
         }
     }
 
@@ -381,6 +439,10 @@ impl Lucky {
             ctx.report("country", p.name.as_str());
         }
         ctx.report("rivals", self.rivals.len());
+        if let Some(w) = &self.world {
+            ctx.report("nations", w.nations.len());
+            ctx.report("main_nations", w.main_count);
+        }
     }
 }
 
@@ -397,9 +459,14 @@ impl Game for Lucky {
             self.mouse = Some(m);
         }
         if ctx.input.was_pressed(Key::F5) {
+            if let Some(id) = self.map_ui.ambient.take() {
+                ctx.stop_loop(id);
+            }
             self.restart();
         }
-        if ctx.input.was_pressed(Key::Escape) && self.inspect.is_none() {
+        // Esc steps back out of a card or a selection on the map; elsewhere it quits.
+        let map_busy = self.screen == Screen::Map && self.map_ui.wants_escape();
+        if ctx.input.was_pressed(Key::Escape) && self.inspect.is_none() && !map_busy {
             ctx.quit();
         }
         let push_in = match self.screen {
@@ -414,6 +481,7 @@ impl Game for Lucky {
             Screen::Round(r) => self.update_round(ctx, r),
             Screen::Final => self.update_final(ctx),
             Screen::Rivals => self.update_rivals(ctx),
+            Screen::Map => self.update_map(ctx),
         }
         ui::update_particles(&mut self.particles, dt);
         if let Some((_, t)) = &mut self.toast {
@@ -429,8 +497,10 @@ impl Game for Lucky {
     fn draw(&self, canvas: &mut Canvas) {
         // clear() also resets the 3D depth buffer: without it, last frame's
         // depths hide this frame's wheel (see ISSUES.md).
-        canvas.clear(ui::INK);
-        canvas.blit_sprite(&self.assets.backdrop, Vec2::ZERO, Blit::default());
+        canvas.clear(if self.screen == Screen::Map { Color::from_hex(0x1c3c7a) } else { ui::INK });
+        if self.screen != Screen::Map {
+            canvas.blit_sprite(&self.assets.backdrop, Vec2::ZERO, Blit::default());
+        }
         match self.screen {
             Screen::Title => self.draw_title(canvas),
             Screen::Wheel => {
@@ -447,6 +517,7 @@ impl Game for Lucky {
                 FINAL_GO.draw(canvas, &self.assets, self.mouse, self.time, self.revealed >= self.data.wheels.len());
             }
             Screen::Rivals => self.draw_rivals(canvas),
+            Screen::Map => self.draw_map(canvas),
         }
         ui::draw_particles(canvas, &self.assets, &self.particles);
         if let Some((words, t)) = &self.toast {
@@ -470,9 +541,24 @@ fn map_card_rect(i: usize) -> Rect {
     Rect::new(60.0 + i as f32 * 400.0, 300.0, 360.0, 190.0)
 }
 
-fn rival_rect(i: usize) -> Rect {
-    let (col, row) = (i % 3, i / 3);
-    Rect::new(36.0 + col as f32 * 406.0, 112.0 + row as f32 * 196.0, 400.0, 182.0)
+/// Up to 9 rivals get big cards; more get small ones, 24 to a page.
+fn rivals_per_page(n: usize) -> usize {
+    if n <= 9 { 9 } else { 24 }
+}
+
+fn rival_delay(n: usize) -> f32 {
+    if n <= 9 { 0.14 } else { 0.05 }
+}
+
+/// Where the `i`th card on the page goes, with `n` rivals in all.
+fn rival_rect(i: usize, n: usize) -> Rect {
+    if n <= 9 {
+        let (col, row) = (i % 3, i / 3);
+        Rect::new(36.0 + col as f32 * 406.0, 112.0 + row as f32 * 196.0, 400.0, 182.0)
+    } else {
+        let (col, row) = (i % 4, i / 4);
+        Rect::new(24.0 + col as f32 * 310.0, 104.0 + row as f32 * 98.0, 300.0, 92.0)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -765,56 +851,115 @@ impl Lucky {
                 country::group(c.value(&self.data, "population") / c.value(&self.data, "size")),
             );
             ui::plain(canvas, &a.font, &stats, vec2(640.0, y0 + 560.0), 17.0, MUTED, Align::Center);
+            // Its land, once the world is made.
+            if let Some((w, n)) = self.world.as_ref().and_then(|w| w.nations.iter().position(|x| x.name == c.name).map(|n| (w, n))) {
+                let map = self.atlas.map(w.map);
+                let provinces = w.provinces_of(n).len();
+                let capital = &map.provinces[w.capital[n]].name;
+                let mut land = format!("{provinces} provinces  ·  capital {capital}");
+                if let Some(note) = &w.notes[n] {
+                    land.push_str(&format!("  ·  {note}"));
+                }
+                ui::text(canvas, &a.font, &land, vec2(640.0, y0 + 584.0), 16.0, ui::BLUE, Align::Center, 1100.0);
+            }
         }
     }
 
     fn draw_rivals(&self, canvas: &mut Canvas) {
         let a = &self.assets;
         let player = self.player.as_ref().expect("rivals come after the player");
-        ui::text(canvas, &a.font, "YOUR RIVALS", vec2(40.0, 22.0), 42.0, GOLD, Align::Left, 400.0);
-        let sub = format!("{} nations spun their wheels on {}", self.rivals.len(), self.data.maps[self.map].name);
-        ui::plain(canvas, &a.font, &sub, vec2(42.0, 74.0), 16.0, MUTED, Align::Left);
-        country::draw_flag(canvas, Rect::new(560.0, 30.0, 60.0, 40.0), &player.flag);
-        ui::plain(canvas, &a.font, "YOU", vec2(632.0, 28.0), 13.0, GOLD, Align::Left);
-        ui::text(canvas, &a.serif, &player.name, vec2(632.0, 44.0), 22.0, Color::WHITE, Align::Left, 340.0);
-        RIVALS_GO.draw(canvas, a, self.mouse, self.time, false);
+        let n = self.rivals.len();
+        let main = self.world.as_ref().map_or(n + 1, |w| w.main_count);
+        ui::text(canvas, &a.font, "YOUR RIVALS", vec2(40.0, 18.0), 42.0, GOLD, Align::Left, 400.0);
+        let filled = (n + 1).saturating_sub(main);
+        let sub = if filled > 0 {
+            format!("{} spun with you; {} more rose to fill {}", main - 1, filled, self.data.maps[self.map].name)
+        } else {
+            format!("{} nations spun their wheels on {}", n, self.data.maps[self.map].name)
+        };
+        ui::text(canvas, &a.font, &sub, vec2(42.0, 70.0), 16.0, MUTED, Align::Left, 500.0);
+        country::draw_flag(canvas, Rect::new(560.0, 26.0, 60.0, 40.0), &player.flag);
+        ui::plain(canvas, &a.font, "YOU", vec2(632.0, 24.0), 13.0, GOLD, Align::Left);
+        ui::text(canvas, &a.serif, &player.name, vec2(632.0, 40.0), 22.0, Color::WHITE, Align::Left, 340.0);
+        let mut go = RIVALS_GO;
+        go.label = "BEGIN";
+        go.key = "SPACE: onto the map";
+        go.draw(canvas, a, self.mouse, self.time, self.revealed > 0);
 
-        for (i, r) in self.rivals.iter().enumerate().take(self.revealed) {
-            let appear = self.screen_time - 0.2 - i as f32 * 0.14;
-            let k = ui::ease_out_back(appear / 0.35);
-            let rect = rival_rect(i);
-            let y = rect.y + (1.0 - k) * 60.0;
+        let per = rivals_per_page(n);
+        let first = self.rival_page * per;
+        let pages = n.div_ceil(per).max(1);
+        for (k, r) in self.rivals.iter().enumerate().skip(first).take(per.min(self.revealed)) {
+            let i = k - first;
+            let appear = self.screen_time - 0.2 - i as f32 * rival_delay(n);
+            let ease = ui::ease_out_back(appear / 0.35);
+            let rect = rival_rect(i, n);
+            let y = rect.y + (1.0 - ease) * 40.0;
             let hover = self.mouse.is_some_and(|m| rect.contains(m));
-            let card = if hover { &a.card_rival_you } else { &a.card_rival };
-            canvas.blit_sprite(card, vec2(rect.x, y), Blit::default());
-            country::draw_flag(canvas, Rect::new(rect.x + 22.0, y + 24.0, 84.0, 56.0), &r.flag);
-            ui::text(canvas, &a.serif, &r.name, vec2(rect.x + 120.0, y + 20.0), 21.0, Color::WHITE, Align::Left, 238.0);
-            ui::plain(canvas, &a.font, &r.label(&self.data, "continent"), vec2(rect.x + 120.0, y + 50.0), 14.0, MUTED, Align::Left);
-            let line1 = format!("{} · {} leader", r.label(&self.data, "ideology"), r.label(&self.data, "leader"));
-            ui::plain(canvas, &a.font, &line1, vec2(rect.x + 22.0, y + 92.0), 15.0, Color::WHITE, Align::Left);
-            let line2 = format!(
-                "{} people · GDP {}",
-                country::people(r.value(&self.data, "population")),
-                country::money(r.value(&self.data, "gdp"))
-            );
-            ui::plain(canvas, &a.font, &line2, vec2(rect.x + 22.0, y + 114.0), 15.0, MUTED, Align::Left);
-            let army = format!("Army: {}", r.label(&self.data, "army"));
-            ui::plain(canvas, &a.font, &army, vec2(rect.x + 22.0, y + 136.0), 15.0, MUTED, Align::Left);
-            let fate_id = r.option_id(&self.data, "fate");
-            let fate_w = self.data.wheel("fate");
-            let curse = self.data.wheels[fate_w].options.iter().any(|o| o.id == fate_id && o.tags.iter().any(|t| t == "curse"));
-            ui::plain(canvas, &a.font, &r.label(&self.data, "fate"), vec2(rect.x + 378.0, y + 136.0), 15.0, if curse { ui::RED } else { ui::GREEN }, Align::Right);
-            ui::plain(canvas, &a.font, &format!("{}", i + 1), vec2(rect.x + 378.0, y + 18.0), 13.0, SOFT, Align::Right);
-            canvas.label(&format!("rival {}", i + 1), rect);
+            let is_new = k + 1 >= main;
+            if n <= 9 {
+                self.draw_big_rival(canvas, r, k, rect, y, hover);
+            } else {
+                let card = if hover {
+                    &a.card_small_on
+                } else if is_new {
+                    &a.card_small_new
+                } else {
+                    &a.card_small
+                };
+                canvas.blit_sprite(card, vec2(rect.x, y), Blit::default());
+                country::draw_flag(canvas, Rect::new(rect.x + 14.0, y + 14.0, 54.0, 36.0), &r.flag);
+                ui::text(canvas, &a.serif, &r.name, vec2(rect.x + 78.0, y + 10.0), 17.0, Color::WHITE, Align::Left, 176.0);
+                let line = format!("{} · {}", r.label(&self.data, "continent"), r.label(&self.data, "ideology"));
+                ui::plain(canvas, &a.font, &line, vec2(rect.x + 78.0, y + 36.0), 13.0, MUTED, Align::Left);
+                let line = format!("{} · Army: {}", country::money(r.value(&self.data, "gdp")), r.label(&self.data, "army"));
+                ui::plain(canvas, &a.font, &line, vec2(rect.x + 14.0, y + 62.0), 13.0, MUTED, Align::Left);
+                if is_new {
+                    ui::plain(canvas, &a.font, "NEW", vec2(rect.x + 288.0, y + 10.0), 11.0, ui::GREEN, Align::Right);
+                } else if k < 9 {
+                    ui::plain(canvas, &a.font, &format!("{}", k + 1), vec2(rect.x + 288.0, y + 10.0), 12.0, SOFT, Align::Right);
+                }
+                canvas.label(&format!("rival {}", k + 1), rect);
+            }
         }
-        if self.revealed >= self.rivals.len() && self.inspect.is_none() {
-            ui::plain(canvas, &a.font, "Click a nation (or press 1-9) for its full card", vec2(640.0, 700.0), 14.0, SOFT, Align::Center);
+        if self.inspect.is_none() {
+            let hint = if pages > 1 {
+                format!("Page {} of {} (Left / Right)  ·  click a nation for its full card", self.rival_page + 1, pages)
+            } else {
+                "Click a nation (or press 1-9) for its full card".to_string()
+            };
+            ui::plain(canvas, &a.font, &hint, vec2(640.0, if n > 9 { 92.0 } else { 700.0 }), 13.0, SOFT, Align::Center);
         }
         if let Some(i) = self.inspect {
             ui::dim(canvas, 0.75);
             self.draw_country_card(canvas, &self.rivals[i], usize::MAX, false);
             INSPECT_BACK.draw(canvas, a, self.mouse, self.time, false);
         }
+    }
+
+    fn draw_big_rival(&self, canvas: &mut Canvas, r: &Country, k: usize, rect: Rect, y: f32, hover: bool) {
+        let a = &self.assets;
+        let card = if hover { &a.card_rival_you } else { &a.card_rival };
+        canvas.blit_sprite(card, vec2(rect.x, y), Blit::default());
+        country::draw_flag(canvas, Rect::new(rect.x + 22.0, y + 24.0, 84.0, 56.0), &r.flag);
+        ui::text(canvas, &a.serif, &r.name, vec2(rect.x + 120.0, y + 20.0), 21.0, Color::WHITE, Align::Left, 238.0);
+        ui::plain(canvas, &a.font, &r.label(&self.data, "continent"), vec2(rect.x + 120.0, y + 50.0), 14.0, MUTED, Align::Left);
+        let line1 = format!("{} · {} leader", r.label(&self.data, "ideology"), r.label(&self.data, "leader"));
+        ui::plain(canvas, &a.font, &line1, vec2(rect.x + 22.0, y + 92.0), 15.0, Color::WHITE, Align::Left);
+        let line2 = format!(
+            "{} people · GDP {}",
+            country::people(r.value(&self.data, "population")),
+            country::money(r.value(&self.data, "gdp"))
+        );
+        ui::plain(canvas, &a.font, &line2, vec2(rect.x + 22.0, y + 114.0), 15.0, MUTED, Align::Left);
+        let army = format!("Army: {}", r.label(&self.data, "army"));
+        ui::plain(canvas, &a.font, &army, vec2(rect.x + 22.0, y + 136.0), 15.0, MUTED, Align::Left);
+        let fate_id = r.option_id(&self.data, "fate");
+        let fate_w = self.data.wheel("fate");
+        let curse = self.data.wheels[fate_w].options.iter().any(|o| o.id == fate_id && o.tags.iter().any(|t| t == "curse"));
+        ui::plain(canvas, &a.font, &r.label(&self.data, "fate"), vec2(rect.x + 378.0, y + 136.0), 15.0, if curse { ui::RED } else { ui::GREEN }, Align::Right);
+        ui::plain(canvas, &a.font, &format!("{}", k + 1), vec2(rect.x + 378.0, y + 18.0), 13.0, SOFT, Align::Right);
+        canvas.label(&format!("rival {}", k + 1), rect);
     }
 }
 

@@ -1,0 +1,24 @@
+# Zoom step on the world map: a tiny, very quiet tick, about 20 ms.
+version = 0
+name = "pan_tick"
+description = "Very quiet short tick for each zoom step."
+tags = ["ui", "click", "short", "quiet"]
+seed = 9
+
+[master]
+normalize_lufs = -32
+trim_silence = true
+
+[[layers]]
+name = "snap"
+source = "noise"
+volume = 0.4
+envelope = { attack = 0.0003, decay = 0.006 }
+filter = { kind = "highpass", cutoff = 3500 }
+
+[[layers]]
+name = "blip"
+source = "triangle"
+volume = 0.7
+envelope = { attack = 0.0005, hold = 0.002, decay = 0.016 }
+pitch = { start = 2600, end = 2000, curve = "exponential" }

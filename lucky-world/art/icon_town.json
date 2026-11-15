@@ -1,0 +1,69 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Town icon",
+  "seed": 1,
+  "palette": {
+    "ink": "#1A1030",
+    "gold": "#F5C542",
+    "gold_dark": "#A8740E",
+    "gold_hi": "#FFF1B8",
+    "white": "#FFFFFF"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 20,
+      "height": 20
+    },
+    {
+      "cmd": "layer",
+      "name": "Icon"
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        10,
+        10
+      ],
+      "radius": 8,
+      "fill": "ink",
+      "outline": "white",
+      "outline_size": 1.5
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          5,
+          11
+        ],
+        [
+          10,
+          6
+        ],
+        [
+          15,
+          11
+        ],
+        [
+          13.5,
+          11
+        ],
+        [
+          13.5,
+          15
+        ],
+        [
+          6.5,
+          15
+        ],
+        [
+          6.5,
+          11
+        ]
+      ],
+      "fill": "white"
+    }
+  ]
+}

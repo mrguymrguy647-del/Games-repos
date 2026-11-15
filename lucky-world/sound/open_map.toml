@@ -1,0 +1,62 @@
+# Entering the world map: a short rising brass-like swell into a C major
+# chord, about 1.8 s. Triumphant but kept soft.
+version = 0
+name = "open_map"
+description = "Rising brass swell into a major chord, for opening the world map."
+tags = ["ui", "jingle", "brass", "open"]
+
+[master]
+normalize_lufs = -21
+trim_silence = true
+
+# Four saw "horns" enter one after another, each scooping up into its note
+# while its lowpass opens, the way brass brightens as it swells.
+[[layers]]
+name = "horn C4"
+source = "saw"
+volume = 0.45
+envelope = { attack = 0.35, hold = 0.55, decay = 0.7 }
+pitch = { start = 254, end = "C4", curve = "exponential", sweep_time = 0.12, vibrato = { rate = 5, depth = 0.08, delay = 0.6 } }
+filter = { kind = "lowpass", cutoff = 400, cutoff_end = 2400, curve = "exponential", sweep_time = 0.6, resonance = 1.1 }
+
+[[layers]]
+name = "horn E4"
+source = "saw"
+offset = 0.09
+volume = 0.4
+envelope = { attack = 0.33, hold = 0.48, decay = 0.7 }
+pitch = { start = 320, end = "E4", curve = "exponential", sweep_time = 0.12, vibrato = { rate = 5.3, depth = 0.08, delay = 0.55 } }
+filter = { kind = "lowpass", cutoff = 450, cutoff_end = 2600, curve = "exponential", sweep_time = 0.55, resonance = 1.1 }
+
+[[layers]]
+name = "horn G4"
+source = "saw"
+offset = 0.18
+volume = 0.38
+envelope = { attack = 0.3, hold = 0.42, decay = 0.7 }
+pitch = { start = 381, end = "G4", curve = "exponential", sweep_time = 0.12, vibrato = { rate = 5.6, depth = 0.08, delay = 0.5 } }
+filter = { kind = "lowpass", cutoff = 500, cutoff_end = 2800, curve = "exponential", sweep_time = 0.5, resonance = 1.1 }
+
+[[layers]]
+name = "horn C5"
+source = "saw"
+offset = 0.27
+volume = 0.34
+envelope = { attack = 0.28, hold = 0.36, decay = 0.72 }
+pitch = { start = 508, end = "C5", curve = "exponential", sweep_time = 0.12, vibrato = { rate = 5.9, depth = 0.1, delay = 0.45 } }
+filter = { kind = "lowpass", cutoff = 600, cutoff_end = 3200, curve = "exponential", sweep_time = 0.45, resonance = 1.1 }
+
+# A soft low root under the chord.
+[[layers]]
+name = "bass"
+source = "triangle"
+volume = 0.5
+envelope = { attack = 0.2, hold = 0.7, decay = 0.6 }
+pitch = { start = "C3" }
+
+[[effects]]
+type = "reverb"
+size = 0.55
+decay = 0.6
+damping = 0.6
+mix = 0.2

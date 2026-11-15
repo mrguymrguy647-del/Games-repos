@@ -1,0 +1,68 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Flag folds and sheen",
+  "seed": 1,
+  "palette": {
+    "w": "#FFFFFF",
+    "k": "#000000"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 40,
+      "height": 26
+    },
+    {
+      "cmd": "layer",
+      "name": "Folds"
+    },
+    {
+      "cmd": "gradient",
+      "kind": "linear",
+      "from": [
+        0,
+        0
+      ],
+      "to": [
+        40,
+        0
+      ],
+      "stops": [
+        [
+          0,
+          "#FFFFFF30"
+        ],
+        [
+          0.22,
+          "#00000030"
+        ],
+        [
+          0.45,
+          "#FFFFFF2A"
+        ],
+        [
+          0.7,
+          "#00000034"
+        ],
+        [
+          0.9,
+          "#FFFFFF20"
+        ],
+        [
+          1,
+          "#00000040"
+        ]
+      ]
+    },
+    {
+      "cmd": "rect",
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 26,
+      "outline": "#00000080",
+      "outline_size": 1.5
+    }
+  ]
+}
