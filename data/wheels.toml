@@ -1,0 +1,1129 @@
+# LUCKY WORLD: the 16 wheels.
+#
+# Change anything here and run the game again (no rebuild needed).
+# `cargo test` checks this file: every id a rule names must exist, and rules
+# may only look at wheels spun *before* theirs.
+#
+# ---------------------------------------------------------------------------
+# How a wheel's odds are worked out, step by step
+# ---------------------------------------------------------------------------
+# 1. Every option starts at its `weight` (only the ratios matter).
+# 2. Every `[[wheel.rule]]` whose `if` is true changes them:
+#      times = { landlocked = 0, island = 3 }   multiply those options
+#      times = { "#big" = 0.5 }                 multiply every option tagged "big"
+#      only  = ["zero"]                         every other option becomes 0
+#      shift = 1.0                              move this wheel's `follow` target up
+#    `if` is one condition or a list (all must hold). A condition is:
+#      "coast=landlocked"           that wheel landed on that option
+#      "ideology=democracy|monarchy" ...on any of those
+#      "continent#island"           that wheel's option has that tag
+#      "population<3000000"         a number wheel's exact value (also >)
+#      "army>4"                     a pick wheel's option level (also <)
+#      "!coast=landlocked"          not
+# 3. Every `[[wheel.follow]]` ties this wheel to earlier ones by `level`:
+#      target = shift + sum(from[wheel] * level of that wheel's result)
+#      each option's weight *= exp(-0.5 * ((option level - target) / spread)^2)
+#    so options near the target are likely and far ones fade away. Smaller
+#    `spread` = tighter link. A number wheel with `log = true` has the level
+#    log10(value) (1 million people = 6.0, $1 billion = 9.0), so a follow can
+#    multiply quantities: GDP = population x money per person.
+#    Options with `share` ignore follows: they are a fixed slice of the wheel
+#    (e.g. 0.04 = 4%) whenever their rules allow them.
+# 4. `unique = "world"` options can only be won by one nation per game;
+#    `unique = "continent"` by one nation per continent.
+# 5. Options whose chance ends below `min_share` are taken off the wheel.
+#    The slices you see on screen are exactly these chances.
+#
+# Number wheels (`kind = "number"`) land on a band, then roll an exact value
+# inside it (log-scale when `log = true`, nearer the follow target).
+
+min_share = 0.015
+
+# How many slices a wheel aims to show: big options are split into several
+# slices spread round the wheel (more pegs, more ticks), small ones get one.
+slices = 18
+
+# Slice colours, used in turn for options with no `color`.
+palette = [
+  "#e8505b", "#f9a03f", "#f6d55c", "#3caea3", "#20639b",
+  "#8e5ac8", "#ed6aa6", "#5cc8f0", "#9bd34d", "#ff7b39",
+]
+
+[[round]]
+number = 1
+title = "Land"
+tagline = "Where fate puts you on the map"
+
+[[round]]
+number = 2
+title = "People"
+tagline = "Who lives there, and who rules them"
+
+[[round]]
+number = 3
+title = "Power"
+tagline = "Money, muscle and secrets"
+
+[[round]]
+number = 4
+title = "Fate"
+tagline = "The luck of the nation"
+
+# ===========================================================================
+# ROUND 1: LAND
+# ===========================================================================
+
+[[wheel]]
+id = "continent"
+round = 1
+title = "Continent"
+# The options are the chosen map's continents (maps.toml).
+source = "map"
+
+# ---------------------------------------------------------------------------
+[[wheel]]
+id = "size"
+round = 1
+title = "Country Size"
+kind = "number"
+unit = "km2"
+log = true
+
+  [[wheel.option]]
+  id = "tiny"
+  label = "Tiny"
+  min = 2
+  max = 1_000
+  weight = 8
+
+  [[wheel.option]]
+  id = "small"
+  label = "Small"
+  min = 1_000
+  max = 50_000
+  weight = 22
+
+  [[wheel.option]]
+  id = "medium"
+  label = "Medium"
+  min = 50_000
+  max = 300_000
+  weight = 30
+
+  [[wheel.option]]
+  id = "large"
+  label = "Large"
+  min = 300_000
+  max = 1_200_000
+  weight = 22
+
+  [[wheel.option]]
+  id = "huge"
+  label = "Huge"
+  min = 1_200_000
+  max = 4_000_000
+  weight = 12
+  tags = ["big"]
+
+  [[wheel.option]]
+  id = "colossal"
+  label = "Colossal"
+  min = 4_000_000
+  max = 12_000_000
+  weight = 6
+  tags = ["big"]
+
+  [[wheel.rule]]
+  if = "continent#island"
+  times = { tiny = 1.8, huge = 0.35, colossal = 0.1 }
+
+# ---------------------------------------------------------------------------
+[[wheel]]
+id = "coast"
+round = 1
+title = "Landlocked or Coastal"
+
+  [[wheel.option]]
+  id = "landlocked"
+  label = "Landlocked"
+  detail = "No coast at all"
+  weight = 18
+
+  [[wheel.option]]
+  id = "coastal"
+  label = "Coastal"
+  detail = "A coastline and ports"
+  weight = 55
+  tags = ["sea"]
+
+  [[wheel.option]]
+  id = "peninsula"
+  label = "Peninsula"
+  detail = "Sea on three sides"
+  weight = 15
+  tags = ["sea"]
+
+  [[wheel.option]]
+  id = "island"
+  label = "Island Nation"
+  detail = "Sea on every side"
+  weight = 12
+  tags = ["sea", "island"]
+
+  # The important one: nobody on an island continent is landlocked.
+  [[wheel.rule]]
+  if = "continent#island"
+  times = { landlocked = 0, island = 3.5 }
+
+  [[wheel.rule]]
+  if = "continent#heartland"
+  times = { landlocked = 2.5, island = 0.15 }
+
+  [[wheel.rule]]
+  if = "size=tiny"
+  times = { island = 2.5, peninsula = 1.5 }
+
+  [[wheel.rule]]
+  if = "size#big"
+  times = { island = 0.2, peninsula = 0.5 }
+
+# ---------------------------------------------------------------------------
+[[wheel]]
+id = "land"
+round = 1
+title = "Land Type"
+
+  [[wheel.option]]
+  id = "plains"
+  label = "Plains"
+  weight = 22
+
+  [[wheel.option]]
+  id = "forest"
+  label = "Forest"
+  weight = 18
+
+  [[wheel.option]]
+  id = "mountains"
+  label = "Mountains"
+  weight = 14
+
+  [[wheel.option]]
+  id = "desert"
+  label = "Desert"
+  weight = 12
+
+  [[wheel.option]]
+  id = "jungle"
+  label = "Jungle"
+  weight = 10
+
+  [[wheel.option]]
+  id = "tundra"
+  label = "Tundra"
+  weight = 8
+
+  [[wheel.option]]
+  id = "steppe"
+  label = "Steppe"
+  weight = 10
+
+  [[wheel.option]]
+  id = "marsh"
+  label = "Marshland"
+  weight = 6
+
+  [[wheel.rule]]
+  if = "continent#cold"
+  times = { tundra = 4, forest = 1.5, jungle = 0, desert = 0.15 }
+
+  [[wheel.rule]]
+  if = "continent#temperate"
+  times = { plains = 1.5, forest = 1.5, tundra = 0.3, jungle = 0.2, desert = 0.3 }
+
+  [[wheel.rule]]
+  if = "continent#hot"
+  times = { tundra = 0, desert = 2.5, forest = 0.5 }
+
+  [[wheel.rule]]
+  if = "continent#arid"
+  times = { desert = 2, steppe = 2.5, jungle = 0.1, marsh = 0.2, forest = 0.5 }
+
+  [[wheel.rule]]
+  if = "continent#tropical"
+  times = { jungle = 4, marsh = 1.8, tundra = 0, steppe = 0.3 }
+
+  [[wheel.rule]]
+  if = "coast=landlocked"
+  times = { steppe = 1.8, mountains = 1.5, marsh = 0.5 }
+
+  [[wheel.rule]]
+  if = "coast=island"
+  times = { steppe = 0.2, desert = 0.5, jungle = 1.4, mountains = 1.3 }
+
+# ===========================================================================
+# ROUND 2: PEOPLE
+# ===========================================================================
+
+[[wheel]]
+id = "population"
+round = 2
+title = "Population"
+kind = "number"
+unit = "people"
+log = true
+
+  [[wheel.option]]
+  id = "p0"
+  label = "Under 1 million"
+  min = 20_000
+  max = 1_000_000
+  weight = 1
+
+  [[wheel.option]]
+  id = "p1"
+  label = "1 - 5 million"
+  min = 1_000_000
+  max = 5_000_000
+  weight = 1
+
+  [[wheel.option]]
+  id = "p2"
+  label = "5 - 20 million"
+  min = 5_000_000
+  max = 20_000_000
+  weight = 1
+
+  [[wheel.option]]
+  id = "p3"
+  label = "20 - 60 million"
+  min = 20_000_000
+  max = 60_000_000
+  weight = 1
+
+  [[wheel.option]]
+  id = "p4"
+  label = "60 - 150 million"
+  min = 60_000_000
+  max = 150_000_000
+  weight = 1
+
+  [[wheel.option]]
+  id = "p5"
+  label = "150 - 400 million"
+  min = 150_000_000
+  max = 400_000_000
+  weight = 1
+
+  [[wheel.option]]
+  id = "p6"
+  label = "400M - 1.5 billion"
+  min = 400_000_000
+  max = 1_500_000_000
+  weight = 1
+
+  # People = area x people per km2. 10^1.9 = about 80 people per km2.
+  [[wheel.follow]]
+  from = { size = 1.0 }
+  shift = 1.9
+  spread = 0.55
+
+  # Harsh land holds fewer people.
+  [[wheel.rule]]
+  if = "land=desert|tundra"
+  shift = -0.6
+
+  [[wheel.rule]]
+  if = "land=plains|marsh"
+  shift = 0.2
+
+# ---------------------------------------------------------------------------
+[[wheel]]
+id = "hdi"
+round = 2
+title = "Human Development"
+kind = "number"
+unit = "hdi"
+
+  # The level of each HDI band is log10 of a typical income per person
+  # (2.9 = $800, 4.65 = $45,000): the GDP wheel multiplies it by population.
+  [[wheel.option]]
+  id = "very_low"
+  label = "Very Low"
+  min = 0.30
+  max = 0.45
+  level = 2.9
+  weight = 12
+
+  [[wheel.option]]
+  id = "low"
+  label = "Low"
+  min = 0.45
+  max = 0.55
+  level = 3.3
+  weight = 18
+
+  [[wheel.option]]
+  id = "medium"
+  label = "Medium"
+  min = 0.55
+  max = 0.70
+  level = 3.8
+  weight = 26
+
+  [[wheel.option]]
+  id = "high"
+  label = "High"
+  min = 0.70
+  max = 0.80
+  level = 4.2
+  weight = 24
+
+  [[wheel.option]]
+  id = "very_high"
+  label = "Very High"
+  min = 0.80
+  max = 0.95
+  level = 4.65
+  weight = 20
+
+  [[wheel.rule]]
+  if = "continent#rich"
+  times = { very_low = 0.4, low = 0.6, very_high = 1.6 }
+
+  [[wheel.rule]]
+  if = "continent#poor"
+  times = { very_low = 1.6, low = 1.4, very_high = 0.5 }
+
+# ---------------------------------------------------------------------------
+[[wheel]]
+id = "ideology"
+round = 2
+title = "Ideology"
+
+  [[wheel.option]]
+  id = "military_rule"
+  label = "Military Rule"
+  weight = 10
+  tags = ["hard"]
+
+  [[wheel.option]]
+  id = "democracy"
+  label = "Democracy"
+  weight = 18
+
+  [[wheel.option]]
+  id = "monarchy"
+  label = "Monarchy"
+  weight = 12
+
+  [[wheel.option]]
+  id = "communism"
+  label = "Communism"
+  weight = 10
+  tags = ["hard"]
+
+  [[wheel.option]]
+  id = "theocracy"
+  label = "Theocracy"
+  weight = 8
+
+  [[wheel.option]]
+  id = "imperialism"
+  label = "Imperialism"
+  weight = 8
+
+  [[wheel.option]]
+  id = "authoritarianism"
+  label = "Authoritarianism"
+  weight = 14
+  tags = ["hard"]
+
+  [[wheel.option]]
+  id = "tribalism"
+  label = "Tribalism"
+  weight = 8
+
+  [[wheel.option]]
+  id = "colony"
+  label = "Colony"
+  detail = "Ruled from abroad"
+  weight = 6
+
+  [[wheel.rule]]
+  if = "hdi=very_high"
+  times = { democracy = 2.5, monarchy = 1.3, tribalism = 0.05, colony = 0.3, military_rule = 0.4 }
+
+  [[wheel.rule]]
+  if = "hdi=very_low|low"
+  times = { tribalism = 2.5, democracy = 0.45, military_rule = 1.5, colony = 1.5 }
+
+  [[wheel.rule]]
+  if = "size=tiny"
+  times = { colony = 2, imperialism = 0.2 }
+
+  [[wheel.rule]]
+  if = "size#big"
+  times = { colony = 0.3, imperialism = 1.7 }
+
+  [[wheel.rule]]
+  if = "population>400000000"
+  times = { tribalism = 0.1, colony = 0.1 }
+
+# ---------------------------------------------------------------------------
+[[wheel]]
+id = "history"
+round = 2
+title = "History"
+
+  [[wheel.option]]
+  id = "former_empire"
+  label = "Former Empire"
+  weight = 10
+
+  [[wheel.option]]
+  id = "ex_colony"
+  label = "Ex-Colony"
+  weight = 16
+
+  [[wheel.option]]
+  id = "post_war"
+  label = "Post-War"
+  weight = 14
+
+  [[wheel.option]]
+  id = "new_nation"
+  label = "New Nation"
+  weight = 12
+
+  [[wheel.option]]
+  id = "ancient_realm"
+  label = "Ancient Realm"
+  weight = 12
+
+  [[wheel.option]]
+  id = "revolution"
+  label = "Born in Revolution"
+  weight = 10
+
+  [[wheel.option]]
+  id = "breakaway"
+  label = "Breakaway State"
+  weight = 10
+
+  # A colony can't be an ex-colony, an old empire or a breakaway state yet.
+  [[wheel.rule]]
+  if = "ideology=colony"
+  times = { ex_colony = 0, former_empire = 0, breakaway = 0, revolution = 0, new_nation = 0.4, ancient_realm = 1.5, post_war = 1.5 }
+
+  [[wheel.rule]]
+  if = "ideology=imperialism"
+  times = { former_empire = 3, ex_colony = 0.3 }
+
+  [[wheel.rule]]
+  if = "ideology=monarchy"
+  times = { ancient_realm = 3, revolution = 0.2 }
+
+  [[wheel.rule]]
+  if = "ideology=communism"
+  times = { revolution = 3.5, ancient_realm = 0.4 }
+
+  [[wheel.rule]]
+  if = "ideology=military_rule"
+  times = { post_war = 2, breakaway = 1.5 }
+
+  [[wheel.rule]]
+  if = "ideology=theocracy"
+  times = { ancient_realm = 2 }
+
+# ===========================================================================
+# ROUND 3: POWER
+# ===========================================================================
+
+[[wheel]]
+id = "gdp"
+round = 3
+title = "GDP"
+kind = "number"
+unit = "usd"
+log = true
+
+  [[wheel.option]]
+  id = "g0"
+  label = "Under $1B"
+  min = 50_000_000
+  max = 1_000_000_000
+  weight = 1
+
+  [[wheel.option]]
+  id = "g1"
+  label = "$1 - 10B"
+  min = 1_000_000_000
+  max = 10_000_000_000
+  weight = 1
+
+  [[wheel.option]]
+  id = "g2"
+  label = "$10 - 50B"
+  min = 10_000_000_000
+  max = 50_000_000_000
+  weight = 1
+
+  [[wheel.option]]
+  id = "g3"
+  label = "$50 - 200B"
+  min = 50_000_000_000
+  max = 200_000_000_000
+  weight = 1
+
+  [[wheel.option]]
+  id = "g4"
+  label = "$200B - 1T"
+  min = 200_000_000_000
+  max = 1_000_000_000_000
+  weight = 1
+
+  [[wheel.option]]
+  id = "g5"
+  label = "$1 - 3T"
+  min = 1_000_000_000_000
+  max = 3_000_000_000_000
+  weight = 1
+
+  # The rare golden slice: a small country sitting on a fortune.
+  [[wheel.option]]
+  id = "tiny_rich"
+  label = "Tiny but Rich!"
+  detail = "A small nation with a fortune"
+  min = 80_000_000_000
+  max = 600_000_000_000
+  share = 0.04
+  color = "#ffd23a"
+  tags = ["rare"]
+
+  # GDP = people x money per person (the HDI band's level).
+  [[wheel.follow]]
+  from = { population = 1.0, hdi = 1.0 }
+  shift = 0.0
+  spread = 0.28
+
+  [[wheel.rule]]
+  if = "population>3000000"
+  times = { tiny_rich = 0 }
+
+  [[wheel.rule]]
+  if = "ideology=communism|tribalism|colony"
+  shift = -0.15
+
+# ---------------------------------------------------------------------------
+[[wheel]]
+id = "resource"
+round = 3
+title = "Main Resource"
+
+  [[wheel.option]]
+  id = "grain"
+  label = "Grain"
+  weight = 22
+
+  [[wheel.option]]
+  id = "iron"
+  label = "Iron"
+  weight = 16
+
+  [[wheel.option]]
+  id = "coal"
+  label = "Coal"
+  weight = 16
+
+  [[wheel.option]]
+  id = "oil"
+  label = "Oil"
+  weight = 16
+
+  [[wheel.option]]
+  id = "timber"
+  label = "Timber"
+  weight = 16
+
+  [[wheel.option]]
+  id = "bauxite"
+  label = "Bauxite"
+  weight = 12
+
+  [[wheel.rule]]
+  if = "land=plains"
+  times = { grain = 3 }
+
+  [[wheel.rule]]
+  if = "land=forest"
+  times = { timber = 3.5 }
+
+  [[wheel.rule]]
+  if = "land=mountains"
+  times = { iron = 2.5, coal = 2, grain = 0.4 }
+
+  [[wheel.rule]]
+  if = "land=desert"
+  times = { oil = 4, grain = 0.1, timber = 0.05 }
+
+  [[wheel.rule]]
+  if = "land=jungle"
+  times = { bauxite = 3, timber = 2 }
+
+  [[wheel.rule]]
+  if = "land=tundra"
+  times = { oil = 2.5, iron = 1.5, grain = 0.1 }
+
+  [[wheel.rule]]
+  if = "land=steppe"
+  times = { grain = 2, coal = 1.5, timber = 0.3 }
+
+  [[wheel.rule]]
+  if = "land=marsh"
+  times = { oil = 1.5, timber = 1.5, coal = 1.3 }
+
+# ---------------------------------------------------------------------------
+[[wheel]]
+id = "army"
+round = 3
+title = "Army Strength"
+
+  [[wheel.option]]
+  id = "none"
+  label = "No Army"
+  detail = "Not one soldier"
+  level = 0
+  share = 0.04
+
+  [[wheel.option]]
+  id = "token"
+  label = "Token Force"
+  level = 1
+  weight = 10
+
+  [[wheel.option]]
+  id = "weak"
+  label = "Weak"
+  level = 2
+  weight = 14
+
+  [[wheel.option]]
+  id = "modest"
+  label = "Modest"
+  level = 3
+  weight = 18
+
+  [[wheel.option]]
+  id = "capable"
+  label = "Capable"
+  level = 4
+  weight = 18
+
+  [[wheel.option]]
+  id = "strong"
+  label = "Strong"
+  level = 5
+  weight = 14
+
+  [[wheel.option]]
+  id = "major"
+  label = "Major Power"
+  level = 6
+  weight = 10
+
+  [[wheel.option]]
+  id = "strongest"
+  label = "World's Strongest"
+  level = 7
+  weight = 3
+  unique = "world"
+  color = "#ffd23a"
+  tags = ["rare"]
+
+  # Armies cost money and soldiers: about 1.6 levels per x10 GDP and 0.8 per
+  # x10 people. ($1B and 10 million people: level 0.3.)
+  [[wheel.follow]]
+  from = { gdp = 1.6, population = 0.8 }
+  shift = -19.7
+  spread = 1.0
+
+  [[wheel.rule]]
+  if = "ideology=military_rule"
+  shift = 1.2
+  times = { none = 0, token = 0.2 }
+
+  [[wheel.rule]]
+  if = "ideology=imperialism|communism"
+  shift = 0.6
+
+  [[wheel.rule]]
+  if = "ideology=colony"
+  shift = -1.2
+
+  [[wheel.rule]]
+  if = "ideology=democracy"
+  shift = -0.3
+
+  [[wheel.rule]]
+  if = "gdp<1000000000000"
+  times = { strongest = 0 }
+
+  # Big armies need people to fill them.
+  [[wheel.rule]]
+  if = "population<1000000"
+  times = { strong = 0, major = 0, strongest = 0 }
+
+  [[wheel.rule]]
+  if = "population<3000000"
+  times = { strong = 0.3, major = 0 }
+
+  [[wheel.rule]]
+  if = "gdp>200000000000"
+  times = { none = 0 }
+
+# ---------------------------------------------------------------------------
+[[wheel]]
+id = "duty"
+round = 3
+title = "Active Duty"
+kind = "number"
+unit = "percent"
+
+  [[wheel.option]]
+  id = "zero"
+  label = "0%"
+  min = 0.0
+  max = 0.0
+  level = 0
+  weight = 1
+
+  [[wheel.option]]
+  id = "d1"
+  label = "0.1 - 0.3%"
+  min = 0.1
+  max = 0.3
+  level = 1
+  weight = 1
+
+  [[wheel.option]]
+  id = "d2"
+  label = "0.3 - 0.6%"
+  min = 0.3
+  max = 0.6
+  level = 2
+  weight = 1
+
+  [[wheel.option]]
+  id = "d3"
+  label = "0.6 - 1.2%"
+  min = 0.6
+  max = 1.2
+  level = 3
+  weight = 1
+
+  [[wheel.option]]
+  id = "d4"
+  label = "1.2 - 2.5%"
+  min = 1.2
+  max = 2.5
+  level = 4
+  weight = 1
+
+  [[wheel.option]]
+  id = "d5"
+  label = "2.5 - 5%"
+  min = 2.5
+  max = 5.0
+  level = 5
+  weight = 1
+
+  # Share of people in uniform. A stronger army than the economy pays for
+  # means more people under arms: target = 2.2 + 0.9 x (army level - the
+  # army level the GDP and population would give, from the follow above).
+  [[wheel.follow]]
+  from = { army = 0.9, gdp = -1.44, population = -0.72 }
+  shift = 19.93
+  spread = 0.9
+
+  [[wheel.rule]]
+  if = "army=none"
+  only = ["zero"]
+
+  [[wheel.rule]]
+  if = "!army=none"
+  times = { zero = 0 }
+
+  [[wheel.rule]]
+  if = "ideology=military_rule|communism"
+  shift = 0.8
+
+  [[wheel.rule]]
+  if = "ideology=democracy|colony"
+  shift = -0.4
+
+# ---------------------------------------------------------------------------
+[[wheel]]
+id = "secret_service"
+round = 3
+title = "Secret Service"
+
+  [[wheel.option]]
+  id = "none"
+  label = "None"
+  level = 0
+  weight = 8
+
+  [[wheel.option]]
+  id = "amateur"
+  label = "Amateurs"
+  level = 1
+  weight = 20
+
+  [[wheel.option]]
+  id = "competent"
+  label = "Competent"
+  level = 2
+  weight = 30
+
+  [[wheel.option]]
+  id = "feared"
+  label = "Feared"
+  level = 3
+  weight = 18
+
+  [[wheel.option]]
+  id = "legendary"
+  label = "Legendary"
+  level = 4
+  weight = 6
+  tags = ["rare"]
+
+  [[wheel.follow]]
+  from = { gdp = 0.8 }
+  shift = -6.9
+  spread = 1.1
+
+  [[wheel.rule]]
+  if = "ideology#hard"
+  shift = 1.2
+
+  [[wheel.rule]]
+  if = "ideology=theocracy|monarchy"
+  shift = 0.4
+
+  [[wheel.rule]]
+  if = "ideology=tribalism|colony"
+  shift = -1.0
+
+# ===========================================================================
+# ROUND 4: FATE
+# ===========================================================================
+
+[[wheel]]
+id = "leader"
+round = 4
+title = "Leader"
+
+  [[wheel.option]]
+  id = "warlord"
+  label = "Warlord"
+  detail = "Strikes first, asks never"
+  weight = 18
+
+  [[wheel.option]]
+  id = "genius"
+  label = "Genius"
+  detail = "Sees ten moves ahead"
+  weight = 14
+
+  [[wheel.option]]
+  id = "builder"
+  label = "Builder"
+  detail = "Roads, dams, factories"
+  weight = 24
+
+  [[wheel.option]]
+  id = "diplomat"
+  label = "Diplomat"
+  detail = "Friends in every capital"
+  weight = 24
+
+  [[wheel.option]]
+  id = "coward"
+  label = "Coward"
+  detail = "Flees at the first shot"
+  weight = 20
+
+  [[wheel.rule]]
+  if = "ideology=military_rule"
+  times = { warlord = 3, diplomat = 0.4 }
+
+  [[wheel.rule]]
+  if = "ideology=imperialism|tribalism"
+  times = { warlord = 2 }
+
+  [[wheel.rule]]
+  if = "ideology=democracy"
+  times = { diplomat = 1.6, warlord = 0.3 }
+
+  [[wheel.rule]]
+  if = "ideology=colony"
+  times = { coward = 1.8, warlord = 0.5 }
+
+  [[wheel.rule]]
+  if = "history=post_war"
+  times = { warlord = 1.5, builder = 1.5 }
+
+# ---------------------------------------------------------------------------
+[[wheel]]
+id = "impact"
+round = 4
+title = "Regional Impact"
+
+  [[wheel.option]]
+  id = "isolated"
+  label = "Isolated"
+  detail = "The world forgets you exist"
+  level = 0
+  weight = 1
+
+  [[wheel.option]]
+  id = "minor"
+  label = "Minor Player"
+  detail = "A voice, not a vote"
+  level = 1
+  weight = 1.4
+
+  [[wheel.option]]
+  id = "regional_power"
+  label = "Regional Power"
+  detail = "Neighbours watch your every move"
+  level = 2
+  weight = 1
+  unique = "continent"
+
+  [[wheel.follow]]
+  from = { gdp = 0.35, army = 0.25 }
+  shift = -3.35
+  spread = 0.6
+
+  [[wheel.rule]]
+  if = "coast=island"
+  shift = -0.3
+
+  [[wheel.rule]]
+  if = "leader=diplomat"
+  shift = 0.3
+
+  [[wheel.rule]]
+  if = "leader=coward"
+  shift = -0.3
+
+# ---------------------------------------------------------------------------
+[[wheel]]
+id = "fate"
+round = 4
+title = "Blessing or Curse"
+
+  [[wheel.option]]
+  id = "fertile"
+  label = "Fertile Lands"
+  detail = "Blessing: harvests never fail"
+  weight = 10
+  tags = ["blessing"]
+
+  [[wheel.option]]
+  id = "hidden_gold"
+  label = "Hidden Gold"
+  detail = "Blessing: a fortune under the hills"
+  weight = 7
+  tags = ["blessing"]
+
+  [[wheel.option]]
+  id = "great_harbor"
+  label = "Great Harbor"
+  detail = "Blessing: the best port on the sea"
+  weight = 9
+  tags = ["blessing"]
+
+  [[wheel.option]]
+  id = "golden_generation"
+  label = "Golden Generation"
+  detail = "Blessing: brilliant minds everywhere"
+  weight = 7
+  tags = ["blessing"]
+
+  [[wheel.option]]
+  id = "loyal_army"
+  label = "Loyal Army"
+  detail = "Blessing: soldiers who never desert"
+  weight = 8
+  tags = ["blessing"]
+
+  [[wheel.option]]
+  id = "plague"
+  label = "Plague Years"
+  detail = "Curse: sickness in the cities"
+  weight = 8
+  tags = ["curse"]
+
+  [[wheel.option]]
+  id = "earthquakes"
+  label = "Earthquakes"
+  detail = "Curse: the ground will not keep still"
+  weight = 7
+  tags = ["curse"]
+
+  [[wheel.option]]
+  id = "corrupt_court"
+  label = "Corrupt Court"
+  detail = "Curse: gold leaks from the treasury"
+  weight = 9
+  tags = ["curse"]
+
+  [[wheel.option]]
+  id = "rebel_province"
+  label = "Rebel Province"
+  detail = "Curse: one region wants out"
+  weight = 9
+  tags = ["curse"]
+
+  [[wheel.option]]
+  id = "drought"
+  label = "Endless Drought"
+  detail = "Curse: the rivers run dry"
+  weight = 7
+  tags = ["curse"]
+
+  [[wheel.rule]]
+  if = "coast=landlocked"
+  times = { great_harbor = 0 }
+
+  [[wheel.rule]]
+  if = "army=none"
+  times = { loyal_army = 0 }
+
+  [[wheel.rule]]
+  if = "land=desert|steppe"
+  times = { drought = 3, fertile = 0.2 }
+
+  [[wheel.rule]]
+  if = "land=mountains"
+  times = { earthquakes = 2.5, hidden_gold = 1.5 }
+
+  [[wheel.rule]]
+  if = "land=plains|marsh"
+  times = { fertile = 2 }
+
+  [[wheel.rule]]
+  if = "leader=coward"
+  times = { corrupt_court = 1.6, rebel_province = 1.5, loyal_army = 0.4 }
+
+  [[wheel.rule]]
+  if = "leader=genius"
+  times = { golden_generation = 2.5 }
+
+  [[wheel.rule]]
+  if = "leader=warlord"
+  times = { loyal_army = 2 }

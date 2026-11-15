@@ -1,0 +1,132 @@
+# LUCKY WORLD: the three premade maps.
+#
+# The Continent wheel is made from the chosen map's continents, so every map
+# can have its own. Tags on a continent are what the other wheels' rules look
+# at (see wheels.toml):
+#
+#   island     - the continent is an island (or islands): nobody there is landlocked
+#   heartland  - deep inland: landlocked countries are more likely
+#   cold, temperate, hot, arid, tropical - climate, for Land type and Resource
+#   rich, poor - nudges HDI
+#
+# `islands = true` on a map gives every one of its continents the `island` tag.
+# `rivals` is how many NPC nations spin their wheels after the player.
+# `style` picks the name syllables in names.toml.
+# `weight` is how often the Continent wheel lands there (bigger = more often).
+
+[[map]]
+id = "grand"
+name = "The Grand Continent"
+description = "One vast landmass. Long borders, few coasts, many neighbours."
+rivals = 9
+
+  [[map.continent]]
+  id = "northern_wilds"
+  label = "Northern Wilds"
+  weight = 18
+  tags = ["cold"]
+  style = "north"
+
+  [[map.continent]]
+  id = "heartland"
+  label = "The Heartland"
+  weight = 24
+  tags = ["temperate", "heartland", "rich"]
+  style = "middle"
+
+  [[map.continent]]
+  id = "eastern_steppe"
+  label = "Eastern Steppe"
+  weight = 20
+  tags = ["arid", "heartland"]
+  style = "east"
+
+  [[map.continent]]
+  id = "sunward_coast"
+  label = "Sunward Coast"
+  weight = 18
+  tags = ["hot", "arid"]
+  style = "sun"
+
+  [[map.continent]]
+  id = "green_south"
+  label = "Green South"
+  weight = 20
+  tags = ["tropical", "poor"]
+  style = "south"
+
+[[map]]
+id = "isles"
+name = "The Thousand Isles"
+description = "An ocean of islands. Every nation has a coast; fleets rule."
+islands = true
+rivals = 7
+
+  [[map.continent]]
+  id = "coral_chain"
+  label = "Coral Chain"
+  weight = 26
+  tags = ["tropical"]
+  style = "south"
+
+  [[map.continent]]
+  id = "storm_isles"
+  label = "Storm Isles"
+  weight = 22
+  tags = ["cold"]
+  style = "north"
+
+  [[map.continent]]
+  id = "jade_islands"
+  label = "Jade Islands"
+  weight = 28
+  tags = ["temperate", "rich"]
+  style = "middle"
+
+  [[map.continent]]
+  id = "ember_atolls"
+  label = "Ember Atolls"
+  weight = 24
+  tags = ["hot", "arid", "poor"]
+  style = "sun"
+
+[[map]]
+id = "five_shores"
+name = "Five Shores"
+description = "Five continents, five climates, one island chain."
+rivals = 8
+
+  [[map.continent]]
+  id = "norvane"
+  label = "Norvane"
+  weight = 18
+  tags = ["cold"]
+  style = "north"
+
+  [[map.continent]]
+  id = "aurel"
+  label = "Aurel"
+  weight = 24
+  tags = ["temperate", "rich"]
+  style = "middle"
+
+  [[map.continent]]
+  id = "sahrun"
+  label = "Sahrun"
+  weight = 20
+  tags = ["hot", "arid", "heartland"]
+  style = "sun"
+
+  [[map.continent]]
+  id = "verdane"
+  label = "Verdane"
+  weight = 22
+  tags = ["tropical", "poor"]
+  style = "south"
+
+  [[map.continent]]
+  id = "kesh_isles"
+  label = "Kesh Isles"
+  weight = 16
+  tags = ["island", "temperate"]
+  style = "east"

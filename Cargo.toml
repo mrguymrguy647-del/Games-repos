@@ -1,0 +1,27 @@
+[package]
+name = "lucky-world"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.87"
+description = "LUCKY WORLD: spin for your country, then rule it. Built with Duck Forge."
+
+[features]
+# The same three features as Duck Forge. On a server with no screen, build with
+# `--no-default-features` and run with `-- --headless`.
+default = ["window", "gpu", "audio"]
+window = ["duckforge/window"]
+gpu = ["duckforge/gpu"]
+audio = ["duckforge/audio"]
+
+[dependencies]
+duckforge = { git = "https://github.com/mrguymrguy647-del/Duck-Forge", default-features = false }
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+
+[profile.dev]
+opt-level = 1
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+opt-level = 2
+debug = false
