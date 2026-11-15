@@ -87,7 +87,7 @@ fn gdp_follows_population_and_only_tiny_nations_are_tiny_but_rich() {
     for c in many(&d, 4000) {
         let gdp = c.value(&d, "gdp");
         let people = c.value(&d, "population");
-        assert!((5e7..=3e12).contains(&gdp), "GDP {gdp}");
+        assert!((1e9..=3e12).contains(&gdp), "GDP {gdp}");
         let per_person = gdp / people;
         if c.option_id(&d, "gdp") == "tiny_rich" {
             rich += 1;

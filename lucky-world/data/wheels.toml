@@ -549,47 +549,43 @@ kind = "number"
 unit = "usd"
 log = true
 
-  [[wheel.option]]
-  id = "g0"
-  label = "Under $1B"
-  min = 50_000_000
-  max = 1_000_000_000
-  weight = 1
-
+  # GDP runs from $1 billion to $3 trillion. Every slice has its own luck:
+  # `weight` is how lucky that slice is before population and HDI are
+  # counted, so the richer the slice, the rarer it is.
   [[wheel.option]]
   id = "g1"
   label = "$1 - 10B"
   min = 1_000_000_000
   max = 10_000_000_000
-  weight = 1
+  weight = 1.0
 
   [[wheel.option]]
   id = "g2"
   label = "$10 - 50B"
   min = 10_000_000_000
   max = 50_000_000_000
-  weight = 1
+  weight = 1.0
 
   [[wheel.option]]
   id = "g3"
   label = "$50 - 200B"
   min = 50_000_000_000
   max = 200_000_000_000
-  weight = 1
+  weight = 0.6
 
   [[wheel.option]]
   id = "g4"
   label = "$200B - 1T"
   min = 200_000_000_000
   max = 1_000_000_000_000
-  weight = 1
+  weight = 0.3
 
   [[wheel.option]]
   id = "g5"
   label = "$1 - 3T"
   min = 1_000_000_000_000
   max = 3_000_000_000_000
-  weight = 1
+  weight = 0.05
 
   # The rare golden slice: a small country sitting on a fortune.
   [[wheel.option]]
