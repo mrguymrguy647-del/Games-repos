@@ -6,10 +6,12 @@
 //! | Rotate | drag with the right button, or Q / E |
 //! | Zoom | mouse wheel, or R / F (T / G tilts) |
 //! | Select | click a province; click a name or flag for that nation's card |
-//! | Keys | Tab: next nation · H: home · M: terrain / political · C: card · Esc: back |
+//! | Keys | Tab: next nation · H: home · M: terrain / political · V: economy overlays · C: card · Esc: back |
+//! | Economy | Space: pause · 1-5: speed · O: the economy window (see `econ_screen`) |
 
 use duckforge::prelude::*;
 
+use super::econ_screen::{EconUi, ECON_BUTTON};
 use super::{Lucky, INSPECT_BACK};
 use crate::country;
 use crate::map_view::Mode;
@@ -42,12 +44,14 @@ pub struct MapUi {
     labels: Vec<Label>,
     camera: Option<Camera3D>,
     last_tick: f32,
+    /// The economy window and overlays.
+    pub econ: EconUi,
 }
 
 impl MapUi {
     /// Esc has something to close here (so it doesn't quit the game).
     pub fn wants_escape(&self) -> bool {
-        self.card.is_some() || self.selected.is_some()
+        self.card.is_some() || self.selected.is_some() || self.econ.open.is_some()
     }
 }
 
@@ -95,6 +99,9 @@ impl Lucky {
         let dt = ctx.dt();
         let mouse = self.mouse;
 
+        // The days go by (a card or the economy window doesn't stop them).
+        self.update_clock(ctx);
+
         // A country card is open: only closing it.
         if self.map_ui.card.is_some() {
             if ctx.input.was_pressed(Key::Escape)
@@ -108,6 +115,28 @@ impl Lucky {
             }
             self.report_map(ctx);
             return;
+        }
+
+        // The clock's pause, and the economy window.
+        if ctx.input.was_pressed(Key::Space) {
+            self.clock.paused = !self.clock.paused;
+            ctx.play_with(&self.assets.click, 0.7, 0.0);
+        }
+        if self.map_ui.econ.open.is_some() {
+            self.update_econ_window(ctx);
+            self.report_map(ctx);
+            return;
+        }
+        let econ_click = ctx.input.was_mouse_pressed(MouseButton::Left) && mouse.is_some_and(|m| ECON_BUTTON.contains(m));
+        if self.economy.is_some() && (ctx.input.was_pressed(Key::O) || econ_click) {
+            self.map_ui.econ.open = Some(super::econ_screen::Tab::Budget);
+            self.map_ui.econ.row = 0;
+            ctx.play_with(&self.assets.card_sound, 0.8, 0.0);
+            self.report_map(ctx);
+            return;
+        }
+        if ctx.input.was_pressed(Key::V) {
+            self.cycle_overlay(ctx);
         }
 
         // Keys.
@@ -339,12 +368,8 @@ impl Lucky {
         ui::text(canvas, &a.font, &self.data.maps[world.map].name.to_uppercase(), vec2(640.0, 14.0), 22.0, GOLD, Align::Center, 360.0);
         let mine = world.provinces_of(0).len();
         let facts = format!("{} nations  ·  {} provinces  ·  yours: {}", world.nations.len(), map.provinces.len(), mine);
-        ui::plain(canvas, &a.font, &facts, vec2(1266.0, 10.0), 15.0, Color::WHITE, Align::Right);
-        let mode = match view.mode {
-            Mode::Political => "M: terrain view",
-            Mode::Terrain => "M: nations view",
-        };
-        ui::plain(canvas, &a.font, mode, vec2(1266.0, 31.0), 13.0, SOFT, Align::Right);
+        ui::plain(canvas, &a.font, &facts, vec2(640.0, 39.0), 12.0, SOFT, Align::Center);
+        self.draw_econ_topbar(canvas);
 
         if let Some(p) = self.map_ui.selected {
             self.draw_province_panel(canvas, p);
@@ -376,17 +401,22 @@ impl Lucky {
             canvas.blit_sprite(&a.icon_capital, MINIMAP_AT + vec2(x * 4.0 - 7.0, y * 4.0 - 7.0), Blit { scale: 0.5, ..Blit::default() });
         }
         canvas.label("minimap", clip);
+        self.draw_overlay_legend(canvas);
 
         ui::plain(
             canvas,
             &a.font,
-            "Drag: pan  ·  Right-drag or Q/E: turn  ·  Wheel or R/F: zoom  ·  T/G: tilt  ·  Click: province  ·  Name or flag: country card  ·  Tab: next nation  ·  H: home",
-            vec2(14.0, 698.0),
-            13.0,
+            match view.mode {
+                Mode::Political => "Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · T/G: tilt · Click: province · Name or flag: card · Tab: next nation · H: home · M: terrain · V: overlays · Space: pause · 1-5: speed · O: economy",
+                Mode::Terrain => "Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · T/G: tilt · Click: province · Name or flag: card · Tab: next nation · H: home · M: nations · V: overlays · Space: pause · 1-5: speed · O: economy",
+            },
+            vec2(14.0, 699.0),
+            12.0,
             Color::rgba(255, 255, 255, 200),
             Align::Left,
         );
 
+        self.draw_econ_window(canvas);
         if let Some(n) = self.map_ui.card {
             ui::dim(canvas, 0.75);
             self.draw_country_card(canvas, &world.nations[n], usize::MAX, n == 0);
@@ -447,6 +477,32 @@ impl Lucky {
             }
         }
         facts.push((None, format!("{} hexes", prov.cells.len())));
+        // Its economy: people, what's under the ground, what's built.
+        if let Some(e) = self.economy.as_ref() {
+            let ed = &self.econ_data;
+            let pe = &e.provinces[p];
+            if let Some(o) = world.owner[p] {
+                let people = e.nations[o].population * pe.people;
+                let mut built: Vec<(f64, usize)> = Vec::new();
+                for b in e.nations[o].buildings.iter().filter(|b| b.province == p) {
+                    match built.iter_mut().find(|(_, k)| *k == b.kind) {
+                        Some(x) => x.0 += b.levels,
+                        None => built.push((b.levels, b.kind)),
+                    }
+                }
+                built.sort_by(|a, b| b.0.total_cmp(&a.0));
+                let names: Vec<String> = built.iter().take(3).map(|(l, k)| format!("{} {:.0}", ed.buildings[*k].name, l)).collect();
+                let jobs = if names.is_empty() { "no buildings".to_string() } else { names.join(", ") };
+                facts.push((None, format!("{} people  ·  {}", super::econ_screen::people(people), jobs)));
+                facts.push((None, format!("Roads {:.1}  ·  rail {:.1}  ·  port {:.1}  ·  moving {:.0}%", pe.road, pe.rail, pe.port, pe.transport * 100.0)));
+            }
+            let mut rich: Vec<usize> = (0..ed.goods.len()).filter(|&g| pe.deposits[g] >= 0.2).collect();
+            rich.sort_by(|&a, &b| pe.deposits[b].total_cmp(&pe.deposits[a]));
+            if !rich.is_empty() {
+                let names: Vec<String> = rich.iter().take(3).map(|&g| format!("{} {:.1}", ed.goods[g].name, pe.deposits[g])).collect();
+                facts.push((None, format!("Rich in {}", names.join(", "))));
+            }
+        }
         for (icon, words) in facts {
             if let Some(icon) = icon {
                 canvas.blit_sprite(icon, vec2(x + 22.0, row - 1.0), Blit::default());

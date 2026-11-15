@@ -322,3 +322,64 @@ Worth keeping as they are:
       still call `colliders` reserved, though it works.
     - Sphere triangle counts are only given for even segment counts
       (`recipe-format.md:266`).
+
+---
+
+# Phase 3 (the economy)
+
+Found while building the economy, against the same commits. Numbering
+carries on for each tool. Nothing here blocked the work, so Duck Forge itself
+is unchanged. Duck Mold wasn't needed this phase.
+
+## Duck Forge (engine)
+
+24. **The engine takes `--seed` even when the game wants it.** `game_args()`
+    drops every word the engine knows, so `lucky-world --economy-report 50
+    --seed 2` silently ran seed 1 for the game (and set the engine's seed).
+    Four "different" seeds gave identical reports before it showed.
+    - Workaround: the game's option is `--world-seed`.
+    - Fix: warn when a game reads `game_args()` and an engine option was
+      given without `--`, or let a game claim names (`claim_args(&["--seed"])`).
+25. **No way to ask whether a reported text ever had a value.** Tests want
+    "the BUDGET page was opened at some point". `history(name)` gives
+    `(frame, &ReportValue)` pairs, but matching a text needs
+    `matches!(v, ReportValue::Text(t) if t == value)` by hand, and
+    `ReportValue`'s `Display` quotes text (`"BUDGET"`), so `to_string() ==`
+    fails. A `seen(name, value)` (or `texts(name)`) would do.
+26. **`Rect` has no `const fn new`.** Fixed screen areas (the economy window,
+    its buttons) are written as `Rect { x, y, w, h }` literals to be `const`.
+27. **Profiling needed valgrind.** There is `--time` for drawing, but nothing
+    for an `update` that is mostly simulation. `callgrind` found that
+    string-keyed modifier lookups took 45% of the economy's time (now cached:
+    4.3 s for 50 years of 25 nations). A `ctx.time_section("economy")` in
+    `--time` would have shown it at once.
+
+Worth keeping as they are:
+- `--snapshot-every` with `--inputs` made the economy screenshots repeatable.
+- The fuzzer with `--fuzz-keys` (adding O, V, B, X, 1-5) reached the economy
+  window and both overlays in seconds, with no problems.
+- `PlayTest` checks (`ctx.check`) run inside every fuzz run: the economy's
+  "sane numbers" rule held in all of them.
+
+## Duck Quill (art)
+
+14. **A closed `path` with a `fill` paints nothing, without a warning.** The
+    factory and ship icons came out as black squares; `quill check` said
+    "OK". Filled shapes must be `polygon`. `check` should warn that `fill` is
+    ignored on a `path` (or `path` should fill when closed).
+15. **Unused palette colours are warned about in every small icon.** Sharing
+    one palette across icons gives six warnings each, which hides real ones.
+    A shared palette file (`"palette": "ui.json"`) would avoid both.
+
+## Duck Echo (sound)
+
+13. Nothing new. `coin`, `month` and `news` rendered and passed `analyze` on
+    the first try; the "pitch rising from 1319 to 1760 Hz, 2 onsets" summary
+    for the coin was exactly the two pings it should be.
+
+## Not tool bugs (for the game's own data)
+
+- **TOML table scope.** A plain key written after `[model.*]` tables belongs
+  to the last table: `plan_priority` was silently read as part of
+  `[model.colony]` until it moved above them (the same trap as `nation_colors`
+  in Phase 2). The loaders use `deny_unknown_fields`, which caught it.

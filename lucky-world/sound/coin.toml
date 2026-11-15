@@ -1,0 +1,40 @@
+# Money changing hands (building, closing, setting taxes): two bright metallic
+# pings a hair apart, like coins dropped on a counter, about 0.3 s.
+version = 0
+name = "coin"
+description = "Two quick metallic pings, for spending or earning."
+tags = ["ui", "money", "coin"]
+seed = 11
+
+[master]
+normalize_lufs = -22
+trim_silence = true
+
+[[layers]]
+name = "ping"
+source = "sine"
+volume = 0.7
+envelope = { attack = 0.001, decay = 0.18 }
+pitch = { start = "E6" }
+
+[[layers]]
+name = "ping overtone"
+source = "triangle"
+volume = 0.25
+envelope = { attack = 0.001, decay = 0.08 }
+pitch = { start = "B6" }
+
+[[layers]]
+name = "second ping"
+source = "sine"
+offset = 0.07
+volume = 0.6
+envelope = { attack = 0.001, decay = 0.2 }
+pitch = { start = "A6" }
+
+[[layers]]
+name = "clink"
+source = "noise"
+volume = 0.25
+envelope = { attack = 0.0005, decay = 0.015 }
+filter = { kind = "highpass", cutoff = 5000 }

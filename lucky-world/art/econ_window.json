@@ -1,0 +1,91 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Economy window 1060x600",
+  "seed": 1,
+  "palette": {
+    "ink": "#1A1030",
+    "gold": "#F5C542",
+    "gold_dark": "#A8740E",
+    "gold_hi": "#FFF1B8",
+    "white": "#FFFFFF",
+    "accent": "#7FA8FF",
+    "green": "#6BD48A",
+    "red": "#F06A6A",
+    "blue": "#4aa8ec"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 1060,
+      "height": 600
+    },
+    {
+      "cmd": "layer",
+      "name": "Art"
+    },
+    {
+      "cmd": "rect",
+      "x": 4,
+      "y": 4,
+      "width": 1052,
+      "height": 592,
+      "radius": 20,
+      "fill": {
+        "gradient": "linear",
+        "from": [
+          0,
+          0
+        ],
+        "to": [
+          0,
+          600
+        ],
+        "colors": [
+          "#2B1C5CFF",
+          "#120A2EFF"
+        ]
+      },
+      "outline": "accent",
+      "outline_size": 3
+    },
+    {
+      "cmd": "gradient",
+      "kind": "linear",
+      "from": [
+        0,
+        6
+      ],
+      "to": [
+        0,
+        64
+      ],
+      "stops": [
+        [
+          0,
+          "#FFFFFF1A"
+        ],
+        [
+          1,
+          "#FFFFFF00"
+        ]
+      ],
+      "area": {
+        "rect": [
+          10,
+          8,
+          1040,
+          56
+        ]
+      }
+    },
+    {
+      "cmd": "rect",
+      "x": 24,
+      "y": 66,
+      "width": 1012,
+      "height": 2,
+      "fill": "#7FA8FF66"
+    }
+  ]
+}

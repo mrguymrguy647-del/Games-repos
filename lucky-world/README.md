@@ -5,10 +5,13 @@ A mostly-3D strategy game where fate deals your nation. At the start you spin
 have, how rich and how armed you are, who leads you and what luck follows
 you. Then every rival nation spins the same wheels, and the game begins.
 
-So far it has **the wheel screen** (phase 1) and **the 3D world map**
-(phase 2): every nation laid on one of three hand-made maps, from its
-wheels. Economy, war and diplomacy come later. It is built with Duck Forge
-(engine), Duck Quill (art), Duck Echo (sound) and Duck Mold (3D models).
+So far it has **the wheel screen** (phase 1), **the 3D world map**
+(phase 2), with every nation laid on one of three hand-made maps from its
+wheels, and **the economy** (phase 3): a living, daily simulation of 16
+goods in production chains, jobs, wages, prices, money, budgets, debt,
+currencies and world trade for every nation, on a game clock. War and
+diplomacy come later. It is built with Duck Forge (engine), Duck Quill
+(art), Duck Echo (sound) and Duck Mold (3D models).
 
 <p>
 <img src="docs/wheel.png" width="49%" alt="A wheel spinning on its stage, with the odds panel">
@@ -16,6 +19,14 @@ wheels. Economy, war and diplomacy come later. It is built with Duck Forge
 <img src="docs/map_grand.png" width="32%" alt="The Grand Continent with 25 nations">
 <img src="docs/map_isles.png" width="32%" alt="The Thousand Isles with 25 nations">
 <img src="docs/map_five_shores.png" width="32%" alt="Five Shores with 25 nations">
+<img src="docs/econ_budget.png" width="49%" alt="The economy window: the budget page">
+<img src="docs/econ_chains.png" width="49%" alt="The economy window: production chains">
+<img src="docs/econ_market.png" width="32%" alt="The economy window: market prices">
+<img src="docs/econ_trade.png" width="32%" alt="The economy window: trade partners">
+<img src="docs/econ_charts.png" width="32%" alt="The economy window: charts">
+<img src="docs/econ_stockpile.png" width="32%" alt="The economy window: the weapons stockpile">
+<img src="docs/map_resources.png" width="32%" alt="The resources overlay">
+<img src="docs/map_industry.png" width="32%" alt="The industry overlay">
 </p>
 
 ## Run it
@@ -55,7 +66,9 @@ sets the picture quality. A running game re-reads it when you save it:
 | Round card | **Space** next round, **S** Skip Spin | buttons |
 | Country card | **Space** meet your rivals | button |
 | Rivals | 1-9 or click a nation for its full card, Esc or Space back, Left / Right turn pages, **Space** Begin | click a card |
-| World map | WASD / arrows pan, Q / E turn, R / F zoom, T / G tilt, Tab next nation, H home, M terrain / nations view, C country card, Esc deselect | drag pans, right-drag turns, wheel zooms, click a province, click a name or flag for its country card, click the minimap to jump |
+| World map | WASD / arrows pan, Q / E turn, R / F zoom, T / G tilt, Tab next nation, H home, M terrain / nations view, **V** resources / industry overlay, C country card, Esc deselect | drag pans, right-drag turns, wheel zooms, click a province, click a name or flag for its country card, click the minimap to jump |
+| The clock (map) | **Space** pause, **1-5** speed (1, 3, 7, 15 or 30 days a second) | |
+| Economy window (map) | **O** open / close, **Tab** next page, Up / Down choose a row; Budget: Left / Right lower / raise, **A** back to autopilot; Chains: **B** build, **X** close; Market: **T** trade policy; Trade: **X** embargo | click the ECONOMY button, the pages, rows, −/+ and the buttons |
 | Anywhere | **F5** start over (for trying it out), **Esc** quit, F12 screenshot, F10 record | |
 
 ### What happens
@@ -74,6 +87,8 @@ sets the picture quality. A running game re-reads it when you save it:
 5. **Begin** takes you onto **the 3D world map**: provinces, borders in each
    nation's colour, names, flags, capitals, towns, landmarks, rivers, a
    minimap, and a panel for any province you click.
+6. **The clock runs**: one tick is one day. Every nation's economy lives
+   (see below), news pops up, and you run yours from the economy window.
 
 ### The world
 
@@ -128,6 +143,57 @@ each wheel. For example:
 **Skip Spin** rolls every wheel that's left at once, with the same odds and
 links. Mid-spin it keeps the result the wheel was heading for.
 
+### The economy
+
+Every nation has a real economy, simulated day by day (the full design,
+with the math, is [docs/ECONOMY.md](docs/ECONOMY.md)):
+
+- **16 goods in chains**: grain, iron ore, coal, oil, timber and bauxite are
+  dug and farmed; power, steel, fuel, aluminium and chemicals are refined;
+  food, consumer goods, ammo, tanks and jets are made. Buildings sit in
+  provinces and need workers, skill, power and inputs; they scrap a share as
+  defects. **Break a link and everything after it slows or stops.** Roads,
+  rail and ports limit what each province can move.
+- **People and jobs**: farming, mining, industry, services, government and
+  the army; wages, unemployment, and needs for food, goods and luxuries.
+  Shortages and joblessness lower happiness and stability.
+- **Money and the state**: taxes in; army, welfare, government,
+  infrastructure, building and weapons out. Deficits become debt with a
+  credit rating; past the rating's ceiling, money is printed and the
+  currency falls. A central bank sets interest rates. Each nation has its
+  own currency.
+- **Markets and trade**: prices from supply and demand; a world market with
+  exchange rates, tariffs and embargoes; coastal nations trade cheaply by
+  sea, landlocked ones pay more overland.
+- **Every wheel has an economic job**: the wheels set day 1 (its GDP is the
+  wheel's), the land and resources decide what a nation makes well, and the
+  ideology sets the model: Communism plans (quotas, shortages), Democracy is
+  a free market, the rest are mixed, and colonies pay tribute to an
+  overlord. History, leader, HDI and blessing or curse all have effects, in
+  `data/economy/effects.toml`.
+- **Luck and rot**: booms, crashes, discoveries, bad harvests, factory fires,
+  strikes, earthquakes and oil shocks; corruption and the black market.
+- **Every nation runs on an autopilot** (central bank, taxes, investment,
+  infrastructure, trade) until you take a lever of your own.
+
+Everything is in `data/economy/*.toml` (goods, buildings, effects, events,
+currencies and every constant in `settings.toml`), read when the game starts.
+
+To see how the world does without you:
+
+```sh
+cargo run --release --no-default-features -- --economy-report 50
+cargo run --release --no-default-features -- --economy-report 50 --map isles --world-seed 3
+```
+
+It prints every nation's model, people, GDP then and now, growth, GDP per
+head, inflation, unemployment, debt, rating, stability, trade and top export,
+then the world's prices and the latest news (50 years of 25 nations take
+about 4 seconds; a full run of all three maps is in
+[docs/economy_report_50y.txt](docs/economy_report_50y.txt)).
+`--economy-trace MAP NATION DAYS EVERY` follows one nation
+day by day (`--detail`, `--budget`, `--world`, `--good ID` show more).
+
 ## Tune the wheels
 
 Everything about the wheels is in plain text files. Edit them and run the
@@ -175,8 +241,8 @@ cargo test --release odds_report -- --ignored --nocapture
 
 | Source | Tool | Becomes |
 |---|---|---|
-| `art/*.json` | Duck Quill scripts | `assets/art/*.png` (pointer, hub, glow, sparkle, cards, buttons, logo, backdrop, RARE! badge; map: top bar, province panel, minimap frame, small cards, flag cloth and pole, capital, town, landmark and river icons) |
-| `sound/*.toml` | Duck Echo recipes | `assets/sound/*.wav` (two ticks, land chime, whoosh, rare sting, card swoosh, fanfare; map: a seamless sea-and-wind ambience loop, click, select, open-map swell, zoom tick) |
+| `art/*.json` | Duck Quill scripts | `assets/art/*.png` (pointer, hub, glow, sparkle, cards, buttons, logo, backdrop, RARE! badge; map: top bar, province panel, minimap frame, small cards, flag cloth and pole, capital, town, landmark and river icons; economy: the window and its six page icons) |
+| `sound/*.toml` | Duck Echo recipes | `assets/sound/*.wav` (two ticks, land chime, whoosh, rare sting, card swoosh, fanfare; map: a seamless sea-and-wind ambience loop, click, select, open-map swell, zoom tick; economy: coin, month chime, news sting) |
 | `models/*.toml` | Duck Mold recipes | `assets/models/*.glb` (the wheel's stand; capital, town, tree, pine, palm, cactus, peak, hill, reeds; landmarks: lighthouse, pyramid, great tower, temple, arch, colossus) |
 
 The wheel itself is built in code from triangles, because its slices change
@@ -194,14 +260,18 @@ QUILL=path/to/quill DUCK_ECHO=path/to/duck-echo DUCK_MOLD=path/to/duck-mold tool
 ```sh
 cargo test --release --no-default-features
 cargo run --release --no-default-features -- --headless --inputs playthroughs/lucky_world.json --sheet-events --out out/look
+cargo run --release --no-default-features -- --headless --inputs playthroughs/economy.json --sheet-events --out out/economy
 cargo run --release --no-default-features -- --fuzz 40
+cargo run --release --no-default-features -- --economy-report 50
 ```
 
 The playthrough spins all 16 wheels and opens a rival's card. It presses
 Begin, then on the map it visits nations, clicks a province, opens and closes
 a country card, pans, zooms, tilts and switches views. The fuzz runs reach
-the map too. For the map's own keys:
-`-- --fuzz 40 --fuzz-keys S,Space,Enter,Left,Right,Up,Down,Tab,M,H,C,Q,E,R,F,T,G,W,A,D`.
+the map too. The economy playthrough runs the clock at full speed, opens
+every page of the economy window, raises a tax, builds, and shows both
+overlays. For the map's and the economy's own keys:
+`-- --fuzz 40 --fuzz-keys S,Space,Enter,Left,Right,Up,Down,Tab,M,H,C,Q,E,R,F,T,G,W,A,D,O,V,B,X,Digit1,Digit5`.
 `out/look/sheet.png` shows the run, and `audio.wav` has every tick.
 
 ## Files
@@ -214,6 +284,9 @@ the map too. For the map's own keys:
 | `src/wheel.rs` | The 3D wheel: slices sized by odds, labels, the spin, ticks, the glow |
 | `src/game.rs` | The screens: title, wheels, round cards, country card, rivals |
 | `src/game/map_screen.rs` | The world map screen: camera keys and mouse, picking, names and flags, province panel, minimap |
+| `src/game/econ_screen.rs` | The clock, the economy window (budget, chains, market, trade, stockpile, charts), the map overlays |
+| `src/econ/` | The economy, which never draws: `data.rs` (reading `data/economy/`), `init.rs` (day 1), `tick.rs` (one day), `market.rs` (world trade), `policy.rs` (events and the autopilot), `player.rs` (the player's levers), `report.rs` (the report), `tests.rs` (its promises) |
+| `docs/ECONOMY.md` | The economy's design, with the math |
 | `src/hex.rs` | Hex grid maths: neighbours, corners, which hex a point is in |
 | `src/mapdata.rs` | Reads and checks the maps; works out provinces, coasts, neighbours, rivers, landmasses |
 | `src/world.rs` | Who owns what: placing nations from their wheels, filling the land |

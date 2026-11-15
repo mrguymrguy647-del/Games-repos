@@ -7,6 +7,8 @@
 #            that rolled "Desert" prefers desert provinces.
 # decor      a model from assets/models/ dotted on the hex (optional), and
 # decor_count how many (a fraction is a chance: 0.4 = on 4 hexes in 10).
+# deposits   how rich one hex of it is in each raw good (docs/ECONOMY.md):
+#            1.0 is a normal deposit, 0 or missing is none.
 
 [terrain."~"]
 name = "Deep Sea"
@@ -32,6 +34,7 @@ kind = "land"
 color = "#9cc45a"
 height = 0.10
 land_type = "plains"
+deposits = { grain = 1.0, coal = 0.1 }
 
 [terrain.F]
 name = "Forest"
@@ -41,6 +44,7 @@ height = 0.11
 land_type = "forest"
 decor = "tree"
 decor_count = 2
+deposits = { timber = 1.0, grain = 0.3, coal = 0.15 }
 
 [terrain.J]
 name = "Jungle"
@@ -50,6 +54,7 @@ height = 0.11
 land_type = "jungle"
 decor = "palm"
 decor_count = 2
+deposits = { timber = 0.8, bauxite = 0.6, grain = 0.3 }
 
 [terrain.D]
 name = "Desert"
@@ -59,6 +64,7 @@ height = 0.08
 land_type = "desert"
 decor = "cactus"
 decor_count = 0.35
+deposits = { oil = 0.7, bauxite = 0.15 }
 
 [terrain.S]
 name = "Steppe"
@@ -66,6 +72,7 @@ kind = "land"
 color = "#c9b96a"
 height = 0.09
 land_type = "steppe"
+deposits = { grain = 0.7, coal = 0.5, oil = 0.2 }
 
 [terrain.T]
 name = "Tundra"
@@ -75,6 +82,7 @@ height = 0.12
 land_type = "tundra"
 decor = "pine"
 decor_count = 1
+deposits = { oil = 0.5, iron_ore = 0.35, timber = 0.3 }
 
 [terrain.M]
 name = "Mountains"
@@ -84,6 +92,7 @@ height = 0.30
 land_type = "mountains"
 decor = "peak"
 decor_count = 1
+deposits = { iron_ore = 0.9, coal = 0.7, bauxite = 0.3 }
 
 [terrain.H]
 name = "Hills"
@@ -93,6 +102,7 @@ height = 0.18
 land_type = "mountains"
 decor = "hill"
 decor_count = 1
+deposits = { iron_ore = 0.5, coal = 0.6, grain = 0.4, bauxite = 0.2 }
 
 [terrain.W]
 name = "Marsh"
@@ -102,6 +112,7 @@ height = 0.06
 land_type = "marsh"
 decor = "reeds"
 decor_count = 1.5
+deposits = { oil = 0.4, timber = 0.4, grain = 0.2 }
 
 [terrain.I]
 name = "Glacier"
@@ -109,3 +120,5 @@ kind = "land"
 color = "#eef3f8"
 height = 0.16
 land_type = "tundra"
+
+deposits = { iron_ore = 0.1 }

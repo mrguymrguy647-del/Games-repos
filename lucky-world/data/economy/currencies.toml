@@ -1,0 +1,16 @@
+# LUCKY WORLD: currency names, by the name style of the nation's continent
+# (data/names.toml). A nation's currency is "<its name> <one of these>".
+[style.north]
+names = ["Krona", "Mark", "Thaler"]
+
+[style.middle]
+names = ["Florin", "Crown", "Pound", "Livre"]
+
+[style.east]
+names = ["Tenge", "Som", "Akce"]
+
+[style.sun]
+names = ["Dinar", "Rial", "Dirham"]
+
+[style.south]
+names = ["Peso", "Real", "Sol"]

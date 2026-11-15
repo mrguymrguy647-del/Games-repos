@@ -268,6 +268,33 @@ fn the_playthrough_spins_all_sixteen_and_goes_onto_the_map() {
     assert_eq!(played.text("map_mode"), "Political");
 }
 
+/// Whether a reported text ever had this value during the run.
+fn seen(played: &Simulation<crate::game::Lucky>, name: &str, value: &str) -> bool {
+    played.history(name).iter().any(|(_, v)| matches!(v, duckforge::prelude::ReportValue::Text(t) if t == value))
+}
+
+#[test]
+fn the_economy_playthrough_runs_the_clock_and_every_screen() {
+    let played = PlayTest::new(crate::config(), game()).inputs("playthroughs/economy.json").run();
+    assert_eq!(played.text("screen"), "Map");
+    // Speed 5 for about 24 seconds: some 700 days went by, then the clock was paused.
+    assert!(played.number("day") > 600.0, "only {} days passed", played.number("day"));
+    assert!(played.flag("paused"));
+    assert_eq!(played.number("speed"), 5.0);
+    // Every page of the economy window was opened, then it was closed.
+    for tab in ["BUDGET", "CHAINS", "MARKET", "TRADE", "STOCKPILE", "CHARTS"] {
+        assert!(seen(&played, "econ_tab", tab), "the {tab} page never opened");
+    }
+    assert_eq!(played.text("econ_tab"), "none");
+    // Both overlays were shown, then turned off.
+    assert!(seen(&played, "overlay", "Resources") && seen(&played, "overlay", "Industry"));
+    assert_eq!(played.text("overlay"), "Off");
+    // Raising income tax and ordering a building both cost a coin sound.
+    assert_eq!(played.sound_frames("coin").len(), 2);
+    assert!(!played.sound_frames("month").is_empty(), "no month chimes");
+    assert!(played.failed_checks().is_empty(), "{:?}", played.failed_checks());
+}
+
 #[test]
 fn skip_spin_on_the_title_rolls_every_wheel_at_once() {
     let played = PlayTest::new(crate::config(), game())

@@ -2,11 +2,13 @@
 //! after each), see your country's card, meet your rivals, then go onto the
 //! 3D world map (in `map_screen`).
 
+mod econ_screen;
 mod map_screen;
 
 use duckforge::prelude::*;
 
 use crate::country::{self, Country};
+use crate::econ::{EconData, Economy};
 use crate::data::Data;
 use crate::fate::{self, Landed};
 use crate::ui::{self, Assets, Button, ButtonKind, Particle, GOLD, MUTED, SOFT};
@@ -14,6 +16,7 @@ use crate::wheel::{self, Event, WheelView};
 use crate::map_view::{MapView, Models};
 use crate::mapdata::Atlas;
 use crate::world::World;
+use econ_screen::Clock;
 use map_screen::MapUi;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -80,10 +83,15 @@ pub struct Lucky {
     pub map_ui: MapUi,
     /// The page of the rival reveal (24 nations to a page).
     rival_page: usize,
+    /// The economy's rules (data/economy/), and the world's economy once
+    /// everyone is on the map.
+    pub econ_data: EconData,
+    pub economy: Option<Economy>,
+    pub clock: Clock,
 }
 
 impl Lucky {
-    pub fn new(data: Data, atlas: Atlas, assets: Assets, models: Models) -> Lucky {
+    pub fn new(data: Data, atlas: Atlas, assets: Assets, models: Models, econ_data: EconData) -> Lucky {
         let mut game = Lucky {
             data,
             assets,
@@ -115,6 +123,9 @@ impl Lucky {
             map_view: None,
             map_ui: MapUi::default(),
             rival_page: 0,
+            econ_data,
+            economy: None,
+            clock: Clock::default(),
         };
         game.make_title_wheel();
         game
@@ -139,6 +150,8 @@ impl Lucky {
         self.rivals.clear();
         self.world = None;
         self.map_view = None;
+        self.economy = None;
+        self.clock = Clock::default();
         self.map_ui = MapUi::default();
         self.rival_page = 0;
         self.inspect = None;
@@ -355,6 +368,10 @@ impl Lucky {
         self.landed = world.nations[0].landed.clone();
         self.rivals = world.nations[1..].to_vec();
         self.map_view = Some(MapView::new(&self.atlas, &world, &self.models));
+        // The economy starts from the wheels (seeded, so a replay is the same).
+        let seed = ctx.rng.next_u32();
+        self.economy = Some(Economy::new(&self.data, &self.econ_data, &self.atlas, &world, seed));
+        self.clock = Clock::default();
         self.world = Some(world);
         self.rival_page = 0;
     }
@@ -443,6 +460,7 @@ impl Lucky {
             ctx.report("nations", w.nations.len());
             ctx.report("main_nations", w.main_count);
         }
+        self.report_econ(ctx);
     }
 }
 

@@ -1,0 +1,36 @@
+# Big economic news (a boom, a crash, a fire at home): a quick rising
+# three-note sting, bright but short, about 0.45 s.
+version = 0
+name = "news"
+description = "Rising three-note sting for economic news."
+tags = ["ui", "alert", "news"]
+seed = 13
+
+[master]
+normalize_lufs = -21
+trim_silence = true
+
+[[layers]]
+name = "one"
+source = "square"
+volume = 0.25
+envelope = { attack = 0.002, decay = 0.09 }
+pitch = { start = "C5" }
+filter = { kind = "lowpass", cutoff = 2500 }
+
+[[layers]]
+name = "two"
+source = "square"
+offset = 0.09
+volume = 0.25
+envelope = { attack = 0.002, decay = 0.09 }
+pitch = { start = "E5" }
+filter = { kind = "lowpass", cutoff = 2500 }
+
+[[layers]]
+name = "three"
+source = "triangle"
+offset = 0.18
+volume = 0.5
+envelope = { attack = 0.002, decay = 0.25 }
+pitch = { start = "G5" }

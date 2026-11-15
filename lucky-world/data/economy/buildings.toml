@@ -1,0 +1,277 @@
+# LUCKY WORLD: buildings (see docs/ECONOMY.md, section 3).
+#
+# sector       farming, mining or industry (who works there)
+# output       the good it makes; amount = units per level per day at tech 1
+#              (amounts are balanced so every building needs about the same
+#              labour per W$ of value added at base prices: about 0.031
+#              workers per W$ a day, so no chain is born losing money)
+# inputs       units of each input per unit of output
+# deposit      raw buildings need a deposit of their output good in the province;
+#              cap_per_hex limits their levels: deposit x hexes x cap_per_hex
+# skill        the share of skilled workers it needs for full speed
+# defect       the share of output scrapped (more with too few skilled workers)
+# cost         W$ to build one level (paid in local money), plus build_goods,
+#              taking build_days
+# upkeep       W$ per level per day while open
+# tier         1 raw, 2 power, 3 refined, 4 final: the order they run in a day
+
+[[building]]
+id = "farm"
+name = "Farm"
+sector = "farming"
+tier = 1
+output = "grain"
+amount = 67
+deposit = true
+cap_per_hex = 600
+skill = 0.02
+defect = 0.03
+cost = 9000
+build_goods = { timber = 2 }
+build_days = 45
+upkeep = 1.5
+
+[[building]]
+id = "iron_mine"
+name = "Iron Mine"
+sector = "mining"
+tier = 1
+output = "iron_ore"
+amount = 86
+deposit = true
+cap_per_hex = 200
+skill = 0.08
+defect = 0.02
+cost = 20000
+build_goods = { timber = 3, steel = 1 }
+build_days = 90
+upkeep = 3
+
+[[building]]
+id = "coal_mine"
+name = "Coal Mine"
+sector = "mining"
+tier = 1
+output = "coal"
+amount = 114
+deposit = true
+cap_per_hex = 200
+skill = 0.06
+defect = 0.02
+cost = 18000
+build_goods = { timber = 3, steel = 1 }
+build_days = 90
+upkeep = 3
+
+[[building]]
+id = "oil_well"
+name = "Oil Well"
+sector = "mining"
+tier = 1
+output = "oil"
+amount = 40
+deposit = true
+cap_per_hex = 150
+skill = 0.15
+defect = 0.01
+cost = 30000
+build_goods = { steel = 3 }
+build_days = 120
+upkeep = 4
+
+[[building]]
+id = "lumber_camp"
+name = "Lumber Camp"
+sector = "mining"
+tier = 1
+output = "timber"
+amount = 96
+deposit = true
+cap_per_hex = 300
+skill = 0.02
+defect = 0.03
+cost = 8000
+build_goods = { steel = 0.5 }
+build_days = 40
+upkeep = 1.5
+
+[[building]]
+id = "bauxite_mine"
+name = "Bauxite Mine"
+sector = "mining"
+tier = 1
+output = "bauxite"
+amount = 77
+deposit = true
+cap_per_hex = 150
+skill = 0.08
+defect = 0.02
+cost = 20000
+build_goods = { timber = 3, steel = 1 }
+build_days = 90
+upkeep = 3
+
+[[building]]
+id = "coal_plant"
+name = "Coal Power Plant"
+sector = "industry"
+tier = 2
+output = "electricity"
+amount = 300
+inputs = { coal = 0.25 }
+skill = 0.25
+defect = 0.01
+cost = 40000
+build_goods = { steel = 6 }
+build_days = 150
+upkeep = 5
+
+[[building]]
+id = "oil_plant"
+name = "Oil Power Plant"
+sector = "industry"
+tier = 2
+output = "electricity"
+amount = 410
+inputs = { oil = 0.12 }
+skill = 0.25
+defect = 0.01
+cost = 42000
+build_goods = { steel = 6 }
+build_days = 150
+upkeep = 5
+
+[[building]]
+id = "steel_mill"
+name = "Steel Mill"
+sector = "industry"
+tier = 3
+output = "steel"
+amount = 51
+inputs = { iron_ore = 1.2, coal = 0.8, electricity = 2 }
+skill = 0.2
+defect = 0.04
+cost = 45000
+build_goods = { steel = 8, timber = 2 }
+build_days = 180
+upkeep = 5
+
+[[building]]
+id = "refinery"
+name = "Refinery"
+sector = "industry"
+tier = 3
+output = "fuel"
+amount = 98
+inputs = { oil = 1.1, electricity = 0.5 }
+skill = 0.25
+defect = 0.02
+cost = 50000
+build_goods = { steel = 8 }
+build_days = 180
+upkeep = 5
+
+[[building]]
+id = "aluminium_smelter"
+name = "Aluminium Smelter"
+sector = "industry"
+tier = 3
+output = "aluminium"
+amount = 18
+inputs = { bauxite = 2, electricity = 10 }
+skill = 0.3
+defect = 0.03
+cost = 55000
+build_goods = { steel = 8 }
+build_days = 200
+upkeep = 6
+
+[[building]]
+id = "chemical_plant"
+name = "Chemical Plant"
+sector = "industry"
+tier = 3
+output = "chemicals"
+amount = 29
+inputs = { oil = 0.8, coal = 0.8, electricity = 1 }
+skill = 0.35
+defect = 0.04
+cost = 50000
+build_goods = { steel = 6 }
+build_days = 180
+upkeep = 6
+
+[[building]]
+id = "food_plant"
+name = "Food Plant"
+sector = "industry"
+tier = 4
+output = "food"
+amount = 305
+inputs = { grain = 1.25, electricity = 0.2 }
+skill = 0.08
+defect = 0.03
+cost = 15000
+build_goods = { steel = 2, timber = 2 }
+build_days = 60
+upkeep = 2
+
+[[building]]
+id = "consumer_factory"
+name = "Consumer Goods Factory"
+sector = "industry"
+tier = 4
+output = "consumer_goods"
+amount = 49
+inputs = { timber = 1, steel = 0.5, electricity = 1 }
+skill = 0.25
+defect = 0.06
+cost = 35000
+build_goods = { steel = 4, timber = 3 }
+build_days = 120
+upkeep = 4
+
+[[building]]
+id = "ammo_factory"
+name = "Ammo Factory"
+sector = "industry"
+tier = 4
+output = "ammo"
+amount = 35
+inputs = { steel = 0.6, chemicals = 0.6 }
+skill = 0.3
+defect = 0.05
+cost = 40000
+build_goods = { steel = 5 }
+build_days = 150
+upkeep = 5
+
+[[building]]
+id = "tank_factory"
+name = "Tank Factory"
+sector = "industry"
+tier = 4
+output = "tanks"
+amount = 0.0115
+inputs = { steel = 400, electricity = 200 }
+skill = 0.4
+defect = 0.05
+cost = 70000
+build_goods = { steel = 12 }
+build_days = 240
+upkeep = 8
+
+[[building]]
+id = "jet_factory"
+name = "Jet Factory"
+sector = "industry"
+tier = 4
+output = "jets"
+amount = 0.00092
+inputs = { aluminium = 2000, electricity = 2000 }
+skill = 0.5
+defect = 0.06
+cost = 90000
+build_goods = { steel = 10, aluminium = 10 }
+build_days = 300
+upkeep = 10

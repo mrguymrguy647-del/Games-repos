@@ -1,0 +1,26 @@
+# A new month on the game clock: a soft, low two-note chime that sits under
+# the world ambience without interrupting it, about 0.5 s.
+version = 0
+name = "month"
+description = "Soft low chime for a new month passing."
+tags = ["ui", "clock", "chime"]
+seed = 12
+
+[master]
+normalize_lufs = -26
+trim_silence = true
+
+[[layers]]
+name = "low"
+source = "sine"
+volume = 0.6
+envelope = { attack = 0.005, decay = 0.4 }
+pitch = { start = "G4" }
+
+[[layers]]
+name = "high"
+source = "sine"
+offset = 0.09
+volume = 0.45
+envelope = { attack = 0.005, decay = 0.35 }
+pitch = { start = "D5" }

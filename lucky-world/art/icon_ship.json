@@ -1,0 +1,79 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Ship icon (trade)",
+  "seed": 1,
+  "palette": {
+    "ink": "#1A1030",
+    "gold": "#F5C542",
+    "gold_dark": "#A8740E",
+    "gold_hi": "#FFF1B8",
+    "white": "#FFFFFF",
+    "accent": "#7FA8FF",
+    "green": "#6BD48A",
+    "red": "#F06A6A",
+    "blue": "#4aa8ec"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "cmd": "layer",
+      "name": "Art"
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        12,
+        12
+      ],
+      "radius": 11,
+      "fill": "ink",
+      "outline": "gold",
+      "outline_size": 1.5
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          5,
+          14
+        ],
+        [
+          19,
+          14
+        ],
+        [
+          16,
+          18
+        ],
+        [
+          8,
+          18
+        ]
+      ],
+      "fill": "blue"
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          12,
+          5
+        ],
+        [
+          12,
+          13
+        ],
+        [
+          17,
+          13
+        ]
+      ],
+      "fill": "white"
+    }
+  ]
+}

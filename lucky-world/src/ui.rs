@@ -48,6 +48,13 @@ pub struct Assets {
     pub icon_town: Sprite,
     pub icon_landmark: Sprite,
     pub icon_river: Sprite,
+    pub econ_window: Sprite,
+    pub icon_coin: Sprite,
+    pub icon_factory: Sprite,
+    pub icon_scales: Sprite,
+    pub icon_ship: Sprite,
+    pub icon_crate: Sprite,
+    pub icon_chart: Sprite,
     pub stand: Mesh,
     pub tick: Wav,
     pub tick_low: Wav,
@@ -61,6 +68,9 @@ pub struct Assets {
     pub select: Wav,
     pub open_map: Wav,
     pub pan_tick: Wav,
+    pub coin: Wav,
+    pub month: Wav,
+    pub news: Wav,
 }
 
 impl Assets {
@@ -99,6 +109,13 @@ impl Assets {
             icon_town: art("icon_town")?,
             icon_landmark: art("icon_landmark")?,
             icon_river: art("icon_river")?,
+            econ_window: art("econ_window")?,
+            icon_coin: art("icon_coin")?,
+            icon_factory: art("icon_factory")?,
+            icon_scales: art("icon_scales")?,
+            icon_ship: art("icon_ship")?,
+            icon_crate: art("icon_crate")?,
+            icon_chart: art("icon_chart")?,
             stand: Mesh::load_glb("assets/models/wheel_stand.glb")?,
             tick: sound("tick")?,
             tick_low: sound("tick_low")?,
@@ -112,6 +129,9 @@ impl Assets {
             select: sound("select")?,
             open_map: sound("open_map")?,
             pan_tick: sound("pan_tick")?,
+            coin: sound("coin")?,
+            month: sound("month")?,
+            news: sound("news")?,
         })
     }
 }

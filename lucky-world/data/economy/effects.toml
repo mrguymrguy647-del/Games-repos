@@ -1,0 +1,197 @@
+# LUCKY WORLD: every wheel result's economic job (docs/ECONOMY.md, section 9).
+#
+# [<wheel id>.<option id>] gives `effects`, a table of modifiers:
+#   multiplied (1.0 = no change): output.<good>, output.raw, output.refined,
+#     output.final, output.all, defect, build_cost, trade_cost, transport, port,
+#     army_upkeep, procurement, demand, investment, tech, event.<event id>
+#   added (0 = no change): corruption, black_market, stability, skill, rating,
+#     growth (population per year), infrastructure (levels on day 1),
+#     debt (share of GDP on day 1), treasury (share of GDP on day 1)
+# Ideology also picks the economic `model` (settings.toml [model.*]).
+#
+# Wheels with numbers (Population, HDI, GDP, Active Duty, Country Size) and
+# Main Resource, Land Type, Army Strength and Continent work through the
+# formulas in docs/ECONOMY.md; extra effects for them can still go here.
+
+# ---- Ideology: the economic model ----
+[ideology.democracy]
+model = "market"
+effects = { stability = 3, rating = 5 }
+
+[ideology.communism]
+model = "planned"
+effects = { defect = 1.15, rating = -3, black_market = 0.03 }
+
+[ideology.monarchy]
+model = "mixed"
+effects = { stability = 4 }
+
+[ideology.military_rule]
+model = "mixed"
+effects = { procurement = 1.4, stability = -2, rating = -4 }
+
+[ideology.theocracy]
+model = "mixed"
+effects = { tech = 0.96, stability = 3 }
+
+[ideology.imperialism]
+model = "mixed"
+effects = { procurement = 1.3, trade_cost = 0.95 }
+
+[ideology.authoritarianism]
+model = "mixed"
+effects = { corruption = 0.02, stability = 1 }
+
+[ideology.tribalism]
+model = "mixed"
+effects = { tech = 0.88, corruption = 0.03, black_market = 0.05, infrastructure = -1 }
+
+[ideology.colony]
+model = "colony"
+effects = { rating = -5, infrastructure = -0.5 }
+
+# ---- History ----
+[history.former_empire]
+effects = { infrastructure = 1.5, rating = 3, debt = 0.3 }
+
+[history.ex_colony]
+effects = { infrastructure = -0.5, debt = 0.2, "output.raw" = 1.05 }
+
+[history.post_war]
+effects = { infrastructure = -1.5, stability = -5, investment = 1.2 }
+
+[history.new_nation]
+effects = { infrastructure = -1, rating = -5 }
+
+[history.ancient_realm]
+effects = { stability = 5, infrastructure = 0.5 }
+
+[history.revolution]
+effects = { stability = -3, investment = 1.1 }
+
+[history.breakaway]
+effects = { rating = -8, debt = 0.1, stability = -3 }
+
+# ---- Leader ----
+[leader.warlord]
+effects = { procurement = 1.5, stability = -2, trade_cost = 1.05 }
+
+[leader.genius]
+effects = { tech = 1.08, defect = 0.8 }
+
+[leader.builder]
+effects = { build_cost = 0.8, infrastructure = 1 }
+
+[leader.diplomat]
+effects = { trade_cost = 0.85, rating = 6 }
+
+[leader.coward]
+effects = { corruption = 0.04, stability = -4 }
+
+# ---- Regional Impact ----
+[impact.regional_power]
+effects = { trade_cost = 0.9, port = 1.2, rating = 4 }
+
+[impact.minor]
+effects = {}
+
+[impact.isolated]
+effects = { trade_cost = 1.25, port = 0.7 }
+
+# ---- Secret Service: fights corruption and smuggling ----
+[secret_service.none]
+effects = { corruption = 0.03, black_market = 0.05 }
+
+[secret_service.amateur]
+effects = { corruption = 0.01, black_market = 0.02 }
+
+[secret_service.competent]
+effects = {}
+
+[secret_service.feared]
+effects = { corruption = -0.02, black_market = -0.03, stability = -2 }
+
+[secret_service.legendary]
+effects = { corruption = -0.04, black_market = -0.05 }
+
+# ---- Landlocked or Coastal ----
+[coast.peninsula]
+effects = { port = 1.2 }
+
+[coast.island]
+effects = { port = 1.3 }
+
+# ---- Blessing or Curse ----
+[fate.fertile]
+effects = { "output.grain" = 1.25, stability = 2 }
+
+[fate.hidden_gold]
+effects = { treasury = 0.05, "output.iron_ore" = 1.15 }
+
+[fate.great_harbor]
+effects = { port = 1.6, trade_cost = 0.9 }
+
+[fate.golden_generation]
+effects = { skill = 0.08, tech = 1.06 }
+
+[fate.loyal_army]
+effects = { army_upkeep = 0.85, stability = 3 }
+
+[fate.plague]
+effects = { growth = -0.008, "output.all" = 0.97, stability = -3 }
+
+[fate.earthquakes]
+effects = { "event.earthquake" = 6.0, "event.factory_fire" = 1.5 }
+
+[fate.corrupt_court]
+effects = { corruption = 0.06 }
+
+[fate.rebel_province]
+effects = { stability = -6, "output.all" = 0.95 }
+
+[fate.drought]
+effects = { "output.grain" = 0.7, "event.bad_harvest" = 2.0 }
+
+# ---- Continent climate (by the continent's tags in data/maps.toml) ----
+[continent_tag.cold]
+effects = { "output.grain" = 0.85, "output.timber" = 1.1 }
+
+[continent_tag.temperate]
+effects = { "output.grain" = 1.1 }
+
+[continent_tag.arid]
+effects = { "output.grain" = 0.85 }
+
+[continent_tag.tropical]
+effects = { "output.timber" = 1.1 }
+
+[continent_tag.rich]
+effects = { tech = 1.03 }
+
+[continent_tag.poor]
+effects = { tech = 0.97 }
+
+# ---- Land Type: the land a nation knows how to work ----
+[land.plains]
+effects = { "output.grain" = 1.3 }
+
+[land.forest]
+effects = { "output.timber" = 1.3 }
+
+[land.mountains]
+effects = { "output.iron_ore" = 1.3, "output.coal" = 1.3 }
+
+[land.desert]
+effects = { "output.oil" = 1.3 }
+
+[land.jungle]
+effects = { "output.bauxite" = 1.3, "output.timber" = 1.15 }
+
+[land.tundra]
+effects = { "output.oil" = 1.2, "output.iron_ore" = 1.1 }
+
+[land.steppe]
+effects = { "output.grain" = 1.2, "output.coal" = 1.1 }
+
+[land.marsh]
+effects = { "output.oil" = 1.15, "output.timber" = 1.1 }

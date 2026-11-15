@@ -120,6 +120,9 @@ pub struct MapView {
     lines: Mesh,
     cities: Mesh,
     highlight: Option<Mesh>,
+    /// An economy overlay (resources, industry): land coloured by province,
+    /// drawn instead of the terrain while it's set.
+    overlay: Option<Vec<Mesh>>,
     pub orbit: Orbit,
     /// The map's extent in the world: (min x, min z, max x, max z).
     pub bounds: (f32, f32, f32, f32),
@@ -147,6 +150,7 @@ impl MapView {
             lines: Mesh::new(),
             cities: Mesh::new(),
             highlight: None,
+            overlay: None,
             orbit: Orbit {
                 target: Vec2::ZERO,
                 yaw: 0.0,
@@ -520,6 +524,42 @@ impl MapView {
         });
     }
 
+    /// Colours the land by province (one colour each, `None` for grey), or
+    /// back to the normal map with `None`. Built in chunks like the terrain.
+    pub fn set_overlay(&mut self, atlas: &Atlas, world: &World, colors: Option<&[Option<Color>]>) {
+        let Some(colors) = colors else {
+            self.overlay = None;
+            return;
+        };
+        let map = atlas.map(world.map);
+        let cols = map.width.div_ceil(CHUNK);
+        let rows = map.height.div_ceil(CHUNK);
+        let mut meshes = Vec::new();
+        for cr in 0..rows {
+            for cc in 0..cols {
+                let mut mesh = Mesh::new();
+                let mut any = false;
+                for r in cr * CHUNK..((cr + 1) * CHUNK).min(map.height) {
+                    for c in cc * CHUNK..((cc + 1) * CHUNK).min(map.width) {
+                        let i = map.index(c, r);
+                        let t = atlas.terrain_of(map, i);
+                        if t.kind != TerrainKind::Land {
+                            continue;
+                        }
+                        let grey = shade(t.color, 0.94 + 0.12 * hash(c, r, 2)).lerp(Color::rgb(70, 70, 80), 0.75);
+                        let color = map.province_of[i].and_then(|p| colors.get(p).copied().flatten()).unwrap_or(grey);
+                        self.add_hex(&mut mesh, map, i, shade(color, 0.95 + 0.1 * hash(c, r, 4)));
+                        any = true;
+                    }
+                }
+                if any {
+                    meshes.push(mesh);
+                }
+            }
+        }
+        self.overlay = Some(meshes);
+    }
+
     /// The province under a ray (from the mouse), looking at the hexes' heights.
     pub fn pick(&self, map: &WorldMap, origin: Vec3, direction: Vec3) -> Option<usize> {
         if direction.y.abs() < 1e-4 {
@@ -576,14 +616,20 @@ impl MapView {
             Mode::Political => 0,
             Mode::Terrain => 1,
         };
-        for meshes in &self.chunks {
-            canvas.draw_mesh(&meshes[slot], &Transform::default(), camera);
+        if let Some(overlay) = &self.overlay {
+            for mesh in overlay {
+                canvas.draw_mesh(mesh, &Transform::default(), camera);
+            }
+        } else {
+            for meshes in &self.chunks {
+                canvas.draw_mesh(&meshes[slot], &Transform::default(), camera);
+            }
         }
         canvas.draw_mesh(&self.lines, &Transform::default(), camera);
         canvas.draw_mesh(&self.rivers, &Transform::default(), camera);
         canvas.draw_mesh(&self.decor, &Transform::default(), camera);
         canvas.draw_mesh(&self.cities, &Transform::default(), camera);
-        if self.mode == Mode::Political {
+        if self.mode == Mode::Political || self.overlay.is_some() {
             canvas.draw_mesh(&self.borders, &Transform::default(), camera);
         }
         if let Some(h) = &self.highlight {

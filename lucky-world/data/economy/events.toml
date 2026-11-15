@@ -1,0 +1,93 @@
+# LUCKY WORLD: random economic events (docs/ECONOMY.md, section 10).
+#
+# chance   per nation per year (world events: per world per year)
+# days     how long its effects last
+# effects  modifiers while it lasts (as in effects.toml)
+# kind     modifier (just the effects), discovery (a new deposit),
+#          fire (destroys share of one factory's levels), damage (infrastructure)
+# world    true: hits every nation at once
+# price    for world events: multiplies these goods' world prices
+
+[[event]]
+id = "boom"
+name = "Economic Boom"
+text = "Factories hum and order books overflow."
+chance = 0.10
+days = 240
+kind = "modifier"
+effects = { "output.all" = 1.08, demand = 1.06, stability = 3 }
+good = true
+
+[[event]]
+id = "crash"
+name = "Market Crash"
+text = "Banks wobble; people stop spending."
+chance = 0.06
+days = 200
+kind = "modifier"
+effects = { demand = 0.85, investment = 0.3, stability = -5 }
+
+[[event]]
+id = "discovery"
+name = "Resource Discovery"
+text = "Prospectors strike a rich new deposit."
+chance = 0.08
+days = 0
+kind = "discovery"
+good = true
+
+[[event]]
+id = "bad_harvest"
+name = "Bad Harvest"
+text = "Blight and storms ruin the fields."
+chance = 0.12
+days = 150
+kind = "modifier"
+effects = { "output.grain" = 0.6, stability = -2 }
+
+[[event]]
+id = "factory_fire"
+name = "Factory Fire"
+text = "A great fire guts a factory."
+chance = 0.20
+days = 0
+kind = "fire"
+destroy = [0.2, 0.5]
+
+[[event]]
+id = "strike"
+name = "General Strike"
+text = "Workers down tools across the country."
+chance = 0.10
+days = 30
+kind = "modifier"
+effects = { "output.refined" = 0.7, "output.final" = 0.7, stability = -3 }
+
+[[event]]
+id = "earthquake"
+name = "Earthquake"
+text = "The ground shakes; roads and rails crack."
+chance = 0.02
+days = 90
+kind = "damage"
+effects = { "output.all" = 0.9, stability = -4 }
+
+[[event]]
+id = "tech_leap"
+name = "Technical Breakthrough"
+text = "Engineers find a better way to make things."
+chance = 0.04
+days = 720
+kind = "modifier"
+effects = { tech = 1.05 }
+good = true
+
+[[event]]
+id = "oil_shock"
+name = "Oil Shock"
+text = "The world's oil fields falter; prices soar."
+chance = 0.04
+days = 360
+kind = "modifier"
+world = true
+price = { oil = 1.6, fuel = 1.3 }

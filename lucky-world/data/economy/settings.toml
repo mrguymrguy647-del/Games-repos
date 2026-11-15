@@ -1,0 +1,215 @@
+# LUCKY WORLD: every economy constant (see docs/ECONOMY.md for what each does).
+
+days_per_year = 360
+workers_per_level = 1000
+participation = 0.48
+
+# Output per worker grows with HDI: tech = exp(tech_slope * (HDI - 0.65)).
+tech_slope = 7.0
+# Skilled share of workers, by HDI (points in between are interpolated).
+skill_by_hdi = [[0.30, 0.05], [0.50, 0.12], [0.70, 0.25], [0.85, 0.40], [0.95, 0.55]]
+# Natural unemployment, by HDI.
+natural_unemployment_by_hdi = [[0.30, 0.12], [0.95, 0.05]]
+# Birth rate per year, by HDI.
+birth_by_hdi = [[0.30, 0.022], [0.60, 0.012], [0.95, 0.002]]
+# Births fall when jobs are scarce: minus this times unemployment above 20%.
+birth_unemployment = 0.05
+
+# A planned economy hands out scarce inputs in this order (by output good).
+plan_priority = ["ammo", "tanks", "jets", "electricity", "steel", "fuel", "chemicals", "aluminium", "food", "consumer_goods"]
+
+# Deposits.
+main_resource_bonus = 2.0
+land_type_bonus = 1.3   # (documented; the bonus itself is [land.*] in effects.toml)
+deposit_spread = [0.6, 1.4]
+
+# Transport (units of weight per hex per day) and trade capacity.
+transport_base = 1200
+transport_road = 2000
+transport_rail = 6000
+port_capacity = 60000
+land_capacity = 15000
+
+# Labour and households.
+labour_share = 0.6          # wages' share of what factories add (day 1, and where wages are pulled)
+hdi_income_slope = 0.04     # HDI drifts by this times ln(income per head / day 1's)
+tech_growth = 0.012         # technical progress: output per worker grows this much a year
+services_markup = 0.25
+wage_tightness = 0.25
+welfare_rate = 0.3
+pension_share = 0.04
+payout = 0.7                # share of firm profits paid out as dividends
+save_base = 0.12
+save_rate_slope = 1.5
+skill_pay = 0.6             # extra pay per worker = wage * skill * skill_pay
+
+# The household basket, units per 1,000 people per day.
+[basket]
+food = 1.0
+goods = 0.6
+goods_exp = 0.9
+power = 0.5
+fuel = 0.1
+luxury = 0.4
+luxury_exp = 1.2
+# Spending shares: food can take up to food_share of the budget; power and
+# fuel together up to essentials_share of what is left; consumer goods up to
+# goods_share of what is left; services get the rest.
+food_share = 0.6
+essentials_share = 0.12
+goods_share = 0.25
+# On day 1, goods, power and fuel take at most this share of their caps.
+day_one_share = 0.85
+
+[prices]
+price_speed = 0.015
+price_cap = 0.02
+planned_price_speed = 0.004
+planned_ceiling = 1.3
+world_price_speed = 0.004
+days_of_cover = 30
+# The CPI basket.
+cpi_food = 0.30
+cpi_goods = 0.25
+cpi_fuel = 0.05
+cpi_power = 0.05
+cpi_services = 0.35
+
+[money]
+credit_growth_base = 0.03
+credit_slope = 1.0
+pass_through = 1.0
+r_neutral = 0.03
+pi_target = 0.02
+taylor_pi = 1.5
+taylor_gap = 0.5
+rate_step = 0.0005
+rate_max = 0.40
+
+[state]
+deficit_target = 0.03
+tax_step = 0.005
+army_pay = 1.2
+upkeep_tank = 1200
+upkeep_jet = 12000
+tribute = 0.10
+# Share of GDP spent each year on new weapons, by Army Strength option.
+procurement = { none = 0.0, token = 0.002, weak = 0.004, modest = 0.006, capable = 0.009, strong = 0.013, major = 0.018, strongest = 0.025 }
+# Years of procurement already in the stockpile on day 1.
+starting_stockpile_years = 5
+# Infrastructure upkeep per level per day, in W$ per hex.
+infrastructure_upkeep = 40
+# W$ per hex to build one level of road, rail or port.
+road_cost = 600000
+rail_cost = 2000000
+port_cost = 4000000
+
+[trade]
+sea_cost_share = 0.03
+sea_cost_weight = 15
+land_cost_share = 0.09
+land_cost_weight = 40
+transit_fee = 0.04
+fx_trade = 0.5
+# The currency follows purchasing power (prices against the world, moving fx_ppp
+# of the way each day), tilted by trade (fx_trade x balance/GDP) and rates
+# (fx_rate x rate gap). Inflation moves it through purchasing power, not directly:
+# a direct term feeds an inflation and depreciation spiral.
+fx_inflation = 0.0
+fx_ppp = 0.01
+fx_rate = 2.0
+
+# Credit ratings: [name, lowest score, debt ceiling (share of GDP), premium]
+[[rating]]
+name = "AAA"
+score = 85
+ceiling = 1.2
+premium = 0.005
+[[rating]]
+name = "AA"
+score = 75
+ceiling = 1.0
+premium = 0.01
+[[rating]]
+name = "A"
+score = 65
+ceiling = 0.8
+premium = 0.015
+[[rating]]
+name = "BBB"
+score = 55
+ceiling = 0.6
+premium = 0.025
+[[rating]]
+name = "BB"
+score = 45
+ceiling = 0.45
+premium = 0.04
+[[rating]]
+name = "B"
+score = 35
+ceiling = 0.3
+premium = 0.07
+[[rating]]
+name = "CCC"
+score = 20
+ceiling = 0.2
+premium = 0.14
+[[rating]]
+name = "D"
+score = -1000
+ceiling = 0.05
+premium = 0.25
+
+# Economic models (Ideology picks one in effects.toml).
+[model.market]
+name = "Free market"
+gov_share = 0.06
+income_tax = 0.22
+corporate_tax = 0.20
+sales_tax = 0.08
+tariff = 0.05
+corruption = 0.02
+private_investment = 1.0
+state_investment = 0.2
+base_stability = 60
+planned = false
+
+[model.planned]
+name = "Planned economy"
+gov_share = 0.12
+income_tax = 0.12
+corporate_tax = 0.70
+sales_tax = 0.05
+tariff = 0.20
+corruption = 0.06
+private_investment = 0.0
+state_investment = 1.0
+base_stability = 52
+planned = true
+
+[model.mixed]
+name = "Mixed economy"
+gov_share = 0.09
+income_tax = 0.18
+corporate_tax = 0.30
+sales_tax = 0.07
+tariff = 0.12
+corruption = 0.05
+private_investment = 0.5
+state_investment = 0.6
+base_stability = 55
+planned = false
+
+[model.colony]
+name = "Colony"
+gov_share = 0.05
+income_tax = 0.15
+corporate_tax = 0.20
+sales_tax = 0.06
+tariff = 0.05
+corruption = 0.08
+private_investment = 0.8
+state_investment = 0.1
+base_stability = 45
+planned = false

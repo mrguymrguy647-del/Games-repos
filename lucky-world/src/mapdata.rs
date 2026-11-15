@@ -39,6 +39,8 @@ struct TerrainEntry {
     decor: Option<String>,
     #[serde(default)]
     decor_count: f32,
+    #[serde(default)]
+    deposits: BTreeMap<String, f64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -118,6 +120,8 @@ pub struct Terrain {
     pub land_type: Option<String>,
     pub decor: Option<String>,
     pub decor_count: f32,
+    /// How rich one hex is in each raw good (by good id).
+    pub deposits: BTreeMap<String, f64>,
 }
 
 #[derive(Debug, Clone)]
@@ -293,6 +297,7 @@ fn parse_terrain(text: &str) -> Result<Vec<Terrain>, DataError> {
             land_type: e.land_type,
             decor: e.decor,
             decor_count: e.decor_count.max(0.0),
+            deposits: e.deposits,
         });
     }
     if !out.iter().any(|t| t.kind == TerrainKind::Sea) || !out.iter().any(|t| t.kind == TerrainKind::Land) {

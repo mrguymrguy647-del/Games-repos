@@ -1,0 +1,189 @@
+== The Grand Continent (seed 1) ==
+LUCKY WORLD economy report: 1 Jan, Year 51 (50.0 years)
+
+Nation                         Model              People  GDP start    GDP now  Growth Per head  Infl.  Unemp   Debt  Rate  Stab  Trade/yr  Top export
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Commonwealth of Freyeheim      Free market        106.0M     $2.22T     $5.29T    1.8%   $49908  11.5%  11.1%    21%    AA    73   $157.8B  Consumer Goods
+Grand Duchy of Urar            Mixed economy       23.5M    $843.4B     $1.86T    1.6%   $79299  14.2%  13.3%    47%    BB    76    $32.6B  Iron Ore
+Clans of Kan                   Mixed economy        126k      $1.1B      $6.8B    3.8%   $53848  19.1%   0.2%     0%   AAA    78     $443M  Oil
+Dominion of Freyaby            Mixed economy      234.8M     $1.70T     $3.44T    1.4%   $14652  22.7%   0.0%    30%     A    75   $288.6B  Iron Ore
+Commonwealth of Valia          Free market         28.9M    $117.3B    $257.9B    1.6%    $8921  25.7%   4.3%     0%   AAA    84    $-8.0B  Fuel
+Sacred Realm of Yucama         Mixed economy        615k      $1.4B     $14.4B    4.8%   $23385  28.0%   0.0%     0%   AAA    82     $1.4B  Coal
+Torström Confederacy           Mixed economy       27.2M     $15.1B     $75.1B    3.3%    $2757  32.6%   4.5%     0%    AA    72    $-7.9B  -
+Lorence Caliphate              Mixed economy        6.8M    $338.1B     $1.11T    2.4%  $164104  30.1%   0.0%     0%   AAA    75    $23.6B  Grain
+Grand Duchy of Tulalan         Mixed economy       1.47B     $2.25T     $6.33T    2.1%    $4318  24.1%  14.9%    32%     A    80  $-201.9B  -
+Unified Sargol                 Mixed economy       77.4M    $204.9B    $652.8B    2.3%    $8436  31.4%   0.6%     0%    AA    82   $-13.9B  Grain
+Colony of Khar                 Colony               1.8M      $3.6B     $20.2B    3.5%   $11111  17.7%   0.0%     0%   AAA    64     $1.3B  Oil
+Crown of Qasir                 Mixed economy       1.15B     $2.69T     $5.82T    1.6%    $5070  15.0%  15.8%    24%     A    77  $-173.2B  -
+Republic of Haland             Free market        544.3M     $2.35T     $5.39T    1.7%    $9911   8.5%  20.1%    30%     A    67   $-45.9B  -
+Unified Zanalesh               Mixed economy        3.7M     $13.0B     $69.6B    3.4%   $19022  27.2%   0.0%     0%    AA    67     $2.3B  Oil
+Imperial Tamada                Mixed economy      579.9M     $2.25T     $4.26T    1.3%    $7345  25.6%  22.4%    26%     B    58  $-161.2B  -
+Workers' State of Temul        Planned economy      1.6M     $12.6B     $54.2B    3.0%   $33654  23.0%   0.1%     0%   AAA    73     $3.8B  Consumer Goods
+Dominion of Verava             Mixed economy        2.5M      $2.8B     $23.5B    4.4%    $9476  27.3%   0.0%     0%   AAA    76     $1.1B  Oil
+Skarheim Confederacy           Mixed economy        248k      $1.1B     $13.1B    5.1%   $52603  12.0%   0.1%     0%   AAA    85     $1.7B  Iron Ore
+Tribal Lands of Baiet          Mixed economy        387k      $2.1B     $57.2B    6.9%  $147864  11.1%   0.0%     0%   AAA    83    $17.1B  Coal
+Aurarine Directorate           Mixed economy         18k      $1.5B      $4.7B    2.3%  $265148  33.0%   0.0%     0%    AA    64      $69M  Bauxite
+Military State of Keshet       Mixed economy         40k      $1.5B     $13.4B    4.5%  $336105  15.0%   0.0%     0%   AAA    72     $1.3B  Iron Ore
+Baimustan Federation           Free market          118k      $1.2B     $13.0B    4.9%  $110375  30.8%   0.1%     0%   AAA    80     $1.2B  Coal
+Clans of Ozmukhand             Mixed economy         38k      $1.2B     $12.9B    4.8%  $342117  16.6%   0.0%     0%   AAA    68     $1.6B  Oil
+Monine Directorate             Mixed economy         76k      $1.0B      $3.9B    2.6%   $50858  24.9%   0.2%     0%   AAA    72      $58M  Coal
+Military State of Altoence     Mixed economy        275k      $7.7B     $79.2B    4.8%  $287839  15.8%   0.1%     0%   AAA    81    $26.2B  Grain
+
+World prices (W$ per unit, start -> now):
+  Grain                  500 ->        684 (+37%)
+  Iron Ore               400 ->        445 (+11%)
+  Coal                   300 ->        566 (+89%)
+  Oil                    900 ->        747 (-17%)
+  Timber                 350 ->        361 (+3%)
+  Bauxite                450 ->        383 (-15%)
+  Steel                 1900 ->       1856 (-2%)
+  Fuel                  1500 ->        899 (-40%)
+  Electricity            200 ->        200 (+0%)
+  Aluminium             5200 ->       5060 (-3%)
+  Chemicals             2600 ->       4492 (+73%)
+  Food                   800 ->       1117 (+40%)
+  Consumer Goods        2400 ->       1714 (-29%)
+  Ammo                  4000 ->       3197 (-20%)
+  Tanks              4500000 ->    3198813 (-29%)
+  Jets              60000000 ->   51471956 (-14%)
+
+World GDP $15.03T -> $34.89T (+1.7% a year), world inflation 18.1%
+
+Latest news:
+  day 17847  Imperial Tamada                Market Crash: Banks wobble; people stop spending.
+  day 17881  Workers' State of Temul        Factory Fire: A great fire guts a factory. (Tank Factory, 21% lost)
+  day 17906  Dominion of Freyaby            Economic Boom: Factories hum and order books overflow.
+  day 17912  Torström Confederacy           Earthquake: The ground shakes; roads and rails crack.
+  day 17913  Clans of Ozmukhand             Technical Breakthrough: Engineers find a better way to make things.
+  day 17929  Tribal Lands of Baiet          Factory Fire: A great fire guts a factory. (Aluminium Smelter, 32% lost)
+  day 17936  Workers' State of Temul        Economic Boom: Factories hum and order books overflow.
+  day 17991  Aurarine Directorate           Economic Boom: Factories hum and order books overflow.
+
+(50 years of 25 nations simulated in 4.23 s)
+
+== The Thousand Isles (seed 1) ==
+LUCKY WORLD economy report: 1 Jan, Year 51 (50.0 years)
+
+Nation                         Model              People  GDP start    GDP now  Growth Per head  Infl.  Unemp   Debt  Rate  Stab  Trade/yr  Top export
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Commonwealth of Tulando        Free market         38.5M     $2.22T     $3.07T    0.7%   $79715   2.3%  10.9%    46%    AA    74    $90.2B  Coal
+Commonwealth of Doria          Free market         64.2M    $564.9B    $963.3B    1.1%   $15015   0.8%  11.2%    33%   AAA    76   $-37.2B  Grain
+Zaniya Junta                   Mixed economy       13.9M      $4.5B     $61.1B    5.4%    $4414   6.1%   0.0%     0%   AAA    78     $3.2B  Timber
+Commonwealth of Svalvik        Free market          229k      $1.1B     $40.5B    7.4%  $176878   0.1%   0.1%     0%   AAA    88     $6.8B  Oil
+Sacred Realm of Loresse        Mixed economy      118.3M    $582.7B     $2.01T    2.5%   $17014   1.1%   8.7%    33%    AA    73   $-55.6B  Iron Ore
+Dominion of Monora             Mixed economy      634.5M     $2.35T     $2.73T    0.3%    $4307   2.0%  16.4%    40%     A    71  $-144.5B  Consumer Goods
+Pananma Junta                  Mixed economy        949k      $1.6B     $17.7B    4.9%   $18638   0.8%   0.0%     0%   AAA    74     $1.1B  Oil
+Republic of Sahiya             Free market           29k      $1.0B      $2.8B    2.1%   $97273   2.3%   8.6%     0%   AAA    78       $1M  Timber
+Sulabad Federation             Free market          7.9M    $390.5B     $1.35T    2.5%  $170758   4.9%   0.1%     0%   AAA    88    $31.4B  Iron Ore
+State of Sahir                 Mixed economy       19.3M    $140.2B    $712.7B    3.3%   $36903   1.7%   0.0%     0%   AAA    89    $20.4B  Iron Ore
+Military State of Mirar        Mixed economy        194k      $2.5B     $27.7B    4.9%  $142856   2.9%   0.3%     0%   AAA    71     $6.2B  Iron Ore
+Skarland Federation            Free market          5.8M    $169.9B    $743.7B    3.0%  $127411   4.5%   0.0%     0%   AAA    79    $38.3B  Iron Ore
+Yucando Protectorate           Colony              10.9M      $2.1B     $70.4B    7.3%    $6459   1.4%   0.0%     0%   AAA    67     $4.3B  Iron Ore
+Crown of Coalalan              Mixed economy       42.1M    $500.3B    $567.3B    0.3%   $13475  -1.0%  35.2%    43%   BBB    67    $-5.5B  Timber
+Commonwealth of Sahesh         Free market          391k      $3.1B     $22.5B    4.1%   $57530   2.1%   0.1%     0%   AAA    83     $1.5B  Oil
+Workers' State of Vintström    Planned economy      6.2M     $21.1B    $112.4B    3.4%   $18147   4.2%   0.1%     0%   AAA    78     $7.6B  Chemicals
+Military State of Amamaria     Mixed economy      286.6M    $384.3B     $1.13T    2.2%    $3939   2.6%   7.9%    22%    AA    65   $-31.4B  Timber
+Panamama Empire                Mixed economy        303k     $14.7B     $71.4B    3.2%  $235777   0.5%   0.1%     0%   AAA    76     $5.2B  Oil
+Clans of Skarström             Mixed economy       63.8M    $237.4B    $752.3B    2.3%   $11798   5.8%   0.4%    22%   AAA    73    $-1.6B  Timber
+Commonwealth of Khabad         Free market          407k      $2.1B     $17.2B    4.3%   $42164   2.2%   0.0%     0%   AAA    86     $499M  Bauxite
+Tribal Lands of Zanaliya       Mixed economy       10.3M     $11.9B    $115.3B    4.7%   $11174   1.9%   0.4%     0%   AAA    75     $6.6B  Coal
+Dominion of Casor              Mixed economy        1.5M     $51.1B    $221.9B    3.0%  $147519   3.5%   0.0%     0%   AAA    80    $13.8B  Iron Ore
+Tribal Lands of Torland        Mixed economy       34.1M     $22.2B    $376.3B    5.8%   $11046   3.8%   0.1%     0%   AAA    73    $-8.6B  Coal
+Selaria Caliphate              Mixed economy       22.1M     $1.15T     $1.98T    1.1%   $89299   2.5%   5.9%    32%   AAA    78    $21.4B  Coal
+Selacolan Federation           Free market          720k      $8.7B     $62.9B    4.0%   $87454   4.1%   0.4%     0%   AAA    79     $3.2B  Iron Ore
+
+World prices (W$ per unit, start -> now):
+  Grain                  500 ->        473 (-5%)
+  Iron Ore               400 ->        447 (+12%)
+  Coal                   300 ->        386 (+29%)
+  Oil                    900 ->        966 (+7%)
+  Timber                 350 ->        357 (+2%)
+  Bauxite                450 ->        473 (+5%)
+  Steel                 1900 ->       1879 (-1%)
+  Fuel                  1500 ->       1501 (+0%)
+  Electricity            200 ->        200 (+0%)
+  Aluminium             5200 ->       4877 (-6%)
+  Chemicals             2600 ->       2424 (-7%)
+  Food                   800 ->        745 (-7%)
+  Consumer Goods        2400 ->       2336 (-3%)
+  Ammo                  4000 ->       3788 (-5%)
+  Tanks              4500000 ->    4176543 (-7%)
+  Jets              60000000 ->   55713017 (-7%)
+
+World GDP $8.84T -> $17.23T (+1.3% a year), world inflation 2.5%
+
+Latest news:
+  day 17847  Commonwealth of Sahesh         Resource Discovery: Prospectors strike a rich new deposit. (Iron Ore)
+  day 17881  Workers' State of Vintström    Factory Fire: A great fire guts a factory. (Consumer Goods Factory, 21% lost)
+  day 17906  Commonwealth of Svalvik        Economic Boom: Factories hum and order books overflow.
+  day 17912  Pananma Junta                  Earthquake: The ground shakes; roads and rails crack.
+  day 17913  Tribal Lands of Torland        Technical Breakthrough: Engineers find a better way to make things.
+  day 17929  Clans of Skarström             Factory Fire: A great fire guts a factory. (Coal Power Plant, 32% lost)
+  day 17936  Workers' State of Vintström    Economic Boom: Factories hum and order books overflow.
+  day 17991  Commonwealth of Khabad         Economic Boom: Factories hum and order books overflow.
+
+(50 years of 25 nations simulated in 3.55 s)
+
+== Five Shores (seed 1) ==
+LUCKY WORLD economy report: 1 Jan, Year 51 (50.0 years)
+
+Nation                         Model              People  GDP start    GDP now  Growth Per head  Infl.  Unemp   Debt  Rate  Stab  Trade/yr  Top export
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Commonwealth of Freyeheim      Free market        106.1M     $2.22T     $4.80T    1.6%   $45263   7.0%  13.9%    43%   BBB    68    $61.9B  Ammo
+Grand Duchy of Zaniya          Mixed economy       23.3M    $843.4B     $4.27T    3.3%  $183643   3.1%   0.0%    14%   AAA    79    $-4.2B  Iron Ore
+Clans of Tamesh                Mixed economy        127k      $1.1B     $10.2B    4.6%   $80076   5.7%   1.4%     0%   AAA    81     $1.8B  Steel
+Dominion of Freyaby            Mixed economy      219.7M     $1.70T     $1.52T   -0.2%    $6933   5.5%  34.1%    43%    AA    61   $-54.5B  -
+Commonwealth of Valia          Free market        129.4M     $26.9B    $239.3B    4.5%    $1849  10.7%   0.0%     0%   AAA    88   $-11.9B  Grain
+Sacred Realm of Kaet           Mixed economy        621k      $1.4B     $16.4B    5.1%   $26361   9.9%   1.5%     0%   AAA    80     $1.8B  Consumer Goods
+Torström Confederacy           Mixed economy       34.3M     $15.1B    $254.6B    5.8%    $7416  10.4%   0.8%     0%   AAA    66    $48.6B  Consumer Goods
+Lorence Caliphate              Mixed economy        6.8M    $338.1B     $1.31T    2.7%  $192274   9.5%   0.3%     0%   AAA    76    $15.5B  Iron Ore
+Grand Duchy of Zhanar          Mixed economy       1.29B     $2.25T     $5.83T    1.9%    $4527   4.6%  13.4%    34%     A    81   $-23.3B  -
+People's Republic of Khada     Planned economy     21.6M      $4.6B     $22.6B    3.2%    $1048   9.1%   0.2%     0%   AAA    64     $4.8B  Steel
+Tamada Directorate             Mixed economy        3.6M     $14.1B     $99.9B    4.0%   $27773   7.3%   0.1%     0%   AAA    85     $2.5B  Grain
+Tribal Lands of Tamesh         Mixed economy      335.5M    $109.8B     $1.28T    5.0%    $3817  10.1%   2.1%     0%   AAA    54   $-42.8B  -
+Dominion of Svalvik            Mixed economy         90k      $1.1B     $14.1B    5.3%  $157309  11.2%   2.6%     0%   AAA    80     $2.2B  Consumer Goods
+State of Brannström            Mixed economy       35.3M    $151.0B    $890.1B    3.6%   $25251   8.1%   0.1%    17%    AA    79    $31.7B  Iron Ore
+Crown of Kaldvik               Mixed economy       35.4M     $64.5B    $356.7B    3.5%   $10083  11.6%   0.1%     0%   AAA    83    $-2.8B  Iron Ore
+Maraca Socialist Union         Planned economy      5.5M     $19.8B     $82.1B    2.9%   $14800  10.3%   0.1%     0%   AAA    74     $6.4B  Consumer Goods
+Colony of Tulama               Colony              18.2M    $121.6B    $510.3B    2.9%   $28018  33.0%   2.7%    17%     A    77   $-22.4B  Steel
+Rasabad Federation             Free market         38.3M    $637.5B     $2.86T    3.0%   $74660  13.7%   0.2%    23%   AAA    75    $-6.3B  Oil
+State of Yucaria               Mixed economy      126.0M    $658.3B     $2.85T    3.0%   $22617  16.6%   0.8%    13%   AAA    78   $-79.6B  Consumer Goods
+Freymarvik Socialist Union     Planned economy      2.7M      $1.3B      $8.8B    4.0%    $3252  10.7%   0.2%     0%   AAA    80     $1.6B  Consumer Goods
+Dominion of Skarheim           Mixed economy       20.4M     $40.7B    $416.9B    4.8%   $20421   3.6%   0.3%     0%   AAA    83    $27.8B  Grain
+Sahiada Directorate            Mixed economy       64.2M    $200.8B     $1.23T    3.7%   $19146   7.4%   0.0%     0%   AAA    76   $-48.5B  Grain
+Torström Protectorate          Colony               2.1M     $42.0B    $392.2B    4.6%  $183949   9.7%   0.2%     0%   AAA    67    $33.3B  Steel
+Clans of Panania               Mixed economy        520k      $1.0B     $19.1B    6.0%   $36788   8.3%   0.8%     0%   AAA    76     $1.5B  Iron Ore
+Vintmark Confederacy           Mixed economy         80k      $1.0B     $23.3B    6.5%  $289396   6.4%   3.1%     0%   AAA    73     $5.2B  Consumer Goods
+
+World prices (W$ per unit, start -> now):
+  Grain                  500 ->        372 (-26%)
+  Iron Ore               400 ->        598 (+50%)
+  Coal                   300 ->        219 (-27%)
+  Oil                    900 ->        927 (+3%)
+  Timber                 350 ->        265 (-24%)
+  Bauxite                450 ->        338 (-25%)
+  Steel                 1900 ->       7293 (+284%)
+  Fuel                  1500 ->       1882 (+25%)
+  Electricity            200 ->        200 (+0%)
+  Aluminium             5200 ->       3568 (-31%)
+  Chemicals             2600 ->       2044 (-21%)
+  Food                   800 ->        639 (-20%)
+  Consumer Goods        2400 ->       4102 (+71%)
+  Ammo                  4000 ->       4369 (+9%)
+  Tanks              4500000 ->    3387113 (-25%)
+  Jets              60000000 ->   43318209 (-28%)
+
+World GDP $9.46T -> $29.31T (+2.3% a year), world inflation 8.3%
+
+Latest news:
+  day 17906  Torström Confederacy           General Strike: Workers down tools across the country.
+  day 17912  Tamada Directorate             Bad Harvest: Blight and storms ruin the fields.
+  day 17914  Grand Duchy of Zaniya          Bad Harvest: Blight and storms ruin the fields.
+  day 17923  Lorence Caliphate              Factory Fire: A great fire guts a factory. (Steel Mill, 24% lost)
+  day 17929  Sahiada Directorate            Technical Breakthrough: Engineers find a better way to make things.
+  day 17936  State of Yucaria               Factory Fire: A great fire guts a factory. (Ammo Factory, 37% lost)
+  day 17982  People's Republic of Khada     Resource Discovery: Prospectors strike a rich new deposit. (Grain)
+  day 17991  Torström Protectorate          Market Crash: Banks wobble; people stop spending.
+
+(50 years of 25 nations simulated in 3.94 s)
+

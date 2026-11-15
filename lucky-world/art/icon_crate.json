@@ -1,0 +1,84 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Crate icon (stockpile)",
+  "seed": 1,
+  "palette": {
+    "ink": "#1A1030",
+    "gold": "#F5C542",
+    "gold_dark": "#A8740E",
+    "gold_hi": "#FFF1B8",
+    "white": "#FFFFFF",
+    "accent": "#7FA8FF",
+    "green": "#6BD48A",
+    "red": "#F06A6A",
+    "blue": "#4aa8ec"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "cmd": "layer",
+      "name": "Art"
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        12,
+        12
+      ],
+      "radius": 11,
+      "fill": "ink",
+      "outline": "gold",
+      "outline_size": 1.5
+    },
+    {
+      "cmd": "rect",
+      "x": 6,
+      "y": 7,
+      "width": 12,
+      "height": 11,
+      "radius": 1,
+      "fill": "#B07A3A",
+      "outline": "gold_dark",
+      "outline_size": 1
+    },
+    {
+      "cmd": "path",
+      "closed": false,
+      "points": [
+        [
+          6,
+          7
+        ],
+        [
+          18,
+          18
+        ]
+      ],
+      "size": 1.5,
+      "line": true,
+      "color": "gold_dark"
+    },
+    {
+      "cmd": "path",
+      "closed": false,
+      "points": [
+        [
+          18,
+          7
+        ],
+        [
+          6,
+          18
+        ]
+      ],
+      "size": 1.5,
+      "line": true,
+      "color": "gold_dark"
+    }
+  ]
+}

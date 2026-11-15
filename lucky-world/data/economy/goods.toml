@@ -1,0 +1,143 @@
+# LUCKY WORLD: the goods (see docs/ECONOMY.md, section 2).
+#
+# tier      raw, refined or final
+# price     the world price at the start, in world dollars (W$) per unit
+# weight    how much transport capacity one unit takes (0: moves on the grid)
+# spoil     the share of the stock that goes bad each day
+# trade     false: can't be traded between nations (electricity)
+# military  goes to the national stockpile for the war phase
+
+[[good]]
+id = "grain"
+name = "Grain"
+tier = "raw"
+price = 500
+weight = 1.0
+spoil = 0.002
+color = "#e0c060"
+
+[[good]]
+id = "iron_ore"
+name = "Iron Ore"
+tier = "raw"
+price = 400
+weight = 1.0
+color = "#a0522d"
+
+[[good]]
+id = "coal"
+name = "Coal"
+tier = "raw"
+price = 300
+weight = 1.0
+color = "#404040"
+
+[[good]]
+id = "oil"
+name = "Oil"
+tier = "raw"
+price = 900
+weight = 1.0
+color = "#202030"
+
+[[good]]
+id = "timber"
+name = "Timber"
+tier = "raw"
+price = 350
+weight = 1.0
+color = "#8b5a2b"
+
+[[good]]
+id = "bauxite"
+name = "Bauxite"
+tier = "raw"
+price = 450
+weight = 1.0
+color = "#c46a3a"
+
+[[good]]
+id = "steel"
+name = "Steel"
+tier = "refined"
+price = 1900
+weight = 0.5
+color = "#9fb4c8"
+
+[[good]]
+id = "fuel"
+name = "Fuel"
+tier = "refined"
+price = 1500
+weight = 0.5
+color = "#e07b39"
+
+[[good]]
+id = "electricity"
+name = "Electricity"
+tier = "refined"
+price = 200
+weight = 0.0
+spoil = 1.0
+trade = false
+color = "#f6e05e"
+
+[[good]]
+id = "aluminium"
+name = "Aluminium"
+tier = "refined"
+price = 5200
+weight = 0.3
+color = "#d0d8e0"
+
+[[good]]
+id = "chemicals"
+name = "Chemicals"
+tier = "refined"
+price = 2600
+weight = 0.4
+color = "#7bdff2"
+
+[[good]]
+id = "food"
+name = "Food"
+tier = "final"
+price = 800
+weight = 0.6
+spoil = 0.003
+color = "#9bd34d"
+
+[[good]]
+id = "consumer_goods"
+name = "Consumer Goods"
+tier = "final"
+price = 2400
+weight = 0.3
+color = "#ed6aa6"
+
+[[good]]
+id = "ammo"
+name = "Ammo"
+tier = "final"
+price = 4000
+weight = 0.3
+military = true
+color = "#c0a060"
+
+[[good]]
+id = "tanks"
+name = "Tanks"
+tier = "final"
+price = 4500000
+weight = 2.0
+military = true
+color = "#6b8e23"
+
+[[good]]
+id = "jets"
+name = "Jets"
+tier = "final"
+price = 60000000
+weight = 3.0
+military = true
+color = "#87a8c8"
