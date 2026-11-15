@@ -1,0 +1,90 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Card frame 470x680",
+  "seed": 1,
+  "palette": {
+    "ink": "#1A1030",
+    "gold": "#F5C542",
+    "gold_dark": "#A8740E",
+    "gold_hi": "#FFF1B8",
+    "white": "#FFFFFF",
+    "accent": "#7FA8FF"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 470,
+      "height": 680
+    },
+    {
+      "cmd": "layer",
+      "name": "Card"
+    },
+    {
+      "cmd": "rect",
+      "x": 6,
+      "y": 6,
+      "width": 458,
+      "height": 668,
+      "radius": 22,
+      "fill": {
+        "gradient": "linear",
+        "from": [
+          0,
+          0
+        ],
+        "to": [
+          0,
+          680
+        ],
+        "colors": [
+          "#2B1C5CEE",
+          "#140C33F2"
+        ]
+      },
+      "outline": "accent",
+      "outline_size": 5
+    },
+    {
+      "cmd": "rect",
+      "x": 16,
+      "y": 16,
+      "width": 438,
+      "height": 648,
+      "radius": 15,
+      "outline": "#FFFFFF22",
+      "outline_size": 2
+    },
+    {
+      "cmd": "gradient",
+      "kind": "linear",
+      "from": [
+        0,
+        6
+      ],
+      "to": [
+        0,
+        70
+      ],
+      "stops": [
+        [
+          0,
+          "#FFFFFF1C"
+        ],
+        [
+          1,
+          "#FFFFFF00"
+        ]
+      ],
+      "area": {
+        "rect": [
+          12,
+          10,
+          446,
+          60
+        ]
+      }
+    }
+  ]
+}

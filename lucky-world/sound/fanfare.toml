@@ -1,0 +1,47 @@
+# Country reveal: a rising C major arpeggio into a held chord, ~1.5 s.
+version = 0
+name = "reveal_fanfare"
+description = "Short fanfare for the final country reveal."
+tags = ["pickup", "jingle", "win"]
+
+[master]
+normalize_lufs = -19
+trim_silence = true
+
+[[layers]]
+name = "lead"
+source = "square"
+duty = 0.25
+volume = 0.5
+envelope = { attack = 0.003, hold = 0.42, decay = 0.08 }
+pitch = { start = "C5", arpeggio = { steps = [0, 4, 7, 12], step_time = 0.11, repeat = false } }
+
+[[layers]]
+name = "chord top"
+source = "square"
+duty = 0.5
+offset = 0.45
+volume = 0.35
+envelope = { attack = 0.005, hold = 0.45, decay = 0.5 }
+pitch = { start = "E6", vibrato = { rate = 6, depth = 0.15, delay = 0.2 } }
+
+[[layers]]
+name = "chord mid"
+source = "triangle"
+offset = 0.45
+volume = 0.6
+envelope = { attack = 0.005, hold = 0.45, decay = 0.5 }
+pitch = { start = "G5" }
+
+[[layers]]
+name = "bass"
+source = "triangle"
+volume = 0.8
+envelope = { attack = 0.005, hold = 0.9, decay = 0.4 }
+pitch = { start = "C3" }
+
+[[effects]]
+type = "reverb"
+size = 0.4
+decay = 0.7
+mix = 0.2

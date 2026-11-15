@@ -1,0 +1,54 @@
+# LUCKY WORLD: country names and flags.
+#
+# A name is a start syllable, sometimes a middle one, and an end one, from the
+# continent's `style` (maps.toml). The ideology then gives it a form, with {}
+# where the name goes. Each form list is picked from at random.
+
+middle_chance = 0.35
+
+[style.north]
+start = ["Nor", "Skar", "Frey", "Hal", "Vint", "Kald", "Sval", "Brann", "Isk", "Tor"]
+middle = ["e", "a", "vik", "mar", "o"]
+end = ["heim", "land", "mark", "gard", "vik", "ström", "fjell", "by"]
+
+[style.middle]
+start = ["Val", "Aur", "Bel", "Lor", "Mon", "Cas", "Ver", "Alt", "Dor", "Sel"]
+middle = ["en", "ar", "o", "ir", "an"]
+end = ["ia", "ora", "mont", "ine", "esse", "or", "ava", "ence"]
+
+[style.east]
+start = ["Kesh", "Tar", "Zhan", "Ura", "Khor", "Bai", "Sar", "Tem", "Oz", "Ka"]
+middle = ["ga", "ri", "mu", "ba", "n"]
+end = ["stan", "gol", "ar", "khand", "an", "ul", "zhar", "et"]
+
+[style.sun]
+start = ["Sah", "Mir", "Qas", "Zan", "Ash", "Kha", "Dar", "Sul", "Ras", "Tam"]
+middle = ["a", "i", "ra", "ha", "al"]
+end = ["ar", "un", "iya", "ah", "esh", "ir", "abad", "ada"]
+
+[style.south]
+start = ["Ver", "Ama", "Tula", "Coa", "Ixi", "Pana", "Sela", "Mara", "Oro", "Yuca"]
+middle = ["n", "ma", "ri", "co", "la"]
+end = ["ndo", "ca", "lan", "ria", "tepec", "nia", "guay", "ma"]
+
+# Forms by ideology option id.
+[forms]
+military_rule = ["Military State of {}", "{} Junta", "Defense Republic of {}"]
+democracy = ["Republic of {}", "{} Federation", "Commonwealth of {}"]
+monarchy = ["Kingdom of {}", "Grand Duchy of {}", "Crown of {}"]
+communism = ["People's Republic of {}", "{} Socialist Union", "Workers' State of {}"]
+theocracy = ["Holy {}", "Sacred Realm of {}", "{} Caliphate"]
+imperialism = ["{} Empire", "Imperial {}", "Dominion of {}"]
+authoritarianism = ["State of {}", "{} Directorate", "Unified {}"]
+tribalism = ["Tribal Lands of {}", "{} Confederacy", "Clans of {}"]
+colony = ["{} Territory", "Colony of {}", "{} Protectorate"]
+
+[flags]
+# Colours a flag is made from (two or three of them, all different).
+colors = [
+  "#c8102e", "#ffffff", "#002868", "#009b3a", "#fedd00", "#000000",
+  "#ff8200", "#6cace4", "#7a1f3d", "#3a7d44", "#d4af37", "#5b2c83",
+]
+# Each layout is picked with this weight.
+layouts = { horizontal = 4, vertical = 4, bicolor = 2, cross = 2, canton = 2, diagonal = 1, circle = 2 }
+emblem_chance = 0.45

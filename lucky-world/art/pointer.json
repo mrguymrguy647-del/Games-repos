@@ -1,0 +1,151 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Wheel pointer (points left, hinged on the right)",
+  "seed": 1,
+  "palette": {
+    "ink": "#1A1030",
+    "gold": "#F5C542",
+    "gold_dark": "#A8740E",
+    "gold_hi": "#FFF1B8",
+    "white": "#FFFFFF",
+    "red": "#E8304A",
+    "red_dark": "#8E1022",
+    "hi": "#FF9AA8"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 120,
+      "height": 84
+    },
+    {
+      "cmd": "layer",
+      "name": "Pointer"
+    },
+    {
+      "cmd": "group",
+      "name": "flap",
+      "filter": {
+        "shadow": {
+          "offset": [
+            3,
+            5
+          ],
+          "blur": 4,
+          "color": "#00000070"
+        }
+      },
+      "commands": [
+        {
+          "cmd": "path",
+          "closed": true,
+          "line": false,
+          "points": [
+            [
+              8,
+              42
+            ],
+            [
+              76,
+              14
+            ],
+            [
+              98,
+              18
+            ],
+            [
+              108,
+              42
+            ],
+            [
+              98,
+              66
+            ],
+            [
+              76,
+              70
+            ]
+          ],
+          "fill": {
+            "gradient": "linear",
+            "from": [
+              0,
+              14
+            ],
+            "to": [
+              0,
+              70
+            ],
+            "colors": [
+              "hi",
+              "red",
+              "red_dark"
+            ]
+          }
+        },
+        {
+          "cmd": "polygon",
+          "points": [
+            [
+              8,
+              42
+            ],
+            [
+              76,
+              14
+            ],
+            [
+              98,
+              18
+            ],
+            [
+              108,
+              42
+            ],
+            [
+              98,
+              66
+            ],
+            [
+              76,
+              70
+            ]
+          ],
+          "outline": "ink",
+          "outline_size": 4
+        },
+        {
+          "cmd": "ellipse",
+          "center": [
+            92,
+            42
+          ],
+          "radius": 13,
+          "fill": {
+            "gradient": "radial",
+            "from": [
+              88,
+              37
+            ],
+            "to": [
+              92,
+              55
+            ],
+            "colors": [
+              "gold_hi",
+              "gold",
+              "gold_dark"
+            ]
+          },
+          "outline": "ink",
+          "outline_size": 3
+        }
+      ]
+    }
+  ],
+  "pivot": [
+    92,
+    42
+  ]
+}

@@ -1,0 +1,30 @@
+version = 0
+name = "rare_sting"
+description = "A sparkling run upward for a rare result."
+[master]
+normalize_lufs = -18
+trim_silence = true
+[[layers]]
+name = "sparkle run"
+source = "square"
+duty = 0.125
+volume = 0.45
+envelope = { attack = 0.002, hold = 0.5, decay = 0.25 }
+pitch = { start = "C6", arpeggio = { steps = [0, 4, 7, 12, 16, 19, 24], step_time = 0.06, repeat = false } }
+[[layers]]
+name = "bell"
+source = "sine"
+offset = 0.42
+volume = 0.6
+envelope = { attack = 0.002, hold = 0.05, decay = 0.7 }
+pitch = { start = "C7" }
+[[effects]]
+type = "echo"
+delay = 0.09
+feedback = 0.3
+mix = 0.25
+[[effects]]
+type = "reverb"
+size = 0.5
+decay = 0.6
+mix = 0.25

@@ -1,0 +1,70 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Button",
+  "seed": 1,
+  "palette": {
+    "ink": "#0A1540"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 260,
+      "height": 64
+    },
+    {
+      "cmd": "layer",
+      "name": "Button"
+    },
+    {
+      "cmd": "group",
+      "name": "b",
+      "filter": {
+        "shadow": {
+          "offset": [
+            0,
+            4
+          ],
+          "blur": 3,
+          "color": "#00000080"
+        }
+      },
+      "commands": [
+        {
+          "cmd": "rect",
+          "x": 4,
+          "y": 4,
+          "width": 252,
+          "height": 52,
+          "radius": 26,
+          "fill": {
+            "gradient": "linear",
+            "from": [
+              0,
+              4
+            ],
+            "to": [
+              0,
+              56
+            ],
+            "colors": [
+              "#8FB6FF",
+              "#3B5FD0"
+            ]
+          },
+          "outline": "ink",
+          "outline_size": 3
+        },
+        {
+          "cmd": "rect",
+          "x": 18,
+          "y": 9,
+          "width": 224,
+          "height": 16,
+          "radius": 8,
+          "fill": "#FFFFFF40"
+        }
+      ]
+    }
+  ]
+}

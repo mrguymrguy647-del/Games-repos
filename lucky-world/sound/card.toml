@@ -1,0 +1,19 @@
+version = 0
+name = "card_swoosh"
+description = "A summary card sliding in."
+seed = 3
+[master]
+normalize_lufs = -24
+trim_silence = true
+[[layers]]
+name = "air"
+source = "noise"
+envelope = { attack = 0.03, hold = 0.02, decay = 0.2 }
+filter = { kind = "bandpass", cutoff = 3000, cutoff_end = 900, curve = "ease_out", sweep_time = 0.2, resonance = 1.5 }
+[[layers]]
+name = "thump"
+source = "sine"
+offset = 0.05
+volume = 0.5
+envelope = { attack = 0.002, decay = 0.12 }
+pitch = { start = 160, end = 70 }

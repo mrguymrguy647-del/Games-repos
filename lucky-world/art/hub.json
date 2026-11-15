@@ -1,0 +1,138 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Wheel hub cap",
+  "seed": 1,
+  "palette": {
+    "ink": "#1A1030",
+    "gold": "#F5C542",
+    "gold_dark": "#A8740E",
+    "gold_hi": "#FFF1B8",
+    "white": "#FFFFFF",
+    "red": "#E8304A"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 140,
+      "height": 140
+    },
+    {
+      "cmd": "layer",
+      "name": "Hub"
+    },
+    {
+      "cmd": "group",
+      "name": "cap",
+      "filter": {
+        "shadow": {
+          "offset": [
+            2,
+            4
+          ],
+          "blur": 5,
+          "color": "#00000080"
+        }
+      },
+      "commands": [
+        {
+          "cmd": "ellipse",
+          "center": [
+            70,
+            70
+          ],
+          "radius": 60,
+          "fill": {
+            "gradient": "radial",
+            "from": [
+              54,
+              50
+            ],
+            "to": [
+              70,
+              130
+            ],
+            "colors": [
+              "gold_hi",
+              "gold",
+              "gold_dark"
+            ]
+          },
+          "outline": "ink",
+          "outline_size": 4
+        },
+        {
+          "cmd": "ellipse",
+          "center": [
+            70,
+            70
+          ],
+          "radius": 47,
+          "outline": "gold_dark",
+          "outline_size": 3
+        },
+        {
+          "cmd": "polygon",
+          "points": [
+            [
+              70.0,
+              36.0
+            ],
+            [
+              78.2,
+              58.7
+            ],
+            [
+              102.3,
+              59.5
+            ],
+            [
+              83.3,
+              74.3
+            ],
+            [
+              90.0,
+              97.5
+            ],
+            [
+              70.0,
+              84.0
+            ],
+            [
+              50.0,
+              97.5
+            ],
+            [
+              56.7,
+              74.3
+            ],
+            [
+              37.7,
+              59.5
+            ],
+            [
+              61.8,
+              58.7
+            ]
+          ],
+          "fill": "red",
+          "outline": "ink",
+          "outline_size": 3
+        },
+        {
+          "cmd": "ellipse",
+          "center": [
+            50,
+            44
+          ],
+          "radius": [
+            16,
+            9
+          ],
+          "rotation": -35,
+          "fill": "#FFFFFFA0"
+        }
+      ]
+    }
+  ]
+}

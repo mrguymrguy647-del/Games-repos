@@ -1,0 +1,73 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "LUCKY WORLD logo",
+  "seed": 1,
+  "palette": {
+    "ink": "#1A1030",
+    "gold": "#F5C542",
+    "gold_dark": "#A8740E",
+    "gold_hi": "#FFF1B8",
+    "white": "#FFFFFF",
+    "purple": "#2A1460"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 1000,
+      "height": 190
+    },
+    {
+      "cmd": "layer",
+      "name": "Logo"
+    },
+    {
+      "cmd": "group",
+      "name": "words",
+      "filter": {
+        "glow": {
+          "radius": 18,
+          "threshold": 0.6,
+          "strength": 0.9
+        },
+        "shadow": {
+          "offset": [
+            0,
+            8
+          ],
+          "blur": 8,
+          "color": "#000000A0"
+        }
+      },
+      "commands": [
+        {
+          "cmd": "text",
+          "text": "LUCKY WORLD",
+          "at": [
+            500,
+            18
+          ],
+          "size": 128,
+          "color": "gold",
+          "align": "center",
+          "outline": "ink",
+          "outline_size": 9,
+          "fit": 930
+        },
+        {
+          "cmd": "text",
+          "text": "LUCKY WORLD",
+          "at": [
+            500,
+            12
+          ],
+          "size": 128,
+          "color": "gold_hi",
+          "align": "center",
+          "opacity": 0.35,
+          "fit": 930
+        }
+      ]
+    }
+  ]
+}

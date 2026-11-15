@@ -1,0 +1,50 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Soft round glow",
+  "seed": 1,
+  "palette": {
+    "core": "#FFFDF0"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 256,
+      "height": 256
+    },
+    {
+      "cmd": "layer",
+      "name": "Glow"
+    },
+    {
+      "cmd": "gradient",
+      "kind": "radial",
+      "from": [
+        128,
+        128
+      ],
+      "to": [
+        128,
+        2
+      ],
+      "stops": [
+        [
+          0,
+          "#FFF6D0FF"
+        ],
+        [
+          0.2,
+          "#FFE9A0D0"
+        ],
+        [
+          0.55,
+          "#FFD86B50"
+        ],
+        [
+          1,
+          "#FFD86B00"
+        ]
+      ]
+    }
+  ]
+}

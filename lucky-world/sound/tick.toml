@@ -1,0 +1,22 @@
+# Prize-wheel peg tick: a very short bright click (noise snap + high blip).
+version = 0
+name = "wheel_tick"
+description = "Crisp peg click for a spinning prize wheel."
+tags = ["ui", "click", "short"]
+
+[master]
+normalize_lufs = -22
+trim_silence = true
+
+[[layers]]
+name = "snap"
+source = "noise"
+envelope = { attack = 0.0005, decay = 0.012 }
+filter = { kind = "highpass", cutoff = 2500 }
+
+[[layers]]
+name = "blip"
+source = "triangle"
+volume = 0.7
+envelope = { attack = 0.0005, hold = 0.002, decay = 0.025 }
+pitch = { start = 2400, end = 1500, curve = "exponential" }
