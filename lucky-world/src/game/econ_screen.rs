@@ -7,7 +7,7 @@
 //! | Clock | Space: pause · 1-5: speed (1, 3, 7, 15 or 30 days a second) |
 //! | Window | O: open or close · Tab: next page · Up / Down: choose a row |
 //! | Budget | Left / Right: lower or raise · A: hand taxes back to the treasury, and the rate to the bank |
-//! | Chains | B: build more of the chosen good's maker · X: close some |
+//! | Chains | B: build more of the chosen good's maker · X: close some · R: a road where goods are stuck · P: a port level |
 //! | Market | T: free trade → no exports → no imports |
 //! | Trade | X: embargo the chosen nation (or lift it) |
 //! | Map | V: resources overlay → industry overlay → off |
@@ -24,7 +24,9 @@ use crate::econ::{EconData, Economy, NationEcon, TradePolicy};
 use crate::ui::{self, GOLD, MUTED, SOFT};
 
 /// Days per second at speeds 1 to 5.
-pub const SPEEDS: [f32; 5] = [1.0, 3.0, 7.0, 15.0, 30.0];
+pub const SPEEDS: [f32; 6] = [1.0, 3.0, 7.0, 15.0, 30.0, 90.0];
+/// Spectator mode's own top speed (key 6): three months a second.
+pub const SPECTATOR_SPEED: usize = 5;
 /// Where the economy window sits.
 const WIN: Rect = Rect { x: 110.0, y: 64.0, w: 1060.0, h: 600.0 };
 /// The economy button on the top bar.
@@ -194,9 +196,10 @@ impl Lucky {
     pub(super) fn update_clock(&mut self, ctx: &mut Context) {
         let Some(e) = self.economy.as_mut() else { return };
         let ed = &self.econ_data;
-        let keys = [Key::Digit1, Key::Digit2, Key::Digit3, Key::Digit4, Key::Digit5];
+        let keys = [Key::Digit1, Key::Digit2, Key::Digit3, Key::Digit4, Key::Digit5, Key::Digit6];
+        let top = if self.spectating { SPECTATOR_SPEED } else { SPECTATOR_SPEED - 1 };
         for (k, key) in keys.into_iter().enumerate() {
-            if ctx.input.was_pressed(key) {
+            if k <= top && ctx.input.was_pressed(key) {
                 self.clock.speed = k;
                 self.clock.paused = false;
                 ctx.play_with(&self.assets.click, 0.6, 0.0);
@@ -209,6 +212,10 @@ impl Lucky {
             self.clock.carry = self.clock.carry.min(1.0);
             for _ in 0..days {
                 e.tick(ed);
+                // The NPCs think after each day, through the same levers.
+                if let Some(b) = self.brains.as_mut() {
+                    b.day(e, ed);
+                }
             }
         }
         // A soft chime each month, and news worth hearing about.
@@ -223,9 +230,10 @@ impl Lucky {
         if e.news.len() < self.clock.last_news {
             self.clock.last_news = 0;
         }
+        let watching = self.spectating;
         let fresh: Vec<String> = e.news[self.clock.last_news..]
             .iter()
-            .filter(|item| item.nation.is_none_or(|i| i == 0))
+            .filter(|item| !watching && item.nation.is_none_or(|i| i == 0))
             .map(|item| match item.nation {
                 Some(_) => item.text.clone(),
                 None => format!("World: {}", item.text),
@@ -367,15 +375,15 @@ impl Lucky {
                     for (k, _) in Lever::ALL.iter().enumerate() {
                         let (minus, plus) = lever_buttons(k);
                         if minus.contains(m) {
-                            said = Some(Ok(e.pull(0, Lever::ALL[k], -1)));
+                            said = Some(Ok(e.pull_with(Some(ed), 0, Lever::ALL[k], -1)));
                         }
                         if plus.contains(m) {
-                            said = Some(Ok(e.pull(0, Lever::ALL[k], 1)));
+                            said = Some(Ok(e.pull_with(Some(ed), 0, Lever::ALL[k], 1)));
                         }
                     }
                 }
                 if steps != 0 {
-                    said = Some(Ok(e.pull(0, lever, steps)));
+                    said = Some(Ok(e.pull_with(Some(ed), 0, lever, steps)));
                 }
                 if ctx.input.was_pressed(Key::A) {
                     e.free_rate(0);
@@ -391,6 +399,19 @@ impl Lucky {
                     if ctx.input.was_pressed(Key::X) || click.is_some_and(|m| CLOSE_BUTTON.contains(m)) {
                         said = Some(e.player_close(ed, 0, kind));
                     }
+                }
+                // Roads where goods are stuck, a bigger port (the brains have the same keys).
+                if ctx.input.was_pressed(Key::R) {
+                    said = Some(match e.most_choked(0) {
+                        Some(q) => e.player_road(ed, 0, q),
+                        None => Err("Goods move freely everywhere: no road needed".to_string()),
+                    });
+                }
+                if ctx.input.was_pressed(Key::P) {
+                    said = Some(match e.smallest_port(0) {
+                        Some(q) => e.player_port(ed, 0, q),
+                        None => Err("No coast with room for a bigger port".to_string()),
+                    });
                 }
             }
             Tab::Market => {
@@ -446,13 +467,21 @@ impl Lucky {
         let speed = if self.clock.paused { "PAUSED".to_string() } else { format!("{}  x{}", ">".repeat(self.clock.speed + 1), SPEEDS[self.clock.speed]) };
         ui::plain(canvas, &a.font, &speed, vec2(1076.0, 32.0), 13.0, if self.clock.paused { WARN } else { GOLD }, Align::Right);
         ui::plain(canvas, &a.font, &e.date(ed), vec2(990.0, 30.0), 16.0, Color::WHITE, Align::Right);
-        let facts = format!(
-            "GDP {}  ·  Inflation {}  ·  Jobless {}  ·  Treasury {}",
-            money(n.gdp),
-            pct(n.inflation),
-            pct(n.unemployment(ed)),
-            money(n.treasury * n.exchange)
-        );
+        let facts = if self.spectating {
+            let (now, start): (f64, f64) = e.nations.iter().fold((0.0, 0.0), |(a, b), n| (a + n.gdp, b + n.gdp_start));
+            let years = (e.day as f64 / ed.days_per_year as f64).max(1.0 / 12.0);
+            let growth = (now / start.max(1.0)).powf(1.0 / years) - 1.0;
+            let jobless = e.nations.iter().filter(|n| n.unemployment(ed) > 0.15).count();
+            format!("World GDP {}  ·  {} a year  ·  {} over 15% jobless", money(now), pct(growth), jobless)
+        } else {
+            format!(
+                "GDP {}  ·  Inflation {}  ·  Jobless {}  ·  Treasury {}",
+                money(n.gdp),
+                pct(n.inflation),
+                pct(n.unemployment(ed)),
+                money(n.treasury * n.exchange)
+            )
+        };
         ui::plain(canvas, &a.font, &facts, vec2(1266.0, 8.0), 13.0, Color::WHITE, Align::Right);
         let hot = self.mouse.is_some_and(|m| ECON_BUTTON.contains(m));
         canvas.fill_rect(ECON_BUTTON, if hot { Color::rgba(245, 197, 66, 90) } else { Color::rgba(245, 197, 66, 40) });
@@ -527,7 +556,7 @@ impl Lucky {
         }
         let help = match tab {
             Tab::Budget => "Up/Down: choose  ·  Left/Right or -/+: change  ·  A: hand back to the autopilot  ·  Tab: next page  ·  O or Esc: close",
-            Tab::Chains => "Up/Down: choose a good  ·  B: build more of its maker  ·  X: close some  ·  Tab: next page",
+            Tab::Chains => "Up/Down: choose a good  ·  B: build more of its maker  ·  X: close some  ·  R: a road where goods are stuck  ·  P: a port  ·  Tab: next page",
             Tab::Market => "Up/Down: choose a good  ·  T: free → no exports → no imports  ·  Tab: next page",
             Tab::Trade => "Up/Down: choose a nation  ·  X: embargo (or lift it)  ·  Tab: next page",
             Tab::Stockpile => "Weapons made at home or bought go into the stockpile  ·  Tab: next page",
@@ -542,16 +571,17 @@ impl Lucky {
         let (x, y) = (WIN.x + 26.0, WIN.y + 84.0);
         plain(canvas, &a.font, "POLICY", vec2(x, y), 12.0, GOLD);
         for (k, lever) in Lever::ALL.iter().enumerate() {
-            let ry = y + 22.0 + k as f32 * 40.0;
-            let r = Rect::new(x - 6.0, ry - 4.0, 470.0, 36.0);
+            let ry = y + 22.0 + k as f32 * LEVER_ROW;
+            let r = Rect::new(x - 6.0, ry - 4.0, 470.0, LEVER_ROW - 4.0);
             if k == row {
                 canvas.fill_rect(r, Color::rgba(245, 197, 66, 40));
             }
             plain(canvas, &a.font, lever.name(), vec2(x, ry + 4.0), 16.0, Color::WHITE);
-            let value = e.lever(0, *lever);
+            let value = e.lever_with(0, *lever, Some(ed));
             let auto = match lever {
                 Lever::InterestRate => n.manual_rate.is_none(),
-                Lever::Tariff => false,
+                Lever::Tariff | Lever::Research => false,
+                Lever::Arms => n.arms.is_none(),
                 _ => !n.manual_taxes,
             };
             right(canvas, &a.font, &pct(value), vec2(x + 360.0, ry + 4.0), 17.0, GOLD);
@@ -574,7 +604,7 @@ impl Lucky {
             ("Debt", format!("{} ({} of GDP)", money(n.debt * n.exchange), pct(n.debt / gdp_year))),
             ("Credit rating", format!("{}  ·  bonds pay {}", ed.ratings[n.rating].name, pct(n.bond_rate))),
             ("Treasury", money(n.treasury * n.exchange)),
-            ("Money printed this month", money(n.printed_month * n.exchange)),
+            ("Money printed last month", money(n.printed_last_month * n.exchange)),
             ("Model", ed.models[n.model].name.clone()),
         ];
         for (k, (label, value)) in lines.iter().enumerate() {
@@ -600,6 +630,7 @@ impl Lucky {
             ("Infrastructure", b.infrastructure),
             ("Building", b.construction),
             ("Weapons", b.procurement),
+            ("Research", b.research),
             ("Lost to corruption", b.corruption),
             ("Tribute out", b.tribute_out),
         ];
@@ -967,8 +998,11 @@ const POLICY_BUTTON: Rect = Rect { x: 960.0, y: 618.0, w: 190.0, h: 30.0 };
 const EMBARGO_BUTTON: Rect = Rect { x: 1010.0, y: 618.0, w: 140.0, h: 30.0 };
 
 /// The -/+ buttons of a lever row.
+/// The height of a lever's row on the budget page.
+const LEVER_ROW: f32 = 31.0;
+
 fn lever_buttons(k: usize) -> (Rect, Rect) {
-    let y = WIN.y + 84.0 + 22.0 + k as f32 * 40.0;
+    let y = WIN.y + 84.0 + 22.0 + k as f32 * LEVER_ROW;
     (Rect::new(WIN.x + 400.0, y, 30.0, 28.0), Rect::new(WIN.x + 436.0, y, 30.0, 28.0))
 }
 

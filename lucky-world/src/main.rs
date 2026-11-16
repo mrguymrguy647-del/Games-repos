@@ -7,6 +7,7 @@
 
 mod country;
 mod data;
+mod ai;
 mod econ;
 mod fate;
 mod game;
@@ -43,7 +44,8 @@ pub fn new_game() -> Result<game::Lucky, Box<dyn std::error::Error>> {
     let assets = ui::Assets::load()?;
     let models = map_view::Models::load()?;
     let econ_data = econ::EconData::load(&data)?;
-    Ok(game::Lucky::new(data, atlas, assets, models, econ_data))
+    let ai_data = ai::AiData::load()?;
+    Ok(game::Lucky::new(data, atlas, assets, models, econ_data, ai_data))
 }
 
 /// Everything a world is made of: its data, maps, economy rules, owners and economy.
@@ -188,8 +190,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(at) = args.iter().position(|a| a == "--economy-health") {
         return economy_health(&args[at + 1..]);
     }
+    if let Some(at) = args.iter().position(|a| a == "--ai-compare") {
+        return ai::report::compare(&args[at + 1..]).map_err(|e| e.to_string().into());
+    }
+    if let Some(at) = args.iter().position(|a| a == "--ai-tune") {
+        return ai::report::tune(&args[at + 1..]).map_err(|e| e.to_string().into());
+    }
+    if let Some(at) = args.iter().position(|a| a == "--ai-trace") {
+        return ai::report::trace(&args[at + 1..]).map_err(|e| e.to_string().into());
+    }
     if let Some(at) = args.iter().position(|a| a == "--economy-report") {
         return economy_report(&args[at + 1..]);
     }
-    duckforge::run(config(), new_game()?)
+    // --spectate [MAP]: straight into a world of NPC brains (the engine's
+    // --seed picks the world).
+    let mut game = new_game()?;
+    if let Some(at) = args.iter().position(|a| a == "--spectate") {
+        if let Some(id) = args.get(at + 1).filter(|a| !a.starts_with("--")) {
+            game.map = game.data.maps.iter().position(|m| &m.id == id).ok_or(format!("there's no map \"{id}\" (try grand, isles or five_shores)"))?;
+        }
+        game.spectate_at_start = true;
+    }
+    duckforge::run(config(), game)
 }

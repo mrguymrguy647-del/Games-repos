@@ -1,0 +1,175 @@
+# LUCKY WORLD: what each wheel result does to an NPC brain (docs/AI.md, section 8).
+# A brain starts from [default] and adds every one of its wheels' sections:
+#   need   multiplies a need's weight (the default is 1 for each; these add to it)
+#   like   adds to an action category's score: fiscal, money, building,
+#          infrastructure, trade, military, research
+#   goal   adds to a goal's score: grow, get_rich, dominate, survive
+#   risk   (0..0.8) takes that share off debt harm
+#   horizon_years  how far ahead it looks (research pays off later)
+#   noise  adds to the difficulty's noise
+#   research_max   adds to the most it will spend on research
+#   arms_floor     the least it will spend on arms (share of GDP)
+#   tax_floor      the lowest it lets income tax go
+#   embargo        adds to the score of embargoes (diplomats hate them)
+#   overlord       how much it resents its overlord (a colony's wish for independence)
+#   hegemon        adds to the pressure it feels from a nation that is too strong
+#   reach          adds to how far away it sees threats and opportunities
+#   research_belief multiplies how much research seems to pay
+
+[default]
+risk = 0.1
+horizon_years = 8.0
+noise = 0.0
+research_max = 0.0
+arms_floor = 0.0
+tax_floor = 0.05
+embargo = 0.0
+overlord = 0.0
+hegemon = 0.0
+reach = 0.0
+research_belief = 1.0
+
+# ---- Leader: the style ----
+[leader.warlord]                 # a risk-taker who trusts guns
+risk = 0.35
+need = { security = 0.5, debt = -0.2 }
+like = { military = 0.06 }
+goal = { dominate = 0.35 }
+embargo = 0.03
+
+[leader.coward]                  # careful: debt and danger loom large
+risk = -0.1
+need = { debt = 0.3, security = 0.3, support = 0.2 }
+like = { military = 0.02 }
+goal = { survive = 0.25 }
+embargo = -0.05
+
+[leader.genius]                  # plans further ahead
+horizon_years = 6.0
+noise = -0.02
+need = { growth = 0.2 }
+like = { research = 0.04 }
+research_max = 0.01
+goal = { grow = 0.2 }
+
+[leader.builder]                 # loves industry
+need = { supply = 0.2, jobs = 0.1 }
+like = { building = 0.05, infrastructure = 0.04 }
+goal = { grow = 0.25 }
+
+[leader.diplomat]                # loves trade
+need = { trade = 0.4 }
+like = { trade = 0.03 }
+goal = { get_rich = 0.3 }
+embargo = -0.2
+
+# ---- Ideology: goals and limits ----
+[ideology.democracy]             # needs public support
+need = { support = 0.6, jobs = 0.2 }
+goal = { grow = 0.15, get_rich = 0.15 }
+embargo = -0.03
+
+[ideology.military_rule]         # loves its army
+need = { security = 0.4 }
+like = { military = 0.04 }
+goal = { dominate = 0.3 }
+arms_floor = 0.012
+
+[ideology.communism]             # plans
+need = { supply = 0.4, jobs = 0.3 }
+like = { building = 0.04 }
+horizon_years = 3.0
+tax_floor = 0.10
+goal = { grow = 0.2 }
+
+[ideology.colony]                # wants independence
+overlord = 0.6
+goal = { get_rich = 0.25 }
+
+[ideology.monarchy]
+need = { support = 0.2 }
+goal = { grow = 0.1 }
+
+[ideology.theocracy]
+need = { support = 0.3 }
+goal = { survive = 0.1 }
+
+[ideology.imperialism]
+need = { security = 0.3 }
+like = { military = 0.02 }
+goal = { dominate = 0.25 }
+
+[ideology.authoritarianism]
+need = { security = 0.2, support = -0.2 }
+goal = { dominate = 0.1, grow = 0.1 }
+
+[ideology.tribalism]
+need = { support = 0.2, supply = 0.2 }
+horizon_years = -2.0
+goal = { survive = 0.15 }
+
+# ---- History ----
+[history.former_empire]
+goal = { dominate = 0.2 }
+need = { security = 0.1 }
+
+[history.ex_colony]              # distrusts the strong
+hegemon = 0.5
+
+[history.post_war]               # careful
+need = { security = 0.2, debt = 0.1 }
+risk = -0.05
+
+[history.new_nation]
+goal = { grow = 0.1 }
+
+[history.ancient_realm]
+horizon_years = 2.0
+
+[history.revolution]             # restless
+need = { support = 0.3 }
+
+[history.breakaway]
+need = { support = 0.2, security = 0.2 }
+
+# ---- Regional impact ----
+[impact.isolated]
+need = { security = -0.3 }
+reach = -0.2
+
+[impact.minor]
+
+[impact.regional_power]
+reach = 0.3
+goal = { dominate = 0.1 }
+
+# ---- Blessing or curse ----
+[fate.loyal_army]
+like = { military = 0.02 }
+
+[fate.corrupt_court]
+noise = 0.02
+
+[fate.rebel_province]
+need = { support = 0.3 }
+
+[fate.golden_generation]
+research_belief = 0.3
+like = { research = 0.02 }
+
+[fate.plague]
+need = { jobs = 0.1, support = 0.1 }
+
+[fate.fertile]
+
+[fate.hidden_gold]
+goal = { get_rich = 0.1 }
+
+[fate.great_harbor]
+need = { trade = 0.2 }
+
+[fate.earthquakes]
+like = { infrastructure = 0.02 }
+
+[fate.drought]
+need = { supply = 0.2 }

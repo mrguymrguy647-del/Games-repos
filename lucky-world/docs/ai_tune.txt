@@ -1,0 +1,17 @@
+40 NPC-only worlds, 30 years, 1000 brains (51 s)
+  world growth 1.57% a year, 325 nations over 15% unemployment, 143 junk
+  decisions:      733407 (0 couldn't be done, 0.0%)
+  bankruptcies:   43 defaults; 10 nations ended near-default and printing money
+  unneeded builds: 3822 of 14034 (27.2%) still mostly idle a year later
+  flip-flops:     0 of 733407 decisions (0.00%) undid a move within 90 days; 40693 more (5.5%) adjusted one back within half a year
+                  most: income_tax_up 7890, income_tax_down 6948, research_up 3184, sales_tax_up 3125, research_down 2019, arms_up 2005
+  decisions by action: income_tax_up 116371, income_tax_down 101024, research_up 72855, research_down 58995, corporate_tax_down 51306, welfare_down 35955, arms_up 35498, welfare_up 34349, corporate_tax_up 33943, arms_down 33497, rate_down 26385, close 22698, sales_tax_down 20530, rate_up 20087, sales_tax_up 18037, tariff_down 15606, build 14034, ban_exports 5688, lift_ban 5295, tariff_up 5128, rate_auto 3081, road 1632, embargo 693, lift_embargo 644, port 76
+  the worst:
+    map 1 seed 116 Workers' State of Iskefjell (Genius, Communism): 108 flips, 47/77 builds idle, 0 defaults
+    map 2 seed 102 Defense Republic of Qasun (Warlord, Military Rule): 149 flips, 1/9 builds idle, 0 defaults
+    map 0 seed 121 Workers' State of Mirah (Warlord, Communism): 118 flips, 28/84 builds idle, 0 defaults
+    map 1 seed 119 Casanora Junta (Warlord, Military Rule): 144 flips, 2/8 builds idle, 0 defaults
+    map 0 seed 139 Orotepec Junta (Warlord, Military Rule): 143 flips, 0/9 builds idle, 0 defaults
+    map 2 seed 105 People's Republic of Darhada (Warlord, Communism): 124 flips, 19/52 builds idle, 0 defaults
+    map 0 seed 106 Iskby Territory (Diplomat, Colony): 136 flips, 6/6 builds idle, 0 defaults
+    map 2 seed 126 Dariar Junta (Builder, Military Rule): 139 flips, 2/6 builds idle, 0 defaults

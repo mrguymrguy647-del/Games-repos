@@ -2,11 +2,13 @@
 //! after each), see your country's card, meet your rivals, then go onto the
 //! 3D world map (in `map_screen`).
 
+mod brain_panel;
 mod econ_screen;
 mod map_screen;
 
 use duckforge::prelude::*;
 
+use crate::ai::{AiData, Brains};
 use crate::country::{self, Country};
 use crate::econ::{EconData, Economy};
 use crate::data::Data;
@@ -16,7 +18,7 @@ use crate::wheel::{self, Event, WheelView};
 use crate::map_view::{MapView, Models};
 use crate::mapdata::Atlas;
 use crate::world::World;
-use econ_screen::Clock;
+use econ_screen::{Clock, SPECTATOR_SPEED};
 use map_screen::MapUi;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,8 +33,9 @@ pub enum Screen {
     Map,
 }
 
-const TITLE_SPIN: Button = Button::new(370.0, 572.0, "SPIN THE WHEELS", "SPACE", ButtonKind::Gold);
-const TITLE_SKIP: Button = Button::new(650.0, 572.0, "SKIP SPIN", "S: roll all 16 at once", ButtonKind::Blue);
+const TITLE_SPIN: Button = Button::new(230.0, 572.0, "SPIN THE WHEELS", "SPACE", ButtonKind::Gold);
+const TITLE_SKIP: Button = Button::new(510.0, 572.0, "SKIP SPIN", "S: roll all 16 at once", ButtonKind::Blue);
+const TITLE_WATCH: Button = Button::new(790.0, 572.0, "WATCH THE BRAINS", "W: a world of NPCs only", ButtonKind::Blue);
 const WHEEL_GO: Button = Button::new(895.0, 560.0, "SPIN", "SPACE", ButtonKind::Gold);
 const WHEEL_SKIP: Button = Button::new(895.0, 630.0, "SKIP SPIN", "S: roll the rest at once", ButtonKind::Blue);
 const CARD_NEXT: Button = Button::new(510.0, 528.0, "NEXT ROUND", "SPACE", ButtonKind::Gold);
@@ -88,10 +91,18 @@ pub struct Lucky {
     pub econ_data: EconData,
     pub economy: Option<Economy>,
     pub clock: Clock,
+    /// The NPC brains' weights (data/ai/), and the brains of every nation
+    /// the player doesn't run (all of them in spectator mode).
+    pub ai_data: AiData,
+    pub brains: Option<Brains>,
+    /// Spectator mode: nobody is the player; click a nation to read its mind.
+    pub spectating: bool,
+    /// `--spectate`: go straight to spectator mode on the first frame.
+    pub spectate_at_start: bool,
 }
 
 impl Lucky {
-    pub fn new(data: Data, atlas: Atlas, assets: Assets, models: Models, econ_data: EconData) -> Lucky {
+    pub fn new(data: Data, atlas: Atlas, assets: Assets, models: Models, econ_data: EconData, ai_data: AiData) -> Lucky {
         let mut game = Lucky {
             data,
             assets,
@@ -126,6 +137,10 @@ impl Lucky {
             econ_data,
             economy: None,
             clock: Clock::default(),
+            ai_data,
+            brains: None,
+            spectating: false,
+            spectate_at_start: false,
         };
         game.make_title_wheel();
         game
@@ -151,6 +166,8 @@ impl Lucky {
         self.world = None;
         self.map_view = None;
         self.economy = None;
+        self.brains = None;
+        self.spectating = false;
         self.clock = Clock::default();
         self.map_ui = MapUi::default();
         self.rival_page = 0;
@@ -186,6 +203,19 @@ impl Lucky {
         self.skipped = true;
         ctx.play_with(&self.assets.whoosh, 0.9, 0.0);
         self.finish(ctx);
+    }
+
+    /// Spectator mode: a world of NPC brains only, straight onto the map at
+    /// top speed. (Nation 0 is rolled like a player's, but a brain runs it.)
+    fn spectate(&mut self, ctx: &mut Context) {
+        let first = country::roll_country(&self.data, self.map, Vec::new(), &[], true, &mut ctx.rng);
+        self.landed = first.landed.clone();
+        self.player = Some(first);
+        self.spectating = true;
+        self.build_world(ctx);
+        self.clock.speed = SPECTATOR_SPEED;
+        ctx.play_with(&self.assets.whoosh, 0.9, 0.0);
+        self.enter_map(ctx);
     }
 
     fn finish(&mut self, ctx: &mut Context) {
@@ -235,7 +265,9 @@ impl Lucky {
         if let Some(w) = &mut self.title_wheel {
             w.angle += 0.15 * ctx.dt();
         }
-        if ctx.input.was_pressed(Key::S) || self.mouse_clicked(ctx, &TITLE_SKIP) {
+        if ctx.input.was_pressed(Key::W) || self.mouse_clicked(ctx, &TITLE_WATCH) {
+            self.spectate(ctx);
+        } else if ctx.input.was_pressed(Key::S) || self.mouse_clicked(ctx, &TITLE_SKIP) {
             self.skip(ctx);
         } else if self.confirm(ctx, &TITLE_SPIN) {
             self.enter_wheel(0, true);
@@ -370,7 +402,11 @@ impl Lucky {
         self.map_view = Some(MapView::new(&self.atlas, &world, &self.models));
         // The economy starts from the wheels (seeded, so a replay is the same).
         let seed = ctx.rng.next_u32();
-        self.economy = Some(Economy::new(&self.data, &self.econ_data, &self.atlas, &world, seed));
+        let mut economy = Economy::new(&self.data, &self.econ_data, &self.atlas, &world, seed);
+        // Every nation but the player's thinks for itself (all of them when watching).
+        let all = self.spectating;
+        self.brains = Some(Brains::new(self.ai_data.clone(), &self.data, &self.atlas, &world, &mut economy, seed, |i| all || i != 0));
+        self.economy = Some(economy);
         self.clock = Clock::default();
         self.world = Some(world);
         self.rival_page = 0;
@@ -475,6 +511,9 @@ impl Game for Lucky {
         self.bloom = ctx.tune("bloom", 0.0).max(0.0);
         if let Some(m) = ctx.input.mouse_position() {
             self.mouse = Some(m);
+        }
+        if std::mem::take(&mut self.spectate_at_start) && self.screen == Screen::Title {
+            self.spectate(ctx);
         }
         if ctx.input.was_pressed(Key::F5) {
             if let Some(id) = self.map_ui.ambient.take() {
@@ -661,7 +700,8 @@ impl Lucky {
         }
         TITLE_SPIN.draw(canvas, a, self.mouse, self.time, true);
         TITLE_SKIP.draw(canvas, a, self.mouse, self.time, false);
-        ui::plain(canvas, &a.font, "Left / Right or 1-3: choose a world   ·   F5: start over   ·   Esc: quit", vec2(640.0, 670.0), 15.0, SOFT, Align::Center);
+        TITLE_WATCH.draw(canvas, a, self.mouse, self.time, false);
+        ui::plain(canvas, &a.font, "Left / Right or 1-3: choose a world   ·   W: watch a world of NPC brains   ·   F5: start over   ·   Esc: quit", vec2(640.0, 670.0), 15.0, SOFT, Align::Center);
     }
 
     fn draw_panel(&self, canvas: &mut Canvas) {

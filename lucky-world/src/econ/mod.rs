@@ -11,7 +11,7 @@ mod market;
 pub mod player;
 mod policy;
 pub mod report;
-mod tick;
+pub mod tick;
 #[cfg(test)]
 mod tests;
 
@@ -113,6 +113,7 @@ pub struct Budget {
     pub infrastructure: f64,
     pub construction: f64,
     pub procurement: f64,
+    pub research: f64,
     pub interest: f64,
     pub tribute_out: f64,
 }
@@ -123,7 +124,7 @@ impl Budget {
     }
 
     pub fn spending(&self) -> f64 {
-        self.army + self.welfare + self.government + self.infrastructure + self.construction + self.procurement + self.interest + self.tribute_out
+        self.army + self.welfare + self.government + self.infrastructure + self.construction + self.procurement + self.research + self.interest + self.tribute_out
     }
 
     pub fn add(&mut self, o: &Budget) {
@@ -139,6 +140,7 @@ impl Budget {
         self.infrastructure += o.infrastructure;
         self.construction += o.construction;
         self.procurement += o.procurement;
+        self.research += o.research;
         self.interest += o.interest;
         self.tribute_out += o.tribute_out;
     }
@@ -402,11 +404,23 @@ pub struct NationEcon {
     pub money_growth: f64,
     /// Printed money this month (local), for the fiscal autopilot.
     pub printed_month: f64,
+    /// What was printed last month.
+    pub printed_last_month: f64,
     pub history: History,
     /// The player decides: the autopilot leaves taxes, the rate, state
     /// building and trade policy alone once the player has changed them.
     pub player: bool,
     pub state_autopilot: bool,
+    /// Run by an NPC brain (src/ai): the state's building and infrastructure
+    /// are the brain's to decide, through the player's own levers.
+    pub brain: bool,
+    /// Research and schools, as a share of GDP a year (a lever, 0 by default),
+    /// and the knowledge it has built up (follows it over `research_lag` years).
+    pub research: f64,
+    pub knowledge: f64,
+    /// Arms purchases as a share of GDP a year, if set by hand (else the Army
+    /// Strength wheel's).
+    pub arms: Option<f64>,
 }
 
 /// The whole world's economy.

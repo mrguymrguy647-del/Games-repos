@@ -200,11 +200,13 @@ impl Economy {
                         tighten += 2.0;
                     }
                 }
-                n.printed_month = 0.0;
                 n.income_tax = (n.income_tax + tighten * step).clamp(0.05, 0.55);
                 n.sales_tax = (n.sales_tax + tighten * step * 0.5).clamp(0.0, 0.25);
                 n.welfare_rate = (n.welfare_rate - tighten * 0.01).clamp(0.1, ed.welfare_rate.max(md.income_tax));
             }
+            // The month's printing is kept as last month's (for anyone setting
+            // their own taxes, it used to pile up for ever).
+            n.printed_last_month = std::mem::take(&mut n.printed_month);
         }
         if std::mem::take(&mut self.nations[i].defaulted) {
             let text = format!("{} defaults: half its debt is written off, and its name with it", self.nations[i].name);
@@ -212,7 +214,7 @@ impl Economy {
         }
         self.invest(ed, i);
         self.close_losers(ed, i);
-        if self.nations[i].state_autopilot {
+        if self.nations[i].state_autopilot && !self.nations[i].brain {
             self.build_infrastructure(ed, i);
         }
         self.refresh_hire_order(ed, i);
@@ -251,6 +253,27 @@ impl Economy {
         n.hire_order = order;
     }
 
+    /// What a nation could make of each good a day at full tilt, counting
+    /// what is being built (a level under construction makes what one built does).
+    pub fn capacity(&self, ed: &EconData, i: usize) -> Vec<f64> {
+        let n = &self.nations[i];
+        let t = tech(ed, n);
+        let per_level = |k: usize, q: usize| {
+            let bd = &ed.buildings[k];
+            let p = &self.provinces[q];
+            let rich = if bd.deposit { p.deposits[bd.output] } else { 1.0 };
+            bd.amount * t * super::skill_factor(n, bd) * rich * super::output_mod(ed, n, bd.output) * p.transport * (1.0 - super::defect_rate(n, bd))
+        };
+        let mut cap = vec![0.0; ed.goods.len()];
+        for b in n.buildings.iter().filter(|b| b.open && b.levels > 0.0) {
+            cap[ed.buildings[b.kind].output] += b.levels * per_level(b.kind, b.province);
+        }
+        for c in &n.construction {
+            cap[ed.buildings[c.kind].output] += c.levels * per_level(c.kind, c.province);
+        }
+        cap
+    }
+
     /// Private firms build where profit is best; the state builds to its plan.
     fn invest(&mut self, ed: &EconData, i: usize) {
         let dpy = ed.days_per_year as f64;
@@ -260,7 +283,7 @@ impl Economy {
             let md = &ed.models[n.model];
             let rate_factor = (-6.0 * (n.rate - 0.03)).exp().clamp(0.2, 2.0);
             let private = n.savings.max(0.0) * 0.15 * md.private_investment * n.mods.get("investment") * rate_factor;
-            let state = if n.state_autopilot && n.deficit_ema < 0.08 {
+            let state = if n.state_autopilot && !n.brain && n.deficit_ema < 0.08 {
                 md.state_investment * 0.004 * n.gdp_local * dpy * n.mods.get("investment")
             } else {
                 0.0
@@ -281,24 +304,7 @@ impl Economy {
 
         // What the nation could make of each good at full tilt, counting what
         // is being built (a level under construction makes what one built does).
-        let capacity: Vec<f64> = {
-            let n = &self.nations[i];
-            let t = tech(ed, n);
-            let per_level = |k: usize, q: usize| {
-                let bd = &ed.buildings[k];
-                let p = &self.provinces[q];
-                let rich = if bd.deposit { p.deposits[bd.output] } else { 1.0 };
-                bd.amount * t * super::skill_factor(n, bd) * rich * super::output_mod(ed, n, bd.output) * p.transport * (1.0 - super::defect_rate(n, bd))
-            };
-            let mut cap = vec![0.0; ed.goods.len()];
-            for b in n.buildings.iter().filter(|b| b.open && b.levels > 0.0) {
-                cap[ed.buildings[b.kind].output] += b.levels * per_level(b.kind, b.province);
-            }
-            for c in &n.construction {
-                cap[ed.buildings[c.kind].output] += c.levels * per_level(c.kind, c.province);
-            }
-            cap
-        };
+        let capacity = self.capacity(ed, i);
 
         // Candidates: each building kind, its best place, and what a level would earn.
         let mut options: Vec<(f64, usize, usize, f64)> = Vec::new(); // (score, kind, province, max levels)

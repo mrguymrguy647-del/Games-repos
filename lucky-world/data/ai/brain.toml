@@ -1,0 +1,327 @@
+# LUCKY WORLD: the NPC brains' weights. docs/AI.md explains every number.
+# The needs (considerations) are, in this order:
+#   jobs, heat (prices rising), chill (prices falling), debt, supply, growth,
+#   support, security, trade
+# An effect is between -1 (makes the need worse) and +1 (relieves it fully).
+
+# Timing: strategy every strategy_days, planning every planning_days.
+strategy_days = 90
+planning_days = 7
+# Holding still scores this: an action must beat it to be taken.
+hold_score = 0.03
+# Harm always counts at least this much of a need, even when it's fine.
+harm_floor = 0.15
+# A new goal must beat the current one by this much.
+goal_stickiness = 0.15
+# Moving a lever back within flipflop_days costs up to flipflop_penalty.
+flipflop_days = 180
+flipflop_penalty = 0.5
+# A lever just moved isn't touched again for this long (to see what it did).
+patience_days = 0
+# ...and a move isn't undone within this many days at all.
+undo_days = 90
+# Each week a need moves this share of the way to what it is now (1: no smoothing).
+need_smoothing = 1.0
+# Embargo only whoever it plans against, and only with a threat level over this.
+embargo_threat = 0.5
+# The difficulty brains play at unless told otherwise.
+default_difficulty = "normal"
+
+[needs]
+jobs_span = 0.07        # unemployment this far over natural is fully urgent
+heat_from = 0.04        # inflation over this starts to worry
+heat_span = 0.08
+chill_from = 0.0        # deflation under this starts to worry
+chill_span = 0.03
+deficit_ok = 0.02       # a deficit over this share of GDP starts to worry
+deficit_span = 0.06
+debt_ok = 0.5           # debt over this share of the rating's ceiling starts to worry
+junk = 0.6              # a junk rating (BB or worse) is at least this urgent
+growth_ok = 0.03        # real growth this good leaves only the floor
+growth_floor = 0.25
+support_ok = 60.0       # stability under this starts to worry
+support_span = 30.0
+trade_full = 0.8        # trade capacity used over this starts to worry
+choked = 0.92           # a province moving less than this of its goods is choked
+dominate_floor = 0.5    # a nation set on dominating always feels this much need for security
+rating_safe = 70.0      # the agencies' score (docs/ECONOMY.md) under this starts to worry (BB is under 55)
+rating_span = 25.0
+emergency = 1.5         # printing money for a deep deficit: the debt need is 1 + this (it outweighs all else)
+
+# How much a shortage of each good matters (inputs: every good a building uses).
+[importance]
+food = 1.0
+electricity = 0.9
+consumer_goods = 0.6
+fuel = 0.5
+inputs = 0.7
+military = 0.2
+
+# Each goal weighs the needs.
+[goal.grow]
+jobs = 1.0
+heat = 0.6
+chill = 0.6
+debt = 0.6
+supply = 0.9
+growth = 1.2
+support = 0.5
+security = 0.3
+trade = 0.6
+
+[goal.get_rich]
+jobs = 0.6
+heat = 0.9
+chill = 0.9
+debt = 1.2
+supply = 0.8
+growth = 1.0
+support = 0.5
+security = 0.2
+trade = 1.1
+
+[goal.dominate]
+jobs = 0.6
+heat = 0.5
+chill = 0.5
+debt = 0.5
+supply = 0.9
+growth = 0.8
+support = 0.4
+security = 1.3
+trade = 0.4
+
+[goal.survive]
+jobs = 1.2
+heat = 0.8
+chill = 0.8
+debt = 1.2
+supply = 1.2
+growth = 0.3
+support = 1.0
+security = 0.9
+trade = 0.4
+
+# What every action does to each need (before the situation scales it).
+[action.income_tax_down]
+jobs = 0.30
+chill = 0.15
+growth = 0.10
+support = 0.20
+debt = -0.45
+heat = -0.15
+
+[action.income_tax_up]
+jobs = -0.25
+chill = -0.15
+growth = -0.08
+support = -0.20
+debt = 0.45
+heat = 0.15
+
+[action.corporate_tax_down]
+growth = 0.15
+jobs = 0.10
+debt = -0.30
+
+[action.corporate_tax_up]
+growth = -0.12
+jobs = -0.08
+debt = 0.30
+
+[action.sales_tax_down]
+jobs = 0.20
+heat = 0.10
+support = 0.10
+debt = -0.35
+
+[action.sales_tax_up]
+jobs = -0.18
+heat = -0.10
+support = -0.10
+debt = 0.35
+
+[action.welfare_up]
+jobs = 0.15
+support = 0.30
+chill = 0.10
+debt = -0.30
+
+[action.welfare_down]
+jobs = -0.12
+support = -0.30
+debt = 0.30
+
+[action.tariff_up]
+debt = 0.12
+heat = -0.15
+trade = -0.20
+growth = -0.10
+
+[action.tariff_down]
+debt = -0.12
+heat = 0.15
+trade = 0.20
+growth = 0.10
+
+[action.rate_down]
+jobs = 0.25
+chill = 0.40
+growth = 0.10
+heat = -0.35
+
+[action.rate_up]
+heat = 0.45
+jobs = -0.20
+chill = -0.35
+growth = -0.08
+
+[action.rate_auto]      # x 2 x how far the reason for fixing the rate has gone
+heat = 0.15
+chill = 0.15
+
+[action.research_up]
+growth = 0.55          # x the horizon (horizon_years / research.horizon_ref)
+jobs = 0.20            # the money is spent at home (schools, labs)
+debt = -0.35
+
+[action.research_down]
+growth = -0.45
+jobs = -0.15
+debt = 0.35
+
+[action.arms_up]        # x how far under arms.max it is
+security = 0.40
+jobs = 0.05
+debt = -0.35
+support = -0.05
+
+[action.arms_down]
+security = -0.40
+debt = 0.25
+
+[action.build]          # plus: supply = the good's shortage x importance, growth = return
+jobs = 0.45
+debt = -0.10           # plus the cost (section [build])
+
+[action.close]
+debt = 0.20
+jobs = -0.20
+
+[action.road]          # growth and trade x how choked the province is
+growth = 0.6
+trade = 0.5
+debt = -0.10
+
+[action.port]
+trade = 0.8
+growth = 0.2
+debt = -0.10
+
+[action.ban_exports]   # supply x the good's shortage
+supply = 0.8
+growth = -0.05
+trade = -0.10
+
+[action.lift_ban]
+growth = 0.15
+trade = 0.20
+
+[action.embargo]       # security x the threat; growth harm x the trade it cuts
+security = 0.6
+growth = -1.0
+trade = -0.5
+
+[action.lift_embargo]
+growth = 0.8
+trade = 0.4
+
+[build]
+margin = 1.1           # build only while able to make less than this x home use and exports
+roi_full = 0.5         # a return this good counts fully for growth
+cost_harm = 6.0        # debt harm = cost over a year's GDP x this
+export_margin = 1.25   # an export pays when the world pays this x its cost
+min_room = 0.05        # and not when debt would go over (1 - this) of the ceiling
+roi_min = 0.12         # not short: build only a kind that already earns this a year on its cost, and sells abroad
+
+[fiscal]
+tax_level = 0.35       # a tax at this level hurts 1.5x as much to raise (0.5 + tax / this)
+yield_ref = 0.004      # a tax point bringing in this share of GDP helps the debt as written (more: more, to 2.5x)
+income_tax_max = 0.55  # the same ceilings as the treasury's autopilot
+corporate_tax_max = 0.45
+sales_tax_max = 0.25
+tariff_max = 0.5
+welfare_floor = 0.10   # the treasury never cuts welfare under this either
+welfare_max = 0.5
+welfare_level = 0.25   # welfare this high costs 1.5x as much to raise again (0.5 + welfare / this)
+
+[money]
+rate_from = 0.5        # the brain fixes the rate only with jobs or heat need over this
+
+[close]
+idle = 0.3             # state buildings run at or under this, losing money
+days = 90              # for this many days
+
+[research]
+horizon_ref = 10.0     # research's growth effect x horizon_years / this
+max = 0.05             # never above this share of GDP (the personality may lower it)
+
+[arms]
+max = 0.03
+
+# How sure each secret service level makes a brain of others' numbers
+# (estimate = truth x exp(error x a normal number)).
+[intel]
+none = 0.30
+amateur = 0.20
+competent = 0.12
+feared = 0.07
+legendary = 0.04
+
+[power]
+army_value = 60000.0   # W$ a soldier is worth in the power index
+
+[threat]
+border = 1.0           # proximity: a land border
+continent = 0.6        # the same continent
+far = 0.25             # anywhere else
+calm = 0.5             # a strong neighbour with no grudge counts this much (1 + hostility for one with)
+ok = 0.8               # threats under this don't worry
+span = 1.2
+
+[hegemon]
+share = 0.30
+lead = 1.5
+pressure = 1.5
+
+[opportunity]
+reach = 0.6
+unemployment = 0.20
+stability = 35.0
+gdp_drop = 0.15
+
+[memory]
+decay = 0.05
+embargo = -0.4
+lift = 0.15
+kept = 0.05
+broken = -0.1          # a partner's sales fell away (at most once a year per partner)
+partner = 0.05         # ...a partner: it sold us at least this share of all we bought
+help = 0.03
+log = 32
+
+# How well a brain plans: noise in its scores, how far it looks, how much it does a week.
+[difficulty.easy]
+noise = 0.12
+horizon = 0.6
+max_actions = 1
+
+[difficulty.normal]
+noise = 0.05
+horizon = 1.0
+max_actions = 3
+
+[difficulty.hard]
+noise = 0.02
+horizon = 1.3
+max_actions = 3

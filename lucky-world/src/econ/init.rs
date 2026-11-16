@@ -345,12 +345,17 @@ impl Economy {
             real_growth: 0.0,
             money_growth: 0.0,
             printed_month: 0.0,
+            printed_last_month: 0.0,
             history: History {
                 prices: vec![Vec::new(); goods],
                 ..History::default()
             },
             player: i == 0,
             state_autopilot: true,
+            brain: false,
+            research: 0.0,
+            knowledge: 0.0,
+            arms: None,
         };
         n.skilled = (interpolate(&ed.skill_by_hdi, hdi) + effects.get("skill")).clamp(0.01, 0.9);
         n.refresh_fast_mods(ed);

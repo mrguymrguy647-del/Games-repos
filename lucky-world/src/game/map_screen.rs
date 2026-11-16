@@ -33,6 +33,8 @@ pub struct MapUi {
     pub hover: Option<usize>,
     /// The nation whose card is open.
     pub card: Option<usize>,
+    /// Spectator mode: the nation whose brain panel is open.
+    pub brain: Option<usize>,
     pub ambient: Option<LoopId>,
     press_at: Option<Vec2>,
     last_mouse: Option<Vec2>,
@@ -51,7 +53,7 @@ pub struct MapUi {
 impl MapUi {
     /// Esc has something to close here (so it doesn't quit the game).
     pub fn wants_escape(&self) -> bool {
-        self.card.is_some() || self.selected.is_some() || self.econ.open.is_some()
+        self.card.is_some() || self.selected.is_some() || self.econ.open.is_some() || self.brain.is_some()
     }
 }
 
@@ -143,6 +145,7 @@ impl Lucky {
         let nations = self.world.as_ref().map_or(0, |w| w.nations.len());
         if ctx.input.was_pressed(Key::Escape) {
             self.select_province(ctx, None);
+            self.map_ui.brain = None;
         }
         if ctx.input.was_pressed(Key::M) {
             if let Some(view) = self.map_view.as_mut() {
@@ -160,6 +163,9 @@ impl Lucky {
             self.map_ui.next_nation = (self.map_ui.next_nation + 1) % nations;
             let n = self.map_ui.next_nation;
             self.visit(ctx, n);
+            if self.spectating {
+                self.map_ui.brain = Some(n);
+            }
         }
         if ctx.input.was_pressed(Key::C) || self.mouse_clicked(ctx, &CARD_BUTTON) && self.map_ui.selected.is_some() {
             let owner = self.map_ui.selected.and_then(|p| self.world.as_ref().and_then(|w| w.owner[p])).unwrap_or(0);
@@ -259,12 +265,24 @@ impl Lucky {
                     rect.contains(at) || flag.is_some_and(|(foot, k)| Rect::new(foot.x - 2.0, foot.y - 46.0 * k, 44.0 * k, 32.0 * k).contains(at))
                 })
                 .map(|(n, ..)| *n);
-            let on_panel = self.map_ui.selected.is_some() && Rect::new(PANEL_AT.x, PANEL_AT.y, 360.0, 350.0).contains(at);
+            let on_panel = self.map_ui.selected.is_some() && !(self.spectating && self.map_ui.brain.is_some()) && Rect::new(PANEL_AT.x, PANEL_AT.y, 360.0, 350.0).contains(at)
+                || self.map_ui.brain.is_some() && super::brain_panel::BRAIN_PANEL.contains(at);
             if let Some(n) = on_label {
-                self.open_card(ctx, n);
+                // Watching, a name opens its brain; playing, its card.
+                if self.spectating {
+                    self.map_ui.brain = Some(n);
+                    ctx.play_with(&self.assets.card_sound, 0.8, 0.0);
+                } else {
+                    self.open_card(ctx, n);
+                }
             } else if !on_panel {
                 let hit = self.map_ui.hover;
                 self.select_province(ctx, hit);
+                if self.spectating {
+                    if let Some(o) = hit.and_then(|p| self.world.as_ref().and_then(|w| w.owner[p])) {
+                        self.map_ui.brain = Some(o);
+                    }
+                }
             }
         }
         self.report_map(ctx);
@@ -313,6 +331,14 @@ impl Lucky {
         let selected = self.map_ui.selected.map_or("none", |p| map.provinces[p].id.as_str());
         ctx.report("selected", selected);
         ctx.report("card", self.map_ui.card.map_or("none".to_string(), |n| self.world.as_ref().map_or(String::new(), |w| w.nations[n].name.clone())));
+        ctx.report("spectating", self.spectating);
+        if let (Some(n), Some(b)) = (self.map_ui.brain, self.brains.as_ref()) {
+            if let Some(brain) = b.brain(n) {
+                ctx.report("brain_nation", n);
+                ctx.report("brain_goal", crate::ai::goal_name(brain.goal));
+                ctx.report("brain_options", brain.thinking.options.len());
+            }
+        }
     }
 
     pub(super) fn draw_map(&self, canvas: &mut Canvas) {
@@ -362,17 +388,31 @@ impl Lucky {
         // The top bar.
         canvas.blit_sprite(&a.topbar, Vec2::ZERO, Blit::default());
         let player = &world.nations[0];
-        country::draw_flag(canvas, Rect::new(14.0, 10.0, 48.0, 32.0), &player.flag);
-        ui::plain(canvas, &a.font, "YOU", vec2(72.0, 7.0), 11.0, GOLD, Align::Left);
-        ui::text(canvas, &a.serif, &player.name, vec2(72.0, 20.0), 20.0, Color::WHITE, Align::Left, 380.0);
+        if self.spectating {
+            ui::plain(canvas, &a.font, "SPECTATING", vec2(14.0, 7.0), 11.0, GOLD, Align::Left);
+            let words = format!("{} NPC brains, {} difficulty  ·  click a nation", world.nations.len(), self.brains.as_ref().map_or("", |b| b.difficulty_name.as_str()));
+            ui::text(canvas, &a.font, &words, vec2(14.0, 22.0), 17.0, Color::WHITE, Align::Left, 440.0);
+        } else {
+            country::draw_flag(canvas, Rect::new(14.0, 10.0, 48.0, 32.0), &player.flag);
+            ui::plain(canvas, &a.font, "YOU", vec2(72.0, 7.0), 11.0, GOLD, Align::Left);
+            ui::text(canvas, &a.serif, &player.name, vec2(72.0, 20.0), 20.0, Color::WHITE, Align::Left, 380.0);
+        }
         ui::text(canvas, &a.font, &self.data.maps[world.map].name.to_uppercase(), vec2(640.0, 14.0), 22.0, GOLD, Align::Center, 360.0);
         let mine = world.provinces_of(0).len();
-        let facts = format!("{} nations  ·  {} provinces  ·  yours: {}", world.nations.len(), map.provinces.len(), mine);
+        let facts = if self.spectating {
+            format!("{} nations  ·  {} provinces  ·  6: top speed (3 months a second)", world.nations.len(), map.provinces.len())
+        } else {
+            format!("{} nations  ·  {} provinces  ·  yours: {}", world.nations.len(), map.provinces.len(), mine)
+        };
         ui::plain(canvas, &a.font, &facts, vec2(640.0, 39.0), 12.0, SOFT, Align::Center);
         self.draw_econ_topbar(canvas);
 
-        if let Some(p) = self.map_ui.selected {
+        // Watching, a brain panel takes the province panel's place.
+        if let Some(p) = self.map_ui.selected.filter(|_| !(self.spectating && self.map_ui.brain.is_some())) {
             self.draw_province_panel(canvas, p);
+        }
+        if let Some(n) = self.map_ui.brain {
+            self.draw_brain_panel(canvas, n);
         }
 
         // The minimap, with the camera's view on it.
@@ -403,13 +443,18 @@ impl Lucky {
         canvas.label("minimap", clip);
         self.draw_overlay_legend(canvas);
 
-        ui::plain(
-            canvas,
-            &a.font,
+        let hint = if self.spectating {
+            "Click a nation: its brain · Tab: next nation · Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · M: terrain · V: overlays · Space: pause · 1-6: speed · O: economy · Esc: close"
+        } else {
             match view.mode {
                 Mode::Political => "Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · T/G: tilt · Click: province · Name or flag: card · Tab: next nation · H: home · M: terrain · V: overlays · Space: pause · 1-5: speed · O: economy",
                 Mode::Terrain => "Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · T/G: tilt · Click: province · Name or flag: card · Tab: next nation · H: home · M: nations · V: overlays · Space: pause · 1-5: speed · O: economy",
-            },
+            }
+        };
+        ui::plain(
+            canvas,
+            &a.font,
+            hint,
             vec2(14.0, 699.0),
             12.0,
             Color::rgba(255, 255, 255, 200),

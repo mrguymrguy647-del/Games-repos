@@ -1,0 +1,53 @@
+{
+ "frames": 1480,
+ "events": [
+  {
+   "frame": 10,
+   "press": "W"
+  },
+  {
+   "frame": 12,
+   "release": "W"
+  },
+  {
+   "frame": 1300,
+   "press": "Tab"
+  },
+  {
+   "frame": 1302,
+   "release": "Tab"
+  },
+  {
+   "frame": 1330,
+   "press": "Tab"
+  },
+  {
+   "frame": 1332,
+   "release": "Tab"
+  },
+  {
+   "frame": 1360,
+   "press": "Tab"
+  },
+  {
+   "frame": 1362,
+   "release": "Tab"
+  },
+  {
+   "frame": 1390,
+   "press": "Tab"
+  },
+  {
+   "frame": 1392,
+   "release": "Tab"
+  },
+  {
+   "frame": 1460,
+   "press": "Space"
+  },
+  {
+   "frame": 1462,
+   "release": "Space"
+  }
+ ]
+}

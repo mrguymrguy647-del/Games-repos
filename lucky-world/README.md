@@ -9,8 +9,11 @@ So far it has **the wheel screen** (phase 1), **the 3D world map**
 (phase 2), with every nation laid on one of three hand-made maps from its
 wheels, and **the economy** (phase 3): a living, daily simulation of 16
 goods in production chains, jobs, wages, prices, money, budgets, debt,
-currencies and world trade for every nation, on a game clock. War and
-diplomacy come later. It is built with Duck Forge (engine), Duck Quill
+currencies and world trade for every nation, on a game clock. And
+**the NPC brains** (phase 4): every nation you don't run thinks for itself,
+with the same levers you have, the same fog of war, and a personality from
+its wheels. You can watch a world of brains only and read any one's mind.
+War and diplomacy come later. It is built with Duck Forge (engine), Duck Quill
 (art), Duck Echo (sound) and Duck Mold (3D models).
 
 <p>
@@ -27,6 +30,7 @@ diplomacy come later. It is built with Duck Forge (engine), Duck Quill
 <img src="docs/econ_stockpile.png" width="32%" alt="The economy window: the weapons stockpile">
 <img src="docs/map_resources.png" width="32%" alt="The resources overlay">
 <img src="docs/map_industry.png" width="32%" alt="The industry overlay">
+<img src="docs/spectator.png" width="98%" alt="Spectator mode: a world of NPC brains, and the brain panel of the Commonwealth of Valia: its goal, its needs, its three best options with scores and reasons, what it did, its biggest threat and what it remembers">
 </p>
 
 ## Run it
@@ -61,14 +65,15 @@ sets the picture quality. A running game re-reads it when you save it:
 
 | Screen | Keys | Mouse |
 |---|---|---|
-| Title | Left / Right or 1-3 choose a world, **Space** spin, **S** Skip Spin | click a world, click the buttons |
+| Title | Left / Right or 1-3 choose a world, **Space** spin, **S** Skip Spin, **W** watch a world of NPC brains | click a world, click the buttons |
 | A wheel | **Space** spin (while spinning: faster), Space again for the next wheel, **S** Skip Spin | buttons |
 | Round card | **Space** next round, **S** Skip Spin | buttons |
 | Country card | **Space** meet your rivals | button |
 | Rivals | 1-9 or click a nation for its full card, Esc or Space back, Left / Right turn pages, **Space** Begin | click a card |
 | World map | WASD / arrows pan, Q / E turn, R / F zoom, T / G tilt, Tab next nation, H home, M terrain / nations view, **V** resources / industry overlay, C country card, Esc deselect | drag pans, right-drag turns, wheel zooms, click a province, click a name or flag for its country card, click the minimap to jump |
-| The clock (map) | **Space** pause, **1-5** speed (1, 3, 7, 15 or 30 days a second) | |
-| Economy window (map) | **O** open / close, **Tab** next page, Up / Down choose a row; Budget: Left / Right lower / raise, **A** back to autopilot; Chains: **B** build, **X** close; Market: **T** trade policy; Trade: **X** embargo | click the ECONOMY button, the pages, rows, −/+ and the buttons |
+| The clock (map) | **Space** pause, **1-5** speed (1, 3, 7, 15 or 30 days a second); watching, **6** (90) | |
+| Economy window (map) | **O** open / close, **Tab** next page, Up / Down choose a row; Budget: Left / Right lower / raise (taxes, welfare, tariff, rate, research, arms), **A** back to autopilot; Chains: **B** build, **X** close, **R** a road where goods are stuck, **P** a port; Market: **T** trade policy; Trade: **X** embargo | click the ECONOMY button, the pages, rows, −/+ and the buttons |
+| Watching (map) | click a nation's name or a province, or **Tab**: its brain panel; Esc closes it | |
 | Anywhere | **F5** start over (for trying it out), **Esc** quit, F12 screenshot, F10 record | |
 
 ### What happens
@@ -173,11 +178,61 @@ with the math, is [docs/ECONOMY.md](docs/ECONOMY.md)):
   `data/economy/effects.toml`.
 - **Luck and rot**: booms, crashes, discoveries, bad harvests, factory fires,
   strikes, earthquakes and oil shocks; corruption and the black market.
-- **Every nation runs on an autopilot** (central bank, taxes, investment,
-  infrastructure, trade) until you take a lever of your own.
+- **Your nation runs on an autopilot** (central bank, taxes, investment,
+  infrastructure, trade) until you take a lever of your own. Every other
+  nation is run by its brain.
 
 Everything is in `data/economy/*.toml` (goods, buildings, effects, events,
 currencies and every constant in `settings.toml`), read when the game starts.
+
+### The NPC brains
+
+Every nation you don't run has a brain (the full design, with the math, is
+[docs/AI.md](docs/AI.md)). It thinks in three layers:
+- **Strategy**, every three months: how strong everyone is, who is its
+  biggest threat, whether someone (perhaps you) is too strong for comfort,
+  which weak neighbours could be opportunities, and its goal: grow, get
+  rich, dominate or survive.
+- **Planning**, every week: every action it could take (taxes, welfare,
+  tariffs, the rate, research, arms, building and closing, roads, ports,
+  export bans, embargoes) gets a score for how much it helps its goal now.
+  It takes the best, or holds still if nothing beats that.
+- **Battles**: a hook for the war phase; no orders yet.
+
+**Fair play.** A brain uses only the player's own buttons, with the same
+costs and limits. It sees its own country fully, but other nations only
+through its secret service, with errors (a legendary service guesses within
+4%, none within 30%). There are no bonuses: difficulty is how well it plans.
+**Personality** comes from the wheels: a warlord takes risks, a coward is
+careful, a genius plans further ahead, a builder loves industry, a diplomat
+loves trade. A democracy needs public support, military rule loves its army,
+communism plans, and a colony resents its overlord. **Memory**: each brain
+remembers who embargoed it, who kept trading and who cut it off, ready for
+diplomacy and war.
+
+Over 50 years on all three maps and twelve seeds (36 worlds), brains beat
+the phase 3 autopilot on all three yardsticks:
+
+| | Autopilot | Brains |
+|---|---|---|
+| World growth a year | 0.84% | **2.09%** |
+| Nations above 15% unemployment | 426 of 900 | **300** |
+| Junk credit ratings | 241 | **123** |
+
+**Spectator mode**: press **W** on the title (or start with
+`-- --spectate grand`). A world of brains only runs at up to three months a
+second; click any nation to see its goal and why, its needs, its three best
+options with their scores and reasons, what it did, its threats and what it
+remembers.
+
+The weights are all in `data/ai/brain.toml` and `data/ai/personality.toml`.
+The tools that tuned them:
+
+```sh
+cargo run --release --no-default-features -- --ai-compare 50 1 2 3 4 5 6   # brains against the autopilot
+cargo run --release --no-default-features -- --ai-tune 100 30              # 100 NPC worlds: dumb behaviour
+cargo run --release --no-default-features -- --ai-trace grand 1 4 720      # one brain's weeks
+```
 
 To see how the world does without you:
 
@@ -274,6 +329,7 @@ QUILL=path/to/quill DUCK_ECHO=path/to/duck-echo DUCK_MOLD=path/to/duck-mold tool
 cargo test --release --no-default-features
 cargo run --release --no-default-features -- --headless --inputs playthroughs/lucky_world.json --sheet-events --out out/look
 cargo run --release --no-default-features -- --headless --inputs playthroughs/economy.json --sheet-events --out out/economy
+cargo run --release --no-default-features -- --headless --inputs playthroughs/spectator.json --sheet-events --out out/spectator
 cargo run --release --no-default-features -- --fuzz 40
 cargo run --release --no-default-features -- --economy-report 50
 ```
@@ -283,8 +339,10 @@ Begin, then on the map it visits nations, clicks a province, opens and closes
 a country card, pans, zooms, tilts and switches views. The fuzz runs reach
 the map too. The economy playthrough runs the clock at full speed, opens
 every page of the economy window, raises a tax, builds, and shows both
-overlays. For the map's and the economy's own keys:
-`-- --fuzz 40 --fuzz-keys S,Space,Enter,Left,Right,Up,Down,Tab,M,H,C,Q,E,R,F,T,G,W,A,D,O,V,B,X,Digit1,Digit5`.
+overlays. The spectator playthrough watches a world of brains for seven
+years at top speed and opens five nations' brain panels. For the map's, the
+economy's and spectator mode's own keys:
+`-- --fuzz 40 --fuzz-keys S,Space,Enter,Left,Right,Up,Down,Tab,M,H,C,Q,E,R,F,T,G,W,A,D,O,V,B,X,P,Digit1,Digit5,Digit6,Escape`.
 `out/look/sheet.png` shows the run, and `audio.wav` has every tick.
 
 ## Files
@@ -298,6 +356,9 @@ overlays. For the map's and the economy's own keys:
 | `src/game.rs` | The screens: title, wheels, round cards, country card, rivals |
 | `src/game/map_screen.rs` | The world map screen: camera keys and mouse, picking, names and flags, province panel, minimap |
 | `src/game/econ_screen.rs` | The clock, the economy window (budget, chains, market, trade, stockpile, charts), the map overlays |
+| `src/game/brain_panel.rs` | Spectator mode's brain panel |
+| `src/ai/` | The NPC brains, which never draw: `data.rs` (reading `data/ai/`), `mod.rs` (personality, brains, the daily loop), `strategy.rs` (intel, power, threats, hegemon, opportunities, the goal), `planning.rs` (needs, actions, scores, acting through the player's levers), `memory.rs` (relations), `battle.rs` (the war phase's hook), `report.rs` (compare, tune, trace), `tests.rs` |
+| `docs/AI.md` | The brains' design, with the math, and the before and after |
 | `src/econ/` | The economy, which never draws: `data.rs` (reading `data/economy/`), `init.rs` (day 1), `tick.rs` (one day), `market.rs` (world trade), `policy.rs` (events and the autopilot), `player.rs` (the player's levers), `report.rs` (the report), `tests.rs` (its promises) |
 | `docs/ECONOMY.md` | The economy's design, with the math |
 | `src/hex.rs` | Hex grid maths: neighbours, corners, which hex a point is in |

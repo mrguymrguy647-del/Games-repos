@@ -411,3 +411,66 @@ are unchanged. Finding the causes took the game's own tools, which are kept:
   seeds 1-15 and 42 pass now, so check `--economy-health 50 1 2 3 4 5 6 7 42
   --why` after any change to `data/economy/`.
 
+---
+
+# Phase 4 (the NPC brains)
+
+Found while building the brains, against the same commits. Numbering
+carries on. Nothing here blocked the work; Duck Forge is unchanged, and
+Quill, Echo and Mold weren't needed (the brain panel is drawn in code).
+
+## Duck Forge (engine)
+
+28. **A playthrough can't click something by its label.** Spectator mode
+    opens a brain by clicking a nation's name, and the game already labels
+    every name (`canvas.label("nation X", rect)`). But a playthrough event
+    needs pixel coordinates, and the names move with the camera and the
+    clock. `playthroughs/spectator.json` uses Tab instead.
+    - Fix: a `{"frame": 640, "click": "nation Commonwealth of Valia"}` event
+      that clicks the middle of the label as drawn that frame (and fails
+      clearly when no label has that name).
+29. **The fuzz summary counts quitting as ending early.** With Escape in
+    `--fuzz-keys`, "27 of 40 runs ended early (quit or crash)". The same
+    line says "no problems found", so these were all quits, but the summary
+    doesn't say how many of each.
+    - Fix: "27 quit, 0 crashed".
+30. **Outlines are `draw_rect`, fills are `fill_rect`.** The first guess for
+    an outline, `stroke_rect`, doesn't exist. `draw_rect` reads like the
+    filled one. An alias, or the name in the error's "did you mean", would
+    have saved a compile.
+31. **Every map run warns about the same labels.** Flags whose capital is
+    off the top of the screen are labelled at (-24, -5) and get "off screen
+    in every checked frame". A flag under the top bar gets "overlaps the
+    economy button". That is three to five warnings per run, before
+    anything new. `--spectate` showed them again. A way to say "this label
+    may be off screen" (`canvas.label_maybe_hidden`) would keep the summary
+    for real problems. (The game could also stop labelling hidden flags.
+    That's for the map phase's next pass.)
+
+Worth keeping as they are:
+- Plain `std::thread` worked well for the brains' tools. `--ai-compare` runs
+  36 worlds of 50 years, twice, on 4 cores in about two minutes, and needs
+  nothing from the engine.
+- `--headless --inputs` with `ctx.report` made the brain panel testable. The
+  spectator playthrough's summary lists the goals the brains reached
+  (`brain_goal: "Survive" on frame 640, "Grow" on 760, "Get rich" on 784`).
+  The key-fuzzer with W and Digit6 reached all four goals.
+
+## The brains' known weak spots (game, not tools)
+
+- **Taxes are adjusted back and forth over months.** No move is undone
+  within 90 days, but 5% of decisions turn a tax back within half a year,
+  as the business cycle turns. Stiffer penalties made unemployment worse
+  (164 instead of 139 nations over 15% in one test), so they stay.
+- **A quarter of new buildings are still mostly idle a year later.**
+  Mostly they are in planned economies and Builder-led nations, and mostly
+  for want of inputs or workers. Down from half before the "one order of a
+  kind at a time" and "goods in store" rules.
+- **Noise as luck.** Letting noise decide whether to act at all beat the
+  careful rule on the yardsticks (more activity, more lucky moves), but it
+  made easy brains as good as hard ones. The brains use the careful rule
+  (section 4 of docs/AI.md), so difficulty means what it says.
+- **Some poor nations stay above 15% unemployment** whatever the brain does
+  (316 of 900 at year 50, against 426 under the autopilot). As the balance
+  pass found, it is structural.
+

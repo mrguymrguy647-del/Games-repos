@@ -41,6 +41,13 @@ hdi_income_slope = 0.04     # HDI drifts by this times ln(income per head / day 
 tech_growth = 0.016         # technical progress: output per worker grows this much a year at $20k a head
 frontier_per_head = 200000  # ...scaled by log10(frontier / GDP per head): 1.5x far below, 0 at the frontier...
 frontier_above = 25         # ...and this many times as steeply backwards above it (at 10, a rich micro-state's first years at full employment took it past $300k a head)
+# Research and schools (a lever, a share of GDP a year): knowledge follows it
+# over research_lag years, and adds research_effect x ln(1 + knowledge /
+# research_ref) a year to technical progress below the frontier (full from
+# half a decade under it: 1% of GDP gives about +0.55% a year, 2% about +0.9%).
+research_effect = 0.008
+research_ref = 0.01
+research_lag = 2.0
 services_markup = 0.25
 services_premium = 1.1       # services can't sell for more than this x their cost: the rest of the money is saved
 # Firms build more of a good only while the nation could make (counting what is

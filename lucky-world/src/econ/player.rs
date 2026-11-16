@@ -20,10 +20,23 @@ pub enum Lever {
     Tariff,
     /// The central bank's rate (from automatic to a fixed rate).
     InterestRate,
+    /// Research and schools, a share of GDP a year.
+    Research,
+    /// Weapons bought for the stockpile, a share of GDP a year.
+    Arms,
 }
 
 impl Lever {
-    pub const ALL: [Lever; 6] = [Lever::IncomeTax, Lever::CorporateTax, Lever::SalesTax, Lever::Welfare, Lever::Tariff, Lever::InterestRate];
+    pub const ALL: [Lever; 8] = [
+        Lever::IncomeTax,
+        Lever::CorporateTax,
+        Lever::SalesTax,
+        Lever::Welfare,
+        Lever::Tariff,
+        Lever::InterestRate,
+        Lever::Research,
+        Lever::Arms,
+    ];
 
     pub fn name(self) -> &'static str {
         match self {
@@ -33,6 +46,8 @@ impl Lever {
             Lever::Welfare => "Welfare (share of a wage)",
             Lever::Tariff => "Tariff on imports",
             Lever::InterestRate => "Interest rate",
+            Lever::Research => "Research and schools (of GDP)",
+            Lever::Arms => "Arms purchases (of GDP)",
         }
     }
 
@@ -45,6 +60,8 @@ impl Lever {
             Lever::Welfare => (0.02, 0.0, 0.8),
             Lever::Tariff => (0.01, 0.0, 1.0),
             Lever::InterestRate => (0.0025, 0.0, 0.4),
+            Lever::Research => (0.0025, 0.0, 0.05),
+            Lever::Arms => (0.001, 0.0, 0.06),
         }
     }
 }
@@ -52,6 +69,11 @@ impl Lever {
 impl Economy {
     /// A lever's value now (the interest rate is today's rate, set or not).
     pub fn lever(&self, nation: usize, lever: Lever) -> f64 {
+        self.lever_with(nation, lever, None)
+    }
+
+    /// The same, with the rules at hand for the levers that need them.
+    pub fn lever_with(&self, nation: usize, lever: Lever, ed: Option<&EconData>) -> f64 {
         let n = &self.nations[nation];
         match lever {
             Lever::IncomeTax => n.income_tax,
@@ -60,14 +82,30 @@ impl Economy {
             Lever::Welfare => n.welfare_rate,
             Lever::Tariff => n.tariff,
             Lever::InterestRate => n.manual_rate.unwrap_or(n.rate),
+            Lever::Research => n.research,
+            Lever::Arms => match ed {
+                Some(ed) => n.arms_share(ed),
+                None => n.arms.unwrap_or(0.0),
+            },
         }
+    }
+
+    /// The lowest and highest a lever can go.
+    pub fn lever_range(lever: Lever) -> (f64, f64) {
+        let (_, lo, hi) = lever.step();
+        (lo, hi)
     }
 
     /// Moves a lever by `steps` presses. Taxes and welfare set by hand stay
     /// as set (the fiscal autopilot leaves them alone from then on).
     pub fn pull(&mut self, nation: usize, lever: Lever, steps: i32) -> String {
+        self.pull_with(None, nation, lever, steps)
+    }
+
+    /// `pull`, with the rules at hand (the arms lever starts from the wheel's share).
+    pub fn pull_with(&mut self, ed: Option<&EconData>, nation: usize, lever: Lever, steps: i32) -> String {
         let (step, lo, hi) = lever.step();
-        let value = (self.lever(nation, lever) + step * steps as f64).clamp(lo, hi);
+        let value = (self.lever_with(nation, lever, ed) + step * steps as f64).clamp(lo, hi);
         let n = &mut self.nations[nation];
         match lever {
             Lever::IncomeTax => n.income_tax = value,
@@ -76,8 +114,10 @@ impl Economy {
             Lever::Welfare => n.welfare_rate = value,
             Lever::Tariff => n.tariff = value,
             Lever::InterestRate => n.manual_rate = Some(value),
+            Lever::Research => n.research = value,
+            Lever::Arms => n.arms = Some(value),
         }
-        if lever != Lever::InterestRate && lever != Lever::Tariff {
+        if !matches!(lever, Lever::InterestRate | Lever::Tariff | Lever::Research | Lever::Arms) {
             n.manual_taxes = true;
         }
         format!("{}: {:.1}%", lever.name(), value * 100.0)
@@ -206,12 +246,18 @@ impl Economy {
 
     /// Free trade, then no exports, then no imports, then free again.
     pub fn cycle_trade_policy(&mut self, ed: &EconData, nation: usize, good: usize) -> String {
-        let p = &mut self.nations[nation].trade_policy[good];
-        *p = match *p {
+        let next = match self.nations[nation].trade_policy[good] {
             TradePolicy::Free => TradePolicy::NoExports,
             TradePolicy::NoExports => TradePolicy::NoImports,
             TradePolicy::NoImports => TradePolicy::Free,
         };
+        self.set_trade_policy(ed, nation, good, next)
+    }
+
+    /// Sets what may cross the border of one good.
+    pub fn set_trade_policy(&mut self, ed: &EconData, nation: usize, good: usize, policy: TradePolicy) -> String {
+        let p = &mut self.nations[nation].trade_policy[good];
+        *p = policy;
         let what = match *p {
             TradePolicy::Free => "trades freely",
             TradePolicy::NoExports => "may not be sold abroad",
@@ -228,6 +274,27 @@ impl Economy {
         let e = &mut self.nations[nation].embargo[other];
         *e = !*e;
         format!("{} {}", if *e { "Embargo on" } else { "Trade reopened with" }, self.nations[other].name)
+    }
+
+    /// The province where goods move worst (where a road helps most), if any
+    /// moves less than all of its goods.
+    pub fn most_choked(&self, nation: usize) -> Option<usize> {
+        self.nations[nation]
+            .provinces
+            .iter()
+            .copied()
+            .filter(|&q| self.provinces[q].transport < 1.0 - EPS)
+            .min_by(|&a, &b| self.provinces[a].transport.total_cmp(&self.provinces[b].transport).then(a.cmp(&b)))
+    }
+
+    /// The coastal province with the smallest port (where a port level goes).
+    pub fn smallest_port(&self, nation: usize) -> Option<usize> {
+        self.nations[nation]
+            .provinces
+            .iter()
+            .copied()
+            .filter(|&q| self.provinces[q].coastal && self.provinces[q].port < 10.0)
+            .min_by(|&a, &b| self.provinces[a].port.total_cmp(&self.provinces[b].port).then(a.cmp(&b)))
     }
 
     /// Lays a level of road (or rail where roads are full) in a province.
@@ -256,5 +323,33 @@ impl Economy {
         n.budget_month.infrastructure += cost;
         n.projects.push((cost / 60.0, 60));
         Ok(format!("A level of {what} laid"))
+    }
+
+    /// Builds a level of port in one of its coastal provinces (the one with
+    /// the smallest port), paid by the treasury.
+    pub fn player_port(&mut self, ed: &EconData, nation: usize, province: usize) -> Result<String, String> {
+        if !self.nations[nation].provinces.contains(&province) {
+            return Err("That province isn't yours".to_string());
+        }
+        if !self.provinces[province].coastal {
+            return Err("That province has no coast".to_string());
+        }
+        if self.provinces[province].port >= 10.0 {
+            return Err("Its port is already as big as a port gets".to_string());
+        }
+        self.provinces[province].port += 1.0;
+        let n = &mut self.nations[nation];
+        let cost = ed.state.port_cost / n.exchange;
+        n.treasury -= cost;
+        if n.treasury < 0.0 {
+            let gap = -n.treasury;
+            n.debt += gap;
+            n.savings -= gap;
+            n.treasury = 0.0;
+        }
+        n.budget_month.infrastructure += cost;
+        n.projects.push((cost / 60.0, 60));
+        self.refresh_trade_capacity(ed);
+        Ok("A level of port built".to_string())
     }
 }

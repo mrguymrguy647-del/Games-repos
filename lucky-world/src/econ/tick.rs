@@ -366,7 +366,7 @@ impl Economy {
         }
         let upkeep = (n.stockpile[ed.tanks] * ed.state.upkeep_tank + n.stockpile[ed.jets] * ed.state.upkeep_jet) / n.exchange * n.mods.get("army_upkeep");
         n.budget_today.army += army_goods + upkeep;
-        let share = ed.state.procurement.get(&n.army_option).copied().unwrap_or(0.0) * n.mods.get("procurement");
+        let share = n.arms_share(ed);
         let daily = share * n.gdp_local;
         let jets_ok = n.hdi >= 0.6;
         let split = if jets_ok { [(ed.ammo, 0.5), (ed.tanks, 0.3), (ed.jets, 0.2)] } else { [(ed.ammo, 0.5), (ed.tanks, 0.5), (ed.jets, 0.0)] };
@@ -379,6 +379,13 @@ impl Economy {
             n.wanted[g] += want;
             n.got[g] += q;
             n.budget_today.procurement += q * n.price[g];
+        }
+
+        // ---- Research and schools: teachers and labs, paid at home ----
+        if n.research > 0.0 {
+            let spend = n.research * n.gdp_local.max(0.0);
+            n.budget_today.research += spend;
+            n.injection += spend;
         }
 
         // ---- Spoilage (and unused power is gone) ----
@@ -809,7 +816,10 @@ impl Economy {
         // nation past it but not keep it there.
         let gap = (ed.frontier_per_head / per_head).log10();
         let catch_up = if gap >= 0.0 { gap.min(1.5) } else { (ed.frontier_above * gap).max(-8.0) };
-        n.tech_progress *= (ed.tech_growth * catch_up / dpy).exp();
+        // Research adds to it below the frontier, as its knowledge builds up.
+        n.knowledge += (n.research - n.knowledge) / (ed.research_lag * dpy).max(1.0);
+        let research = ed.research_effect * (1.0 + n.knowledge.max(0.0) / ed.research_ref).ln() * (gap / 0.5).clamp(0.0, 1.0);
+        n.tech_progress *= ((ed.tech_growth * catch_up + research) / dpy).exp();
 
         // ---- People ----
         let food = n.food_sat.min(1.0);
@@ -877,6 +887,12 @@ impl Economy {
 }
 
 impl NationEcon {
+    /// What it spends on weapons a year, as a share of GDP: its own choice if
+    /// it made one, else what its Army Strength wheel says.
+    pub fn arms_share(&self, ed: &EconData) -> f64 {
+        self.arms.unwrap_or_else(|| ed.state.procurement.get(&self.army_option).copied().unwrap_or(0.0) * self.mods.get("procurement"))
+    }
+
     /// The exchange rate prices were set against on day 1, so the CPI starts at 1.
     pub fn exchange0(&self) -> f64 {
         self.exchange_start
