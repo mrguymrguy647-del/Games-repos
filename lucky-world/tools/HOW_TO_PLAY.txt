@@ -1,0 +1,18 @@
+LUCKY WORLD
+
+Windows: unzip the whole folder, then double-click LuckyWorld.exe.
+  (The first time, Windows may say "Windows protected your PC" because the
+   game isn't signed: click "More info", then "Run anyway".)
+Linux: unzip, then double-click LuckyWorld (or run ./LuckyWorld).
+
+Keep LuckyWorld next to its "data" and "assets" folders: it reads them.
+If it can't start, it writes why in lucky-world-error.txt beside it.
+
+Keys
+  Title:        Left/Right choose a world · Space spin · S skip spin · W watch NPC brains
+  World map:    drag or WASD pan · right-drag or Q/E turn · wheel or R/F zoom
+                click a province · C country card · V map overlays · M terrain
+  Clock:        Space pause · 1-5 speed
+  Economy:      O      War room: K      Biggest battle: J
+  Diplomacy:    P      Spies: I
+  Anywhere:     F5 start over · Esc back / quit

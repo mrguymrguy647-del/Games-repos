@@ -47,7 +47,21 @@ missions succeed or fail by real odds. It is built with Duck Forge (engine), Duc
 <img src="docs/spectator.png" width="98%" alt="Spectator mode: a world of NPC brains, and the brain panel of the Commonwealth of Valia: its goal, its needs, its three best options with scores and reasons, what it did, its biggest threat and what it remembers">
 </p>
 
-## Run it
+## Play it (no install)
+
+Download a zip from [dist/](dist/), unzip the whole folder, and double-click:
+
+| | |
+|---|---|
+| Windows | [LuckyWorld-Windows.zip](dist/LuckyWorld-Windows.zip) → `LuckyWorld.exe` (the first time, "Windows protected your PC": More info → Run anyway; the game isn't signed) |
+| Linux | [LuckyWorld-Linux.zip](dist/LuckyWorld-Linux.zip) → `LuckyWorld` |
+
+Keep the app next to its `data` and `assets` folders. If it can't start, it
+writes why in `lucky-world-error.txt` beside it. `HOW_TO_PLAY.txt` in the
+zip lists the keys. To rebuild both zips: `tools/package.sh` (Windows is
+cross-built from Linux with mingw-w64). There is no macOS build yet.
+
+## Run it from the source
 
 You need [Rust](https://rustup.rs) 1.87 or newer. From this folder:
 
@@ -56,8 +70,8 @@ cargo run --release
 ```
 
 The first build downloads Duck Forge from GitHub and takes a few minutes;
-after that it starts in seconds. Always run it **from this folder**: it reads
-`data/` and `assets/` from here.
+after that it starts in seconds. It reads `data/` and `assets/` from this
+folder (started from anywhere else, it looks beside its executable).
 
 ### If it runs slowly
 
@@ -533,6 +547,7 @@ economy's and spectator mode's own keys:
 | `src/fate.rs` | The odds of each wheel given the earlier results, rolling a result |
 | `src/country.rs` | A country: results, name, flag, numbers in words; rolling rivals |
 | `src/wheel.rs` | The 3D wheel: slices sized by odds, labels, the spin, ticks, the glow |
+| `tools/package.sh` | Builds the Windows and Linux apps and zips them into `dist/` |
 | `src/game.rs` | The screens: title, wheels, round cards, country card, rivals |
 | `src/game/map_screen.rs` | The world map screen: camera keys and mouse, picking, names and flags, province panel, minimap |
 | `src/game/econ_screen.rs` | The clock, the economy window (budget, chains, market, trade, stockpile, charts), the map overlays |

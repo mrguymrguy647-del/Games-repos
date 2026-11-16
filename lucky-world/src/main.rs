@@ -2,8 +2,12 @@
 //!
 //! Run it from this folder (it reads `data/` and `assets/`):
 //!   cargo run --release
+//! Or double-click the app: it finds `data/` and `assets/` next to itself.
 //! On a computer with no screen:
 //!   cargo run --release --no-default-features -- --headless --inputs playthroughs/lucky_world.json --sheet-events --out out/look
+
+// A double-clicked game on Windows opens no console window (release builds).
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
 mod country;
 mod data;
@@ -141,7 +145,38 @@ fn economy_report(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// Started by a double-click (or from anywhere else), the game looks for
+/// its `data/` and `assets/` next to the executable, or a folder or two up
+/// (target/release in the source tree).
+fn find_home() {
+    if std::path::Path::new("data/wheels.toml").exists() {
+        return;
+    }
+    let Ok(exe) = std::env::current_exe() else { return };
+    let mut dir = exe.parent().map(|d| d.to_path_buf());
+    for _ in 0..3 {
+        let Some(d) = dir else { return };
+        if d.join("data/wheels.toml").exists() {
+            let _ = std::env::set_current_dir(&d);
+            return;
+        }
+        dir = d.parent().map(|p| p.to_path_buf());
+    }
+}
+
+fn main() {
+    find_home();
+    if let Err(e) = run() {
+        // With no console to show it (a double-clicked app), the error goes
+        // to a file beside the game too.
+        let words = format!("LUCKY WORLD couldn't start: {e}");
+        eprintln!("{words}");
+        let _ = std::fs::write("lucky-world-error.txt", format!("{words}\n"));
+        std::process::exit(1);
+    }
+}
+
+fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args = duckforge::game_args();
     if let Some(at) = args.iter().position(|a| a == "--economy-trace") {
         // --economy-trace MAP NATION DAYS EVERY [--world-seed N] [--cpi] [--detail] [--world] [--good ID] [--budget]
