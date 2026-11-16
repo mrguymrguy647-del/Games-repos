@@ -192,7 +192,20 @@ then the world's prices and the latest news (50 years of 25 nations take
 about 4 seconds; a full run of all three maps is in
 [docs/economy_report_50y.txt](docs/economy_report_50y.txt)).
 `--economy-trace MAP NATION DAYS EVERY` follows one nation
-day by day (`--detail`, `--budget`, `--world`, `--good ID` show more).
+day by day (`--detail`, `--budget`, `--world`, `--good ID` and `--cpi` show more).
+
+The balance rules (no nation over $300k a head, no 5-year spell over 25%
+unemployment, world inflation between -3% and 8% every year, never more than
+2 nations over 15% inflation at once, no collapses) can be checked on any
+seeds:
+
+```
+cargo run --release --no-default-features -- --economy-health 50 1 2 3 4 5 6 7 42 --why
+cargo run --release --no-default-features -- --economy-world isles 5 600
+```
+
+(see [docs/ECONOMY.md](docs/ECONOMY.md), section 14, for the rules and the
+before and after of the balance pass).
 
 ## Tune the wheels
 

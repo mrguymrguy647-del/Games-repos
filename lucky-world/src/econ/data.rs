@@ -152,7 +152,15 @@ pub struct Prices {
     pub planned_price_speed: f64,
     pub planned_ceiling: f64,
     pub world_price_speed: f64,
+    /// Daily pull of a world price back to its anchor (in logs).
+    pub world_price_pull: f64,
+    /// World prices stay within these multiples of their anchor.
+    pub world_price_band: [f64; 2],
+    /// A traded good's home price stays within [a × export parity, b × import parity].
+    pub home_band: [f64; 2],
     pub days_of_cover: f64,
+    pub supply_damping: f64,
+    pub cost_pull: f64,
     pub cpi_food: f64,
     pub cpi_goods: f64,
     pub cpi_fuel: f64,
@@ -172,6 +180,10 @@ pub struct Money {
     pub taylor_gap: f64,
     pub rate_step: f64,
     pub rate_max: f64,
+    /// Rate cut per point of unemployment over its natural rate.
+    pub taylor_u: f64,
+    pub taylor_u_ceiling: f64,
+    pub taylor_recent: f64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -185,6 +197,15 @@ pub struct State {
     pub tribute: f64,
     pub procurement: BTreeMap<String, f64>,
     pub starting_stockpile_years: f64,
+    /// In a slump: public works hire this share of the jobless over the
+    /// natural rate, and retraining adds this much to the skilled share a
+    /// year, up to `retraining_max`.
+    pub public_works: f64,
+    pub public_works_pay: f64,
+    pub public_works_max: f64,
+    pub slump_inflation_limit: f64,
+    pub retraining: f64,
+    pub retraining_max: f64,
     pub infrastructure_upkeep: f64,
     pub road_cost: f64,
     pub rail_cost: f64,
@@ -204,6 +225,10 @@ pub struct Trade {
     pub fx_rate: f64,
     /// Daily pull of the exchange rate towards purchasing-power parity.
     pub fx_ppp: f64,
+    /// In a slump the currency is let go: the tilt falls this much per
+    /// point of unemployment over the slump line.
+    pub fx_slump: f64,
+    pub capital_flow: f64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -255,8 +280,19 @@ struct SettingsFile {
     labour_share: f64,
     hdi_income_slope: f64,
     tech_growth: f64,
+    frontier_per_head: f64,
+    frontier_above: f64,
     services_markup: f64,
+    services_premium: f64,
+    invest_margin: f64,
+    wage_anchor_speed: f64,
+    informal_slope: f64,
+    informal_floor: f64,
+    port_headroom: f64,
     wage_tightness: f64,
+    wage_shortage: f64,
+    wage_follows_pay: f64,
+    wage_sticky: f64,
     welfare_rate: f64,
     pension_share: f64,
     payout: f64,
@@ -432,8 +468,23 @@ pub struct EconData {
     pub labour_share: f64,
     pub hdi_income_slope: f64,
     pub tech_growth: f64,
+    pub frontier_per_head: f64,
+    pub frontier_above: f64,
     pub services_markup: f64,
+    pub services_premium: f64,
+    pub invest_margin: f64,
+    pub wage_anchor_speed: f64,
+    pub informal_slope: f64,
+    pub informal_floor: f64,
+    pub port_headroom: f64,
     pub wage_tightness: f64,
+    pub wage_shortage: f64,
+    /// The wage's weight on what all buildings could pay (the rest: day 1's
+    /// wage grown with tech).
+    pub wage_follows_pay: f64,
+    /// The share of a currency move W$ wages take at once (local wages are
+    /// sticky, so a devaluation makes workers cheaper for a while).
+    pub wage_sticky: f64,
     pub welfare_rate: f64,
     pub pension_share: f64,
     pub payout: f64,
@@ -777,8 +828,19 @@ impl EconData {
             labour_share: settings.labour_share,
             hdi_income_slope: settings.hdi_income_slope,
             tech_growth: settings.tech_growth,
+            frontier_per_head: settings.frontier_per_head,
+            frontier_above: settings.frontier_above,
             services_markup: settings.services_markup,
+            services_premium: settings.services_premium,
+            invest_margin: settings.invest_margin,
+            wage_anchor_speed: settings.wage_anchor_speed,
+            informal_slope: settings.informal_slope,
+            informal_floor: settings.informal_floor,
+            port_headroom: settings.port_headroom,
             wage_tightness: settings.wage_tightness,
+            wage_shortage: settings.wage_shortage,
+            wage_follows_pay: settings.wage_follows_pay,
+            wage_sticky: settings.wage_sticky,
             welfare_rate: settings.welfare_rate,
             pension_share: settings.pension_share,
             payout: settings.payout,

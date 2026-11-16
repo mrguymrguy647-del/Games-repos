@@ -26,7 +26,6 @@ impl Economy {
             if n.trade_capacity <= 0.0 {
                 continue;
             }
-            let (mut bid_weight, mut offer_weight) = (0.0, 0.0);
             for g in 0..goods {
                 if !ed.goods[g].trade {
                     continue;
@@ -40,14 +39,33 @@ impl Economy {
                 // is bought keenly and sold reluctantly, and the other way round.
                 if n.trade_policy[g] != TradePolicy::NoExports && stock > target {
                     let push = (ep / p).clamp(0.5, 2.0);
-                    offers[i][g] = ((stock - target) * 0.15 * push).min(stock - 0.5 * target).max(0.0);
+                    offers[i][g] = ((stock - target) * super::OFFER_SHARE * push).min(stock - 0.5 * target).max(0.0);
                 }
                 if n.trade_policy[g] != TradePolicy::NoImports && stock < target {
                     let pull = (p / ip).clamp(0.5, 2.0);
-                    bids[i][g] = (target - stock) * 0.3 * pull;
+                    // No more than twice what it lacks a day (use beyond what
+                    // it makes), and a little: a short world is shared by
+                    // need, not by how big a stock a nation wants to rebuild.
+                    // (By the refill, one giant topping up its month took a
+                    // world's food and its tiny neighbours starved.)
+                    let lacks = (n.use_rate[g] - n.ledger.produced[g]).max(0.0);
+                    bids[i][g] = ((target - stock) * super::BID_SHARE * pull).min(2.0 * lacks + 0.05 * n.use_rate[g]);
                 }
-                bid_weight += bids[i][g] * ed.goods[g].weight;
-                offer_weight += offers[i][g] * ed.goods[g].weight;
+            }
+        }
+        // Nobody plans to ship more than the world offers (or bids): a bid
+        // for something nobody sells mustn't take up port room that what is
+        // on sale could use.
+        let total_offer: Vec<f64> = (0..goods).map(|g| offers.iter().map(|o| o[g]).sum()).collect();
+        let total_bid: Vec<f64> = (0..goods).map(|g| bids.iter().map(|b| b[g]).sum()).collect();
+        for (i, n) in self.nations.iter().enumerate() {
+            let (mut bid_weight, mut offer_weight) = (0.0, 0.0);
+            for g in 0..goods {
+                let others_offer = total_offer[g] - offers[i][g];
+                let others_bid = total_bid[g] - bids[i][g];
+                let (b, o) = (bids[i][g].min(others_offer), offers[i][g].min(others_bid));
+                bid_weight += b * ed.goods[g].weight;
+                offer_weight += o * ed.goods[g].weight;
             }
             // Ports (or roads and rail at the border) limit it all: what the
             // nation needs comes in first, and its surpluses share the rest.
@@ -149,32 +167,42 @@ impl Economy {
                     }
                 }
             }
-            // The world price moves with the imbalance, and slowly back towards its cost.
-            let pull = if total_bid.max(total_offer) > EPS { (total_bid - total_offer) / total_bid.max(total_offer) } else { 0.0 };
+            // The world price moves with the world's stocks against a month of
+            // what the world uses (and the exporters sell), as home prices do,
+            // and slowly back towards its cost. (Bids against offers was
+            // biased: offers are a share of a stock, bids about a day's need,
+            // so in a calm world every price sat 6-7% under its anchor and
+            // slid there together at the start, a world-wide deflation.)
+            let _ = (total_bid, total_offer);
+            let (stock, cover): (f64, f64) = self
+                .nations
+                .iter()
+                .fold((0.0, 0.0), |(s, c), n| (s + n.stock[g], c + n.stock_target(ed, g)));
+            let pull = if stock.max(cover) > EPS { ((cover - stock) / stock.max(cover)).clamp(-1.0, 1.0) } else { 0.0 };
             let shock: f64 = self.world_shocks.iter().filter(|s| s.0 == g).map(|s| s.1).product();
             let anchor = self.base_world_price[g] * shock;
             let w = &mut self.world_price[g];
-            *w *= (pr.world_price_speed * pull + 0.004 * (anchor / *w).ln()).exp();
+            *w *= (pr.world_price_speed * pull + pr.world_price_pull * (anchor / *w).ln()).exp();
+            *w = w.clamp(pr.world_price_band[0] * anchor, pr.world_price_band[1] * anchor);
         }
-        // The W$ is the world's unit: goods get dearer or cheaper against
-        // each other, but the average world price stays where shocks put it.
-        let traded: Vec<usize> = (0..goods).filter(|&g| ed.goods[g].trade).collect();
-        if !traded.is_empty() {
-            let mean = traded
-                .iter()
-                .map(|&g| {
-                    let shock: f64 = self.world_shocks.iter().filter(|s| s.0 == g).map(|s| s.1).product();
-                    (self.world_price[g] / (self.base_world_price[g] * shock)).ln()
-                })
-                .sum::<f64>()
-                / traded.len() as f64;
-            let f = (-mean).exp();
-            for &g in &traded {
-                self.world_price[g] *= f;
-            }
-        }
+        // (No renormalising of the whole basket: each price is already pulled
+        // to its own anchor, and holding their average fixed made a glut of
+        // ore and coal lift food and consumer goods, and the CPI with them.)
         for n in self.nations.iter_mut() {
             n.balance_ema = 0.97 * n.balance_ema + 0.03 * (n.exports_w - n.imports_w);
+            // Capital flows: a trade deficit is mostly financed from abroad
+            // (`capital_flow` of it comes back as spending at home), and a
+            // surplus nation lends that share of its surplus out of its
+            // savings. (Without it, money spent on imports was nobody's
+            // income: import-heavy nations' services shrank day after day and
+            // a third of their people were out of work for decades.)
+            let net = (n.exports_w - n.imports_w) / n.exchange.max(1e-12);
+            let flow = ed.trade.capital_flow * net;
+            if flow < 0.0 {
+                n.injection -= flow;
+            } else {
+                n.savings = (n.savings - flow).max(0.0);
+            }
         }
     }
 }

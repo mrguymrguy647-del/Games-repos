@@ -383,3 +383,31 @@ Worth keeping as they are:
   to the last table: `plan_priority` was silently read as part of
   `[model.colony]` until it moved above them (the same trap as `nation_colors`
   in Phase 2). The loaders use `deny_unknown_fields`, which caught it.
+
+---
+
+# Phase 3 balance pass
+
+Nothing in the tools blocked the pass, and Duck Forge, Mold, Quill and Echo
+are unchanged. Finding the causes took the game's own tools, which are kept:
+- `--economy-health [YEARS] [SEEDS...] [--why]` (the balance rules on every
+  map, and who broke them);
+- `--economy-world MAP SEED MONTHS` (the world month by month);
+- `--economy-trace ... --cpi` (one nation's CPI taken apart) and `--budget`
+  (now with public works, unemployment and the wage).
+
+## The economy's known weak spots (game, not tools)
+
+- **Big poor nations can sit at 15-20% unemployment for years**, under the
+  25% rule. Informal work and public works hold it there; the labour market
+  doesn't clear by itself, because services are paid out of the same incomes
+  a wage cut would cut.
+- **World GDP can dip 5-20% in the first decades before it grows.** A nation
+  easing for slack lets its currency go, and the exchange rate follows its
+  money rather than its prices, so its GDP in W$ falls. The 50-year test
+  holds the world richer at the end, not in every decade.
+- **The balance is sensitive.** One constant can move a world across a rule
+  (a single extra nation over 15%, or a year at 8.3%). All 48 worlds on
+  seeds 1-15 and 42 pass now, so check `--economy-health 50 1 2 3 4 5 6 7 42
+  --why` after any change to `data/economy/`.
+

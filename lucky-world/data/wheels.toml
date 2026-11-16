@@ -587,13 +587,17 @@ log = true
   max = 3_000_000_000_000
   weight = 0.05
 
-  # The rare golden slice: a small country sitting on a fortune.
+  # The rare golden slice: a small country sitting on a fortune. Its size is
+  # per person (like Monaco or Liechtenstein: $100k to $200k a head), so a
+  # town of 50,000 isn't handed a $300 billion economy. min/max are what the
+  # wheel shows before the population is known.
   [[wheel.option]]
   id = "tiny_rich"
   label = "Tiny but Rich!"
   detail = "A small nation with a fortune"
   min = 80_000_000_000
   max = 600_000_000_000
+  per_person = [100_000, 200_000]
   share = 0.04
   color = "#ffd23a"
   tags = ["rare"]

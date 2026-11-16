@@ -55,7 +55,8 @@ impl Economy {
         // ---- Labour ----
         let labour = n.population * ed.participation;
         n.army = (n.population * n.duty).min(labour * 0.5);
-        n.government = labour * md.gov_share;
+        // The state's own staff, plus anyone on public works in a slump.
+        n.government = labour * md.gov_share + n.public_works;
         let mut remaining = (labour - n.army - n.government).max(0.0);
         let (mut farming, mut mining, mut industry) = (0.0, 0.0, 0.0);
         for &bi in &n.hire_order {
@@ -64,7 +65,8 @@ impl Economy {
                 b.hired = 0.0;
                 continue;
             }
-            let h = (b.levels * b.utilization * wpl).min(remaining);
+            // A building short of inputs keeps only the crews it can feed.
+            let h = (b.levels * b.utilization * wpl * crew(b)).min(remaining);
             b.hired = h;
             remaining -= h;
             match ed.buildings[b.kind].sector {
@@ -76,7 +78,7 @@ impl Economy {
         n.farming = farming;
         n.mining = mining;
         n.industry = industry;
-        let services_target = n.services_spending / (n.wage * (1.0 + ed.services_markup)).max(EPS);
+        let services_target = n.services_spending / (n.wage * n.service_pay * (1.0 + ed.services_markup)).max(EPS);
         n.services += 0.02 * (services_target.min(remaining) - n.services);
         n.services = n.services.clamp(0.0, remaining);
         n.unemployed = (remaining - n.services).max(0.0);
@@ -107,7 +109,7 @@ impl Economy {
             if b.levels <= 0.0 || b.hired <= 0.0 {
                 continue;
             }
-            let staffing = (b.hired / (b.levels * b.utilization * wpl).max(EPS)).min(1.0) * b.utilization;
+            let staffing = (b.hired / (b.levels * b.utilization * wpl * crew(b)).max(EPS)).min(1.0) * b.utilization;
             let skill = super::skill_factor(n, bd);
             let rich = if bd.deposit { self.provinces[b.province].deposits[bd.output] } else { 1.0 };
             potential[bi] = b.levels * bd.amount * t * staffing * skill * rich * out_mod[bd.output] * self.provinces[b.province].transport;
@@ -156,8 +158,16 @@ impl Economy {
             let keep_back = home_power.min(1.1 * n.home_power_bought + 0.05 * home_power);
             avail[ed.electricity] = (avail[ed.electricity] - keep_back).max(0.0);
             if tier < food_tier {
+                // Only as much as the food plants can really use: if they're
+                // short of grain, power held back for them would only spoil
+                // while the steel mills go without.
+                let feasible = (0..goods)
+                    .filter(|&h| food_reserve[h] > EPS && ed.goods[h].spoil < 1.0)
+                    .map(|h| (n.stock[h] / food_reserve[h]).min(1.0))
+                    .fold(1.0f64, f64::min);
                 for g in 0..goods {
-                    avail[g] = (avail[g] - food_reserve[g]).max(0.0);
+                    let hold = if ed.goods[g].spoil >= 1.0 { food_reserve[g] * feasible } else { food_reserve[g] };
+                    avail[g] = (avail[g] - hold).max(0.0);
                 }
             }
             if planned {
@@ -178,9 +188,13 @@ impl Economy {
                 }
             }
             let food_ratio: Vec<f64> = (0..goods).map(|g| if food_request[g] > EPS { (avail[g] / food_request[g]).min(1.0) } else { 1.0 }).collect();
+            // Food plants run as far as their scarcest input lets them, and
+            // only that much of each input is theirs: power they can't use
+            // for want of grain goes to the other factories, not to waste.
+            let food_phi = (0..goods).filter(|&g| food_request[g] > EPS).map(|g| food_ratio[g]).fold(1.0f64, f64::min);
             let ratio: Vec<f64> = (0..goods)
                 .map(|g| {
-                    let left = (avail[g] - food_request[g] * food_ratio[g]).max(0.0);
+                    let left = (avail[g] - food_request[g] * food_phi).max(0.0);
                     let rest = request[g] - food_request[g];
                     if rest > EPS { (left / rest).min(1.0) } else { 1.0 }
                 })
@@ -227,6 +241,7 @@ impl Economy {
                 let b = &mut n.buildings[bi];
                 b.output = out;
                 b.input_factor = if q > EPS { phi } else { 1.0 };
+                b.fed += 0.05 * (b.input_factor - b.fed);
                 self.provinces[b.province].tonnage += 0.5 * out * ed.goods[bd.output].weight;
             }
         }
@@ -237,8 +252,9 @@ impl Economy {
             goods_wages += b.hired * n.wage * (1.0 + ed.buildings[b.kind].skill * ed.skill_pay);
         }
         let army_pay = n.army * n.wage * ed.state.army_pay * n.mods.get("army_upkeep");
-        let gov_pay = n.government * n.wage;
-        let services_pay = n.services * n.wage;
+        // Public works pay less than a market job (`public_works_pay` of the wage).
+        let gov_pay = (n.government - n.public_works + n.public_works * ed.state.public_works_pay) * n.wage;
+        let services_pay = n.services * n.wage * n.service_pay;
         let wage_bill = goods_wages + army_pay + gov_pay + services_pay;
         let welfare = n.unemployed * n.wage * n.welfare_rate + ed.pension_share * wage_bill;
         let dividends = ed.payout * n.profits.max(0.0);
@@ -320,6 +336,16 @@ impl Economy {
             p.1 > 0
         });
         n.services_spending = services + std::mem::take(&mut n.injection) + projects;
+        // Services are people's work: no more can be bought than the people
+        // free to do it could deliver (at most a 25% premium over their cost).
+        // Past that, money stays in savings instead of turning into profit
+        // that is paid out and spent again: that loop made tiny, fully
+        // employed nations "richer" every year with nothing more made.
+        let can_serve = (n.services + n.unemployed) * n.wage * n.service_pay * (1.0 + ed.services_markup) * ed.services_premium;
+        if n.services_spending > can_serve {
+            n.savings += n.services_spending - can_serve;
+            n.services_spending = can_serve;
+        }
         let sales_tax = sales * n.sales_tax / (1.0 + n.sales_tax) * (1.0 - bm);
         n.budget_today.income_tax += income_tax;
         n.budget_today.sales_tax += sales_tax;
@@ -375,9 +401,23 @@ impl Economy {
                 let unused = if made > EPS { n.ledger.spoiled[g] / made } else { 0.0 };
                 shortage - 0.5 * unused
             } else {
-                let target = pr.days_of_cover * n.use_rate[g];
+                // A month of what the nation uses, and what it holds for sale.
+                let target = n.stock_target(ed, g);
                 let gap = (target - n.stock[g]) / target.max(n.stock[g]).max(EPS);
                 gap + 0.5 * shortage
+            };
+            // Below what it costs to make, makers hold back: the price is
+            // pulled up towards the cost (so a cheap glut of food doesn't
+            // close the food plants and leave a dear shortage a season on).
+            // (Not for what the nation mainly sells abroad: the world sets
+            // that price, and a dear producer pulling its home price above
+            // what it fetches abroad stopped offering it: one rich nation's
+            // dear ore pulled the world's steel down with it.)
+            let exporter = n.export_rate[g] > 0.2 * n.use_rate[g];
+            let x = if n.unit_cost[g] > n.price[g] && !planned && !exporter {
+                x + pr.cost_pull * (n.unit_cost[g] / n.price[g].max(EPS)).ln()
+            } else {
+                x
             };
             let mut dl = (speed * x).clamp(-pr.price_cap, pr.price_cap);
             if ed.goods[g].trade && n.trade_capacity > 0.0 {
@@ -388,7 +428,7 @@ impl Economy {
                     dl += 0.08 * (ep / n.price[g]).ln();
                 }
                 // And never far outside the band: traders would step in.
-                n.price[g] = (n.price[g] * dl.exp()).clamp(0.6 * ep, 1.6 * ip);
+                n.price[g] = (n.price[g] * dl.exp()).clamp(pr.home_band[0] * ep, pr.home_band[1] * ip);
                 dl = 0.0;
             }
             n.price[g] *= dl.exp();
@@ -417,6 +457,7 @@ impl Economy {
         let md = &ed.models[n.model];
         let dpy = ed.days_per_year as f64;
         let bm = n.black_market;
+        let wpl_f = ed.workers_per_level;
 
         // ---- Firms ----
         let mut value_added = 0.0;
@@ -424,6 +465,50 @@ impl Economy {
         let mut upkeep_paid = 0.0;
         let mut wage_units = 0.0;
         let defects: Vec<f64> = ed.buildings.iter().map(|bd| super::defect_rate(n, bd)).collect();
+        // What every building could pay if all of them ran full (whoever is
+        // running today): the wage's anchor. Unlike what today's survivors
+        // earn, it has no selection in it, and it falls with prices in a glut.
+        let skills: Vec<f64> = ed.buildings.iter().map(|bd| super::skill_factor(n, bd)).collect();
+        let t_now = tech(ed, n);
+        let (mut full_va, mut full_units) = (0.0, 0.0);
+        let mut cost_made = vec![(0.0, 0.0); ed.goods.len()];
+        for b in n.buildings.iter() {
+            let bd = &ed.buildings[b.kind];
+            if b.levels <= 0.0 {
+                continue;
+            }
+            let p = &self.provinces[b.province];
+            let rich = if bd.deposit { p.deposits[bd.output] } else { 1.0 };
+            let gross = b.levels * bd.amount * t_now * skills[b.kind] * rich * n.mod_out[bd.output] * p.transport;
+            let inputs: f64 = bd.inputs.iter().map(|&(g, per)| gross * per * n.price[g]).sum();
+            full_va += gross * (1.0 - defects[b.kind]) * n.price[bd.output] - inputs;
+            full_units += b.levels * wpl_f * (1.0 + bd.skill * ed.skill_pay);
+            // What a unit costs at full output: inputs, a full crew's wages
+            // and upkeep. (Not today's output: a starved plant still paying
+            // its skeleton crew made every unit look dear, and the cost pull
+            // sent power to three times its worth.)
+            let c = &mut cost_made[bd.output];
+            c.0 += inputs + b.levels * wpl_f * n.wage * (1.0 + bd.skill * ed.skill_pay) + b.levels * bd.upkeep / n.exchange;
+            c.1 += gross * (1.0 - defects[b.kind]);
+        }
+        // Each storable good's supply signal: short of cover (stock against
+        // its target: a month of home use and what is held for sale), plus
+        // supply_damping x the share of that demand stocks lose a day.
+        let supply: Vec<Option<f64>> = (0..ed.goods.len())
+            .map(|g| {
+                let l = &n.ledger;
+                n.export_rate[g] = 0.9 * n.export_rate[g] + 0.1 * l.exported[g];
+                if ed.goods[g].spoil >= 1.0 {
+                    return None;
+                }
+                let demand = (n.use_rate[g] + n.export_rate[g]).max(EPS);
+                let target = n.stock_target(ed, g);
+                let gap = (target - n.stock[g]) / target.max(n.stock[g]).max(EPS);
+                let net_in = l.produced[g] + l.imported[g] - l.exported[g] - l.used[g] - l.consumed[g] - l.stockpiled[g] - l.spoiled[g] - l.destroyed[g];
+                let falling = (-net_in / demand).clamp(-1.0, 1.0);
+                Some((gap + ed.prices.supply_damping * falling).clamp(-1.0, 1.0))
+            })
+            .collect();
         for b in n.buildings.iter_mut() {
             let bd = &ed.buildings[b.kind];
             let gross_out = if b.output > 0.0 { b.output } else { 0.0 };
@@ -442,41 +527,36 @@ impl Economy {
             let per_level = if b.levels > 0.0 { p / b.levels } else { 0.0 };
             b.profit = 0.97 * b.profit + 0.03 * per_level;
             b.losing_days = if per_level < 0.0 { b.losing_days + 1 } else { 0 };
-            // Losing money: run less of it; earning: run more (the plan runs everything).
-            if !md.planned {
-                // Losing money: run less of it (unless the nation is short of
-                // it); earning: run more (unless it's piling up). Gently, so
-                // farms and mines don't swing from glut to shortage and back.
-                let target = ed.prices.days_of_cover * n.use_rate[bd.output];
-                let stock = n.stock[bd.output];
-                let short = ed.goods[bd.output].spoil < 1.0 && stock < target;
-                let glut = ed.goods[bd.output].spoil < 1.0 && stock > 2.0 * target;
-                let step = if b.profit < 0.0 && !short {
-                    -0.005
-                } else if b.profit >= 0.0 && !glut {
-                    0.005
-                } else {
-                    0.0
-                };
-                b.utilization = (b.utilization + step).clamp(0.2, 1.0);
+            // How much of it to run. Storable goods: by the stock gap and how
+            // fast stocks are moving (damped, so plants don't swing from glut
+            // to shortage and back); a planned economy goes by that alone,
+            // firms also cut back what loses money unless it is short.
+            // Power (made to order): by profit.
+            let signal = supply[bd.output];
+            let step = if md.planned {
+                0.01 * signal.unwrap_or(0.0)
             } else {
-                // The plan goes by stocks, not profit: quotas are cut for
-                // what piles up and raised for what runs short.
-                let target = ed.prices.days_of_cover * n.use_rate[bd.output];
-                let stock = n.stock[bd.output];
-                let step = if ed.goods[bd.output].spoil >= 1.0 {
-                    0.0
-                } else if stock > 2.0 * target {
-                    -0.01
-                } else if stock < target {
-                    0.01
-                } else {
-                    0.0
-                };
-                b.utilization = (b.utilization + step).clamp(0.2, 1.0);
+                // Losing money with stocks at or over target: cut, harder the
+                // fuller the stores (a thin loss with stocks near target only
+                // trims: full cuts there starved the next link of the chain).
+                match signal {
+                    Some(s) if b.profit < 0.0 && s <= 0.0 => -0.005 * (0.2 - s).min(1.0),
+                    Some(s) => 0.005 * s,
+                    None if b.profit < 0.0 => -0.005,
+                    None => 0.005,
+                }
+            };
+            b.utilization = (b.utilization + step).clamp(0.2, 1.0);
+        }
+        for (g, &(cost, made)) in cost_made.iter().enumerate() {
+            if made > EPS {
+                let unit = cost / made;
+                n.unit_cost[g] = if n.unit_cost[g] > 0.0 { 0.97 * n.unit_cost[g] + 0.03 * unit } else { unit };
+            } else {
+                n.unit_cost[g] = 0.0;
             }
         }
-        let services_profit = n.services_spending - n.services * n.wage;
+        let services_profit = n.services_spending - n.services * n.wage * n.service_pay;
         profit += services_profit;
         let corporate = n.corporate_tax * profit.max(0.0) * (1.0 - bm);
         n.budget_today.corporate_tax += corporate;
@@ -500,19 +580,62 @@ impl Economy {
         // exchange rate below), so a wage push can't feed on itself.
         let tight = ((u_nat - u) / u_nat.max(0.01)).clamp(-1.0, 1.0);
         let base_w = n.wage0 * n.exchange_start * (tech(ed, n) / n.tech_start.max(EPS));
-        if wage_units > 0.02 * labour.max(1.0) && value_added > 0.0 {
-            let can_pay = ed.labour_share * value_added * n.exchange / wage_units;
-            n.wage_anchor += 0.02 * (can_pay - n.wage_anchor);
+        let _ = (value_added, wage_units);
+        if full_units > 0.02 * labour.max(1.0) && full_va > 0.0 {
+            let raw = ed.labour_share * full_va * n.exchange / full_units;
+            if n.pay_scale <= 0.0 {
+                n.pay_scale = (n.wage_anchor / raw.max(EPS)).clamp(0.2, 5.0);
+            }
+            let can_pay = n.pay_scale * raw;
+            n.wage_anchor += ed.wage_anchor_speed * (can_pay - n.wage_anchor);
         } else {
-            n.wage_anchor += 0.02 * (base_w - n.wage_anchor);
+            n.wage_anchor += ed.wage_anchor_speed * (base_w - n.wage_anchor);
         }
-        // Mostly day 1's wage grown with tech; a little of what the firms
-        // still running can pay (only a little: survivors are the best, and
-        // following them alone would price the rest out).
-        let mix = (0.75 * base_w.max(EPS).ln() + 0.25 * n.wage_anchor.max(EPS).ln()).exp();
-        let target_w = mix * (1.0 + ed.wage_tightness * tight);
+        // Mostly what all the buildings could pay, some of day 1's wage grown
+        // with tech (so a bad month doesn't swing wages).
+        let w_pay = ed.wage_follows_pay;
+        let mix = ((1.0 - w_pay) * base_w.max(EPS).ln() + w_pay * n.wage_anchor.max(EPS).ln()).exp();
+        // Short of labour, wages rise a little (`wage_shortage`); in a slump
+        // they fall further (`wage_tightness`), so firms can hire again.
+        let push = if tight > 0.0 { ed.wage_shortage * tight } else { ed.wage_tightness * tight };
+        let target_w = mix * (1.0 + push);
         n.wage_w *= (0.003 * (target_w / n.wage_w.max(EPS)).ln()).exp();
+        // Service pay: below the wage by `informal_slope` x unemployment over
+        // its natural rate (down to `informal_floor`), back up as work returns.
+        let informal = (1.0 - ed.informal_slope * (u - u_nat).max(0.0)).clamp(ed.informal_floor, 1.0);
+        n.service_pay += 0.01 * (informal - n.service_pay);
         n.wage_w = n.wage_w.clamp(0.25 * base_w, 4.0 * base_w);
+
+        // ---- Fighting a slump (the autopilot) ----
+        // Unemployment well over its natural rate: the state takes on the
+        // jobless for public works (roads, clinics: a job guarantee, paid
+        // `public_works_pay` of the wage) and retrains others, which slowly
+        // lifts the skilled share. The works grow while the jobless (those on
+        // them included, so the scheme doesn't shrink just because it works)
+        // are over 5 points under the slump line, up to `public_works_max` of
+        // the workforce, and wind down as market jobs come back. Their pay
+        // keeps up the spending services jobs live on, which a wage cut alone
+        // doesn't. (At a full wage and with no cap they once took a third of
+        // a nation's workers, paid for by printing.)
+        let line = slump_line(ed, n);
+        let jobless = if labour > 0.0 { (n.unemployed + n.public_works) / labour } else { 0.0 };
+        let slump = jobless > line;
+        let pw_target = if n.state_autopilot {
+            (ed.state.public_works * (jobless - (line - 0.05)).max(0.0)).min(ed.state.public_works_max) * labour.max(0.0)
+        } else {
+            0.0
+        };
+        n.public_works += 0.01 * (pw_target - n.public_works);
+        n.public_works = n.public_works.max(0.0);
+        if slump && n.state_autopilot {
+            n.retrained = (n.retrained + ed.state.retraining / dpy).min(ed.state.retraining_max);
+            // The courses cost about a tenth of a wage per jobless person.
+            let cost = 0.1 * n.unemployed * n.wage;
+            n.budget_today.government += cost;
+            n.injection += cost;
+        } else {
+            n.retrained = (n.retrained - 0.5 * ed.state.retraining / dpy).max(0.0);
+        }
 
         // ---- The budget ----
         let gross_revenue = n.budget_today.income_tax + n.budget_today.corporate_tax + n.budget_today.sales_tax + n.budget_today.tariffs;
@@ -559,7 +682,12 @@ impl Economy {
 
         // ---- Money and prices ----
         let m = &ed.money;
-        let lend = (m.credit_growth_base + m.credit_slope * (m.r_neutral - n.rate)) / dpy;
+        // At the neutral rate, credit grows with the nation's real output
+        // (its trend) plus credit_growth_base (the target inflation). A fixed
+        // rate outran output wherever growth was slow (rich nations near the
+        // frontier) and kept their prices rising 4-6% a year.
+        let trend = n.real_growth.clamp(-0.02 / dpy, 0.06 / dpy);
+        let lend = (m.credit_growth_base + m.credit_slope * (m.r_neutral - n.rate)) / dpy + trend;
         let growth_m = lend + n.printed / n.money.max(EPS);
         n.money *= 1.0 + lend;
         n.money_growth += (growth_m - n.money_growth) / 90.0;
@@ -582,23 +710,21 @@ impl Economy {
             }
         }
         let pr = &ed.prices;
-        let rel = |g: usize, n: &NationEcon| n.price[g] * n.exchange0() / ed.goods[g].price;
-        let cpi = pr.cpi_food * rel(ed.food, n)
-            + pr.cpi_goods * rel(ed.consumer_goods, n)
-            + pr.cpi_fuel * rel(ed.fuel, n)
-            + pr.cpi_power * rel(ed.electricity, n)
-            + pr.cpi_services * n.wage / n.wage0.max(EPS);
-        n.cpi = cpi.max(1e-6);
+        let (cpi, goods_cpi) = cpi_parts(ed, n);
+        n.cpi = cpi;
         let ring = n.cpi_ring.len();
         let old = n.cpi_ring[(self.day as usize) % ring];
         n.cpi_ring[(self.day as usize) % ring] = n.cpi;
         let annual = ((n.cpi / old.max(1e-9)).ln() * dpy / ring as f64).clamp(-0.9, 20.0);
         n.inflation = 0.9 * n.inflation + 0.1 * annual;
+        // The last three months, at a yearly rate: what the central bank
+        // watches besides the year's (which lags turns by half a year).
+        let quarter = (ring / 4).max(1);
+        let back = n.cpi_ring[(self.day as usize + ring - quarter) % ring];
+        let recent = ((n.cpi / back.max(1e-9)).ln() * dpy / quarter as f64).clamp(-0.9, 20.0);
+        n.inflation_recent = 0.9 * n.inflation_recent + 0.1 * recent;
         // Goods alone: wages are indexed to these, not to themselves.
-        let goods_w = pr.cpi_food + pr.cpi_goods + pr.cpi_fuel + pr.cpi_power;
-        let goods_cpi = (pr.cpi_food * rel(ed.food, n) + pr.cpi_goods * rel(ed.consumer_goods, n) + pr.cpi_fuel * rel(ed.fuel, n) + pr.cpi_power * rel(ed.electricity, n))
-            / goods_w.max(EPS);
-        n.goods_cpi = goods_cpi.max(1e-6);
+        n.goods_cpi = goods_cpi;
         let old = n.goods_ring[(self.day as usize) % ring];
         n.goods_ring[(self.day as usize) % ring] = n.goods_cpi;
         let annual = ((n.goods_cpi / old.max(1e-9)).ln() * dpy / ring as f64).clamp(-0.9, 20.0);
@@ -612,8 +738,23 @@ impl Economy {
         n.expected_inflation += 0.01 * (anchored - n.expected_inflation);
 
         // ---- Central bank ----
+        // A Taylor rule that also answers to joblessness: unemployment above
+        // its natural rate cuts the rate (`taylor_u` per point).
         let gap = if n.real_trend > EPS { n.real_gdp / n.real_trend - 1.0 } else { 0.0 };
-        let target = n.manual_rate.unwrap_or(m.r_neutral + m.taylor_pi * (n.inflation - m.pi_target) + m.taylor_gap * gap).clamp(0.0, m.rate_max);
+        // The easing for joblessness fades out as inflation climbs from the
+        // target to `taylor_u_ceiling`: a long slump mustn't buy chronic
+        // inflation (with the full easing, nations that stayed slack settled
+        // at 6-8% a year, and being big, lifted the world's average with them).
+        // Inflation as the bank sees it: half the year's, half the last
+        // three months' (steering by the year's alone, it eased for half a
+        // year after deflation had turned, then chased the overshoot).
+        let seen_pi = (1.0 - m.taylor_recent) * n.inflation + m.taylor_recent * n.inflation_recent;
+        let fade = ((m.taylor_u_ceiling - seen_pi) / (m.taylor_u_ceiling - m.pi_target).max(EPS)).clamp(0.0, 1.0);
+        let slack = (u - u_nat).max(0.0) * fade;
+        let target = n
+            .manual_rate
+            .unwrap_or(m.r_neutral + m.taylor_pi * (seen_pi - m.pi_target) + m.taylor_gap * gap - m.taylor_u * slack)
+            .clamp(0.0, m.rate_max);
         let step = if n.manual_rate.is_some() { 1.0 } else { m.rate_step };
         n.rate += (target - n.rate).clamp(-step, step);
         n.bond_rate = n.rate + ed.ratings[n.rating].premium + n.mods.get("rating").min(0.0) * -0.0005;
@@ -637,17 +778,38 @@ impl Economy {
             }
             if den > 0.0 { num / den } else { 1.0 }
         };
-        let tilt = (t.fx_trade * n.balance_ema * dpy / gdp_w - t.fx_inflation * (n.inflation - world_inflation) + t.fx_rate * (n.rate - world_rate)).clamp(-0.3, 0.3);
+        // In a slump the central bank also lets the currency go (devalues),
+        // `fx_slump` per point of unemployment over the slump line.
+        let devalue = t.fx_slump * (u - slump_line(ed, n)).max(0.0);
+        let tilt = (t.fx_trade * n.balance_ema * dpy / gdp_w - t.fx_inflation * (n.inflation - world_inflation) + t.fx_rate * (n.rate - world_rate)
+            - devalue)
+            .clamp(-0.3, 0.3);
         let capacity = (n.population * ed.participation).max(1.0) * tech(ed, n);
         n.real_supply += (capacity - n.real_supply) / dpy;
         let real = (n.real_supply / n.real_start.max(EPS)).max(1e-6);
         let money = (n.money / n.money_start.max(EPS)).max(1e-12);
         let target = n.exchange_start * world_index * real / money * tilt.exp();
+        let before = n.exchange;
         n.exchange *= (t.fx_ppp * (target / n.exchange).ln()).clamp(-0.01, 0.01).exp();
+        // Wages are set in local money in the short run: part of a fall in
+        // the currency is a fall in the W$ wage too (so a devaluation makes a
+        // nation's workers cheaper for a while), part is passed on.
+        n.wage_w *= (n.exchange / before).powf(ed.wage_sticky);
         n.wage = n.wage_w / n.exchange.max(1e-12);
 
         // ---- Technical progress: a little more from each worker each year ----
-        n.tech_progress *= (ed.tech_growth / dpy).exp();
+        // Catching up is faster than leading: far below the frontier a nation
+        // learns up to 1.5x the base rate; near it, progress slows to nothing.
+        // (Before, every nation compounded 1.2% a year for ever, and small
+        // rich ones ran off to millions a head.)
+        let per_head = (n.gdp / n.population.max(1.0)).max(1.0);
+        // Above the frontier it runs backwards (diminishing returns: the best
+        // wells and fields are taken, every worker is already busy),
+        // `frontier_above` times as steeply, so a windfall can lift a small
+        // nation past it but not keep it there.
+        let gap = (ed.frontier_per_head / per_head).log10();
+        let catch_up = if gap >= 0.0 { gap.min(1.5) } else { (ed.frontier_above * gap).max(-8.0) };
+        n.tech_progress *= (ed.tech_growth * catch_up / dpy).exp();
 
         // ---- People ----
         let food = n.food_sat.min(1.0);
@@ -659,7 +821,8 @@ impl Economy {
         n.stability = (n.stability + 0.01 * (target_stab - n.stability)).clamp(0.0, 100.0);
         let birth = interpolate(&ed.birth_by_hdi, n.hdi);
         let famine = 0.2 * ((0.85 - food).max(0.0) / 0.85);
-        let growth = birth - famine - ed.birth_unemployment * (u - 0.2).max(0.0) + n.mods.get("growth");
+        // Where work is scarce, people have fewer children and some leave.
+        let growth = birth - famine - ed.birth_unemployment * (u - u_nat).max(0.0) + n.mods.get("growth");
         n.population *= (growth / dpy).exp();
         n.population = n.population.max(1000.0);
         // HDI drifts towards what its income per person would give.
@@ -669,7 +832,7 @@ impl Economy {
         let start_per_person = (n.gdp_start / n.population_start.max(1.0)).max(1.0);
         let hdi_target = (n.hdi_start + ed.hdi_income_slope * (per_person.max(1.0) / start_per_person).ln()).clamp(0.25, 0.97);
         n.hdi += (hdi_target - n.hdi) * 0.02 / dpy;
-        n.skilled = (interpolate(&ed.skill_by_hdi, n.hdi) + n.mods.get("skill")).clamp(0.01, 0.9);
+        n.skilled = (interpolate(&ed.skill_by_hdi, n.hdi) + n.mods.get("skill") + n.retrained).clamp(0.01, 0.9);
 
         // ---- GDP ----
         let gov_wages = n.budget_today.government + n.army * n.wage * ed.state.army_pay;
@@ -737,6 +900,18 @@ impl NationEcon {
     pub fn debt_ratio(&self, ed: &EconData) -> f64 {
         self.debt / (self.gdp_local * ed.days_per_year as f64).max(EPS)
     }
+
+    /// In a slump: unemployment over 1.5 × its natural rate plus 5 points.
+    /// The autopilot's slump measures (rate cuts, public works, retraining,
+    /// tax cuts, letting the currency go) all start here.
+    pub fn in_slump(&self, ed: &EconData) -> bool {
+        self.unemployment(ed) > slump_line(ed, self)
+    }
+}
+
+/// The unemployment rate past which a nation is in a slump.
+pub fn slump_line(ed: &EconData, n: &NationEcon) -> f64 {
+    1.5 * interpolate(&ed.natural_unemployment_by_hdi, n.hdi) + 0.05
 }
 
 /// A nation's import and export parity for a good (local money).
@@ -755,4 +930,21 @@ pub fn trade_cost(ed: &EconData, n: &NationEcon, g: usize, world: f64) -> f64 {
         t.sea_cost_share + t.sea_cost_weight * w / world.max(EPS)
     };
     base * n.mod_trade_cost
+}
+
+/// The share of a building's crews it keeps on: what it has been getting of
+/// its inputs (never below a skeleton crew, so it can restart).
+fn crew(b: &super::Building) -> f64 {
+    b.fed.clamp(0.05, 1.0)
+}
+
+/// The CPI (food, goods, fuel, power and services, against their W$ worth at
+/// the day-1 exchange rate) and its goods part alone.
+pub fn cpi_parts(ed: &EconData, n: &NationEcon) -> (f64, f64) {
+    let pr = &ed.prices;
+    let rel = |g: usize| n.price[g] * n.exchange0() / ed.goods[g].price;
+    let goods = pr.cpi_food * rel(ed.food) + pr.cpi_goods * rel(ed.consumer_goods) + pr.cpi_fuel * rel(ed.fuel) + pr.cpi_power * rel(ed.electricity);
+    let cpi = goods + pr.cpi_services * n.wage / n.wage0.max(EPS);
+    let goods_w = pr.cpi_food + pr.cpi_goods + pr.cpi_fuel + pr.cpi_power;
+    (cpi.max(1e-6), (goods / goods_w.max(EPS)).max(1e-6))
 }

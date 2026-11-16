@@ -150,6 +150,18 @@ impl Economy {
                 + 0.2 * (n.stability - 50.0)
                 + n.mods.get("rating");
             n.rating = ed.rating_for(score);
+            // Default: rated the lowest and paying over 5% of GDP a year in
+            // interest, the state stops paying. Half its debt is written off,
+            // it loses face (stability), and it starts again from there. (Not
+            // defaulting, a D rating's premium made the interest the deficit,
+            // the deficit was printed, and the inflation and deficit kept the
+            // rating at D: a spiral with no way out.)
+            let interest_share = n.budget_last_month.interest * 12.0 / (n.gdp_local * dpy).max(EPS);
+            if n.rating + 1 == ed.ratings.len() && interest_share > 0.05 {
+                n.debt *= 0.5;
+                n.stability = (n.stability - 10.0).max(0.0);
+                n.defaulted = true;
+            }
 
             // Taxes (unless the player has taken them over).
             if !n.manual_taxes {
@@ -158,27 +170,45 @@ impl Economy {
                 // Counter-cyclical: in a slump (unemployment well above its
                 // natural rate) a deficit is borrowed, not taxed away, and a
                 // small one is let grow.
-                let u = n.unemployment(ed);
-                let u_nat = super::data::interpolate(&ed.natural_unemployment_by_hdi, n.hdi);
-                let slump = u > 1.8 * u_nat + 0.03;
+                let slump = n.in_slump(ed);
                 let mut tighten = 0.0;
-                if n.deficit_ema > ed.state.deficit_target && !slump {
-                    tighten = 1.0;
-                } else if n.deficit_ema < -0.02 || (slump && n.deficit_ema < ed.state.deficit_target) {
-                    tighten = -1.0;
-                }
-                if debt_ratio > 0.9 {
-                    tighten += 1.0;
-                }
-                // Printing money last month: hard austerity.
-                if n.printed_month > 0.0 {
-                    tighten += 2.0;
+                if slump {
+                    // In a slump the state cuts taxes and lifts welfare back
+                    // towards normal, borrowing while its rating lets it.
+                    // Only printing that has pushed inflation past
+                    // `slump_inflation_limit` stops that:
+                    // austerity in a slump deepened it, for good (taxes went
+                    // to 52-55% and stayed there, spending halved and the
+                    // services that employ most people with it).
+                    let room = debt_ratio < 0.8 * ed.ratings[n.rating].ceiling;
+                    if n.printed_month > 0.0 && n.inflation > ed.state.slump_inflation_limit {
+                        tighten = 1.0;
+                    } else if room || n.income_tax > md.income_tax {
+                        tighten = -1.0;
+                    }
+                } else {
+                    if n.deficit_ema > ed.state.deficit_target {
+                        tighten = 1.0;
+                    } else if n.deficit_ema < -0.02 {
+                        tighten = -1.0;
+                    }
+                    if debt_ratio > 0.9 {
+                        tighten += 1.0;
+                    }
+                    // Printing money last month: hard austerity.
+                    if n.printed_month > 0.0 {
+                        tighten += 2.0;
+                    }
                 }
                 n.printed_month = 0.0;
                 n.income_tax = (n.income_tax + tighten * step).clamp(0.05, 0.55);
                 n.sales_tax = (n.sales_tax + tighten * step * 0.5).clamp(0.0, 0.25);
                 n.welfare_rate = (n.welfare_rate - tighten * 0.01).clamp(0.1, ed.welfare_rate.max(md.income_tax));
             }
+        }
+        if std::mem::take(&mut self.nations[i].defaulted) {
+            let text = format!("{} defaults: half its debt is written off, and its name with it", self.nations[i].name);
+            self.news(Some(i), text, false);
         }
         self.invest(ed, i);
         self.close_losers(ed, i);
@@ -249,6 +279,27 @@ impl Economy {
                 .collect()
         };
 
+        // What the nation could make of each good at full tilt, counting what
+        // is being built (a level under construction makes what one built does).
+        let capacity: Vec<f64> = {
+            let n = &self.nations[i];
+            let t = tech(ed, n);
+            let per_level = |k: usize, q: usize| {
+                let bd = &ed.buildings[k];
+                let p = &self.provinces[q];
+                let rich = if bd.deposit { p.deposits[bd.output] } else { 1.0 };
+                bd.amount * t * super::skill_factor(n, bd) * rich * super::output_mod(ed, n, bd.output) * p.transport * (1.0 - super::defect_rate(n, bd))
+            };
+            let mut cap = vec![0.0; ed.goods.len()];
+            for b in n.buildings.iter().filter(|b| b.open && b.levels > 0.0) {
+                cap[ed.buildings[b.kind].output] += b.levels * per_level(b.kind, b.province);
+            }
+            for c in &n.construction {
+                cap[ed.buildings[c.kind].output] += c.levels * per_level(c.kind, c.province);
+            }
+            cap
+        };
+
         // Candidates: each building kind, its best place, and what a level would earn.
         let mut options: Vec<(f64, usize, usize, f64)> = Vec::new(); // (score, kind, province, max levels)
         {
@@ -262,14 +313,18 @@ impl Economy {
                 let mut best: Option<(usize, f64, f64)> = None; // (province, richness, room)
                 for &q in &n.provinces {
                     let p = &self.provinces[q];
+                    // A hungry nation farms poorer land and farms it harder,
+                    // as day 1 does (food comes first).
+                    let hungry = bd.output == ed.grain && (shortage[ed.grain] > 0.05 || shortage[ed.food] > 0.05);
                     let (rich, room) = if bd.deposit {
                         let d = p.deposits[bd.output];
-                        if d < 0.2 {
+                        if d < if hungry { 0.05 } else { 0.2 } {
                             continue;
                         }
                         let have: f64 = n.buildings.iter().filter(|b| b.kind == k && b.province == q).map(|b| b.levels).sum::<f64>()
                             + n.construction.iter().filter(|c| c.kind == k && c.province == q).map(|c| c.levels).sum::<f64>();
-                        (d.min(3.0), d.min(3.0) * p.hexes * bd.cap_per_hex - have)
+                        let cap = if hungry { d.clamp(0.2, 3.0) * 2.0 } else { d.min(3.0) };
+                        (d.min(3.0), cap * p.hexes * bd.cap_per_hex - have)
                     } else {
                         (1.0, f64::INFINITY)
                     };
@@ -297,9 +352,25 @@ impl Economy {
                 if starved {
                     continue;
                 }
+                // Neither more of a kind whose buildings already stand idle for
+                // want of inputs: the bottleneck is upstream, and that's where
+                // the money goes (its own shortage shows there).
+                if levels > 0.5 {
+                    let fed = existing.iter().map(|b| b.input_factor * b.levels).sum::<f64>() / levels;
+                    if fed < 0.8 {
+                        continue;
+                    }
+                }
                 // A glut at home: no new building for it, whatever it earns.
                 let out = bd.output;
                 if shortage[out] < 0.05 && n.stock[out] > 1.5 * ed.prices.days_of_cover * n.use_rate[out] {
+                    continue;
+                }
+                // Enough already (or coming): the nation makes what it uses
+                // and sells abroad, with a margin. Prices high for a season
+                // don't call for more; a shortage does.
+                let demand = n.use_rate[out] + n.export_rate[out];
+                if shortage[out] < 0.05 && capacity[out] > ed.invest_margin * demand {
                     continue;
                 }
                 let cost = bd.cost * n.mods.get("build_cost") / n.exchange;
@@ -358,9 +429,14 @@ impl Economy {
         let cost = bd.cost * n.mods.get("build_cost") / n.exchange;
         let workers = n.unemployed * 0.4 / ed.workers_per_level;
         let mut levels = (money / cost.max(EPS)).min(room).min(workers.max(0.0));
+        // Building materials come out of what the nation holds beyond three
+        // quarters of its usual stock, half of that at a time. (Half of the
+        // whole stock at a time let a building boom eat the steel that
+        // factories needed: consumer goods ran short and prices jumped.)
         for &(g, per) in &bd.build_goods {
             if per > 0.0 {
-                levels = levels.min(n.stock[g] * 0.5 / per);
+                let spare = (n.stock[g] - 0.75 * n.stock_target(ed, g)).max(0.0);
+                levels = levels.min(spare * 0.5 / per);
             }
         }
         if levels < 0.05 {
@@ -393,11 +469,15 @@ impl Economy {
         }
         // What the nation is short of stays open, losing or not (the state
         // keeps the lights on): only surplus makers close.
+        // Nor what it makes no more than it uses and sells (with a fifth to
+        // spare): closing that would only make it short later. (One colony
+        // shut its only food plant, then starved, exporting its grain.)
         let short: Vec<bool> = (0..ed.goods.len())
             .map(|g| {
                 let wanted_short = n.wanted[g] > 1e-9 && n.got[g] < 0.95 * n.wanted[g];
                 let low_stock = ed.goods[g].spoil < 1.0 && n.stock[g] < 0.5 * ed.prices.days_of_cover * n.use_rate[g];
-                wanted_short || low_stock
+                let no_surplus = n.ledger.produced[g] < 1.2 * (n.use_rate[g] + n.export_rate[g]);
+                wanted_short || low_stock || no_surplus
             })
             .collect();
         for b in n.buildings.iter_mut() {
@@ -413,7 +493,11 @@ impl Economy {
     /// Roads and rail where goods are stuck, ports where trade is full.
     fn build_infrastructure(&mut self, ed: &EconData, i: usize) {
         let n = &self.nations[i];
-        if n.deficit_ema > 0.06 {
+        // Border crossings worn below day 1's by damage: a landlocked nation
+        // rebuilds them whatever its budget (cut off, one micro-state had no
+        // trade for decades: no goods, no work, and its people left).
+        let cut_off = n.landlocked && n.trade_capacity < 0.8 * n.trade_capacity_start;
+        if n.deficit_ema > 0.06 && !cut_off {
             return;
         }
         let e = n.exchange;
@@ -440,6 +524,19 @@ impl Economy {
             if let Some(q) = port {
                 self.provinces[q].port += 0.5;
                 spend += ed.state.port_cost * 0.5 / e;
+            }
+        }
+        // A landlocked nation's trade goes overland: when it's full, lay rail
+        // (then road) in the border province with the least.
+        let n = &self.nations[i];
+        if n.landlocked && (n.trade_used > 0.85 * n.trade_capacity || n.trade_capacity < 0.8 * n.trade_capacity_start) {
+            // A level of rail in each of the three border provinces with the least.
+            let mut border: Vec<usize> = n.border_provinces.iter().copied().filter(|&q| self.provinces[q].rail < super::init::MAX_INFRA).collect();
+            border.sort_by(|&a, &b| self.provinces[a].rail.total_cmp(&self.provinces[b].rail).then(a.cmp(&b)));
+            for q in border.into_iter().take(3) {
+                let p = &mut self.provinces[q];
+                p.rail = (p.rail + 1.0).min(super::init::MAX_INFRA);
+                spend += ed.state.rail_cost * p.hexes / e;
             }
         }
         let n = &mut self.nations[i];

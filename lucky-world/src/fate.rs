@@ -65,7 +65,19 @@ pub fn odds(
     others: &[&dyn Nation],
 ) -> Odds {
     let def = &data.wheels[wheel];
-    let options = data.options_on(wheel, map);
+    let mut options = data.options_on(wheel, map);
+    // A band per person becomes a real band once the population is known.
+    if let Some(people) = data.wheel_index("population").and_then(|p| landed.get(p)).map(|l| l.value).filter(|v| *v > 0.0) {
+        for o in options.iter_mut() {
+            if let Some([lo, hi]) = o.per_person {
+                o.min = lo * people;
+                o.max = hi * people;
+                if def.log {
+                    o.level = (o.min.log10() + o.max.log10()) / 2.0;
+                }
+            }
+        }
+    }
     let n = options.len();
 
     // 1. Weights, and each rule that holds.

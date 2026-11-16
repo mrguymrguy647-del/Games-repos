@@ -43,7 +43,10 @@ text = "Blight and storms ruin the fields."
 chance = 0.12
 days = 150
 kind = "modifier"
-effects = { "output.grain" = 0.6, stability = -2 }
+# A fifth of the grain lost for five months. (Two-fifths was more than a
+# month's stock and the world's spare food could cover in a big nation that
+# feeds itself: its food prices rose by half and its inflation past 15%.)
+effects = { "output.grain" = 0.8, stability = -2 }
 
 [[event]]
 id = "factory_fire"

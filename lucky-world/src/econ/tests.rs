@@ -213,3 +213,33 @@ fn default_nations_neither_spiral_nor_collapse_in_fifty_years() {
         assert!(now > start, "the world got poorer over 50 years on map {map}");
     }
 }
+
+/// The balance rules (docs/ECONOMY.md, section 14), watched every month for
+/// 50 years on every map with six seeds (18 worlds, one thread each):
+/// - no nation above $300k GDP per head;
+/// - no nation above 25% unemployment for more than 5 years straight;
+/// - world inflation between -3% and 8% at every year's end;
+/// - never more than 2 nations above 15% inflation at once;
+/// - and no nation below a fifth of its starting GDP at the end.
+#[test]
+fn the_balance_rules_hold_for_fifty_years_on_six_seeds() {
+    let jobs: Vec<(usize, u32)> = maps().into_iter().flat_map(|m| (1..=6).map(move |s| (m, s))).collect();
+    let results: Vec<(usize, u32, report::Health)> = std::thread::scope(|scope| {
+        let handles: Vec<_> = jobs
+            .iter()
+            .map(|&(map, seed)| {
+                scope.spawn(move || {
+                    let (ed, mut e) = world(map, seed);
+                    (map, seed, report::run_and_watch(&mut e, &ed, 50))
+                })
+            })
+            .collect();
+        handles.into_iter().map(|h| h.join().expect("a world panicked")).collect()
+    });
+    let broken: Vec<String> = results
+        .iter()
+        .filter(|(.., h)| !h.problems().is_empty())
+        .map(|(map, seed, h)| format!("map {map} seed {seed}: {}", h.problems().join("; ")))
+        .collect();
+    assert!(broken.is_empty(), "{} of {} worlds broke a balance rule:\n{}", broken.len(), results.len(), broken.join("\n"));
+}

@@ -12,8 +12,11 @@ skill_by_hdi = [[0.30, 0.05], [0.50, 0.12], [0.70, 0.25], [0.85, 0.40], [0.95, 0
 natural_unemployment_by_hdi = [[0.30, 0.12], [0.95, 0.05]]
 # Birth rate per year, by HDI.
 birth_by_hdi = [[0.30, 0.022], [0.60, 0.012], [0.95, 0.002]]
-# Births fall when jobs are scarce: minus this times unemployment above 20%.
-birth_unemployment = 0.05
+# Births fall (and people leave) when jobs are scarce: minus this times
+# unemployment above its natural rate. (Above 20% only, and at half the rate,
+# populations outgrew their jobs for decades: by year 45, a fifth of the
+# median nation out of work.)
+birth_unemployment = 0.1
 
 # A planned economy hands out scarce inputs in this order (by output good).
 plan_priority = ["ammo", "tanks", "jets", "electricity", "steel", "fuel", "chemicals", "aluminium", "food", "consumer_goods"]
@@ -29,13 +32,34 @@ transport_road = 2000
 transport_rail = 6000
 port_capacity = 60000
 land_capacity = 15000
+# Day 1's ports (or border roads and rail) carry this many times day 1's trade.
+port_headroom = 1.6
 
 # Labour and households.
 labour_share = 0.6          # wages' share of what factories add (day 1, and where wages are pulled)
 hdi_income_slope = 0.04     # HDI drifts by this times ln(income per head / day 1's)
-tech_growth = 0.012         # technical progress: output per worker grows this much a year
+tech_growth = 0.016         # technical progress: output per worker grows this much a year at $20k a head
+frontier_per_head = 200000  # ...scaled by log10(frontier / GDP per head): 1.5x far below, 0 at the frontier...
+frontier_above = 25         # ...and this many times as steeply backwards above it (at 10, a rich micro-state's first years at full employment took it past $300k a head)
 services_markup = 0.25
-wage_tightness = 0.25
+services_premium = 1.1       # services can't sell for more than this x their cost: the rest of the money is saved
+# Firms build more of a good only while the nation could make (counting what is
+# already being built) less than this x what it uses and sells abroad, or it is
+# short. (Building costs are small next to a level's profit, so without it they
+# chased every price spike: a boom, then a bust in what fed it.)
+invest_margin = 1.15
+# Informal work: when jobs are scarce, service work pays less than the wage
+# (informal_slope x unemployment over its natural rate, down to informal_floor),
+# so the same spending on services employs more people. (A wage cut alone
+# can't: services are paid out of the same falling incomes, and crowded nations
+# whose population outgrew their buildings stayed a third out of work.)
+informal_slope = 2.0
+informal_floor = 0.4
+wage_tightness = 0.25        # in a slump wages fall up to this much below their anchor
+wage_shortage = 0.08         # short of labour, they rise up to this much above it
+wage_follows_pay = 0.6       # the wage's anchor: this much what all buildings could pay (full), the rest day 1's wage x tech
+wage_anchor_speed = 0.005    # ...and what they could pay reaches the anchor this fast a day (prices feed wages slowly)
+wage_sticky = 0.5            # when the currency moves, W$ wages take this share of the move at once
 welfare_rate = 0.3
 pension_share = 0.04
 payout = 0.7                # share of firm profits paid out as dividends
@@ -66,8 +90,30 @@ price_speed = 0.015
 price_cap = 0.02
 planned_price_speed = 0.004
 planned_ceiling = 1.3
-world_price_speed = 0.004
+# World prices move with the world's stocks against the world's cover (as home
+# prices do with a nation's) and are pulled back to their anchor (base price x
+# any shock): at most about world_price_speed / world_price_pull = 8% away from
+# it while a glut or shortage lasts, and never outside world_price_band. (With
+# a weak pull they wandered 3x from cost, and the CPI goods' swings became
+# synchronized world inflation; moved by bids against offers, they all sat
+# 6-7% low.)
+world_price_speed = 0.0008
+world_price_pull = 0.01
+world_price_band = [0.6, 1.7]
+# A traded good's home price stays between home_band[0] x export parity and
+# home_band[1] x import parity: past that, traders step in. (At 0.6 and 1.6, a
+# local shortage could lift the home price 60% over the import price, and the
+# CPI with it.)
+home_band = [0.8, 1.25]
 days_of_cover = 30
+# Firms run more or less of what they have by the stock gap (against a month
+# of home use and what is held for sale abroad) plus supply_damping x how
+# fast stocks are falling (as a share of that demand a day). Profit alone (with
+# prices following stocks) made a farm and food-plant cycle of a year or so.
+supply_damping = 8.0
+# A home price below what the good costs to make (inputs, wages, upkeep per
+# unit) is pulled up by cost_pull x ln(cost / price), on top of the stock gap.
+cost_pull = 1.0
 # The CPI basket.
 cpi_food = 0.30
 cpi_goods = 0.25
@@ -76,7 +122,7 @@ cpi_power = 0.05
 cpi_services = 0.35
 
 [money]
-credit_growth_base = 0.03
+credit_growth_base = 0.02   # credit growth at the neutral rate, on top of real growth (the target inflation)
 credit_slope = 1.0
 pass_through = 1.0
 r_neutral = 0.03
@@ -85,6 +131,9 @@ taylor_pi = 1.5
 taylor_gap = 0.5
 rate_step = 0.0005
 rate_max = 0.40
+taylor_u = 1.0              # rate cut per point of unemployment over its natural rate...
+taylor_u_ceiling = 0.04     # ...fading out as inflation climbs from pi_target to this
+taylor_recent = 0.5         # the bank's inflation: this share the last three months' (yearly rate), the rest the year's
 
 [state]
 deficit_target = 0.03
@@ -97,6 +146,19 @@ tribute = 0.10
 procurement = { none = 0.0, token = 0.002, weak = 0.004, modest = 0.006, capable = 0.009, strong = 0.013, major = 0.018, strongest = 0.025 }
 # Years of procurement already in the stockpile on day 1.
 starting_stockpile_years = 5
+# A slump (unemployment over 1.5 x natural + 5 points): public works take on
+# public_works x the jobless (those on the works included) over 5 points under
+# that line, up to public_works_max of the workforce, paid public_works_pay x
+# the wage; retraining adds this much to the skilled share a year (up to
+# retraining_max), fading at half that after.
+public_works = 1.0
+public_works_pay = 0.6
+public_works_max = 0.1
+# In a slump taxes are cut and welfare kept up, until printing has pushed
+# inflation past this: then they rise a step a month.
+slump_inflation_limit = 0.08
+retraining = 0.02
+retraining_max = 0.06
 # Infrastructure upkeep per level per day, in W$ per hex.
 infrastructure_upkeep = 40
 # W$ per hex to build one level of road, rail or port.
@@ -118,6 +180,8 @@ fx_trade = 0.5
 fx_inflation = 0.0
 fx_ppp = 0.01
 fx_rate = 2.0
+fx_slump = 1.0              # in a slump the currency is let go: the tilt falls this much per point over the slump line
+capital_flow = 0.8          # share of a trade deficit financed from abroad (spent at home); surplus nations lend that share of theirs
 
 # Credit ratings: [name, lowest score, debt ceiling (share of GDP), premium]
 [[rating]]

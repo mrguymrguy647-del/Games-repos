@@ -63,10 +63,42 @@ pub fn make_world(map: usize, seed: u32) -> Result<MadeWorld, Box<dyn std::error
     Ok((data, atlas, ed, world, economy))
 }
 
+/// `--economy-health [YEARS] [SEEDS...] [--why]`: every map with each seed, watched
+/// monthly against the balance rules (see `econ::report::Health`).
+fn economy_health(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    // --why: under each world that broke a rule, who did it.
+    let why = args.iter().any(|a| a == "--why");
+    let mut nums: Vec<u32> = args.iter().filter_map(|a| a.parse().ok()).collect();
+    let years = if nums.is_empty() { 50 } else { nums.remove(0) };
+    let seeds = if nums.is_empty() { vec![1, 2, 3, 4, 5, 6] } else { nums };
+    let data = data::Data::load()?;
+    let mut failures = 0;
+    println!("{:<14} {:>5} {:>12} {:>9} {:>17} {:>9} {:>9}  problems", "map", "seed", "max/head", "jobless", "world infl.", ">15% max", "collapse");
+    for seed in &seeds {
+        for (map, m) in data.maps.iter().enumerate() {
+            let (_, _, ed, _, mut e) = make_world(map, *seed)?;
+            let h = econ::report::run_and_watch(&mut e, &ed, years);
+            let p = h.problems();
+            failures += usize::from(!p.is_empty());
+            println!(
+                "{:<14} {:>5} {:>12.0} {:>8.1}y {:>7.1}% .. {:>5.1}% {:>9} {:>9}  {}",
+                m.id, seed, h.max_per_head, h.longest_jobless_years, h.world_inflation_low * 100.0, h.world_inflation_high * 100.0,
+                h.most_high_inflation, h.collapsed.len(), p.join("; ")
+            );
+            if why && !p.is_empty() {
+                println!("    most over 15% at once, {}", h.high_inflation_who);
+                println!("    world inflation furthest out, {}", h.world_inflation_who);
+            }
+        }
+    }
+    println!("{} of {} worlds broke a rule", failures, seeds.len() * data.maps.len());
+    Ok(())
+}
+
 /// `--economy-report [YEARS] [--map ID] [--world-seed N]`: simulate and print.
 /// (`--seed` belongs to the engine, so the world's seed is `--world-seed`.)
 fn economy_report(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
-    let mut years = 50u32;
+    let mut years = 50.0f64;
     let mut maps: Vec<String> = vec!["grand".into(), "isles".into(), "five_shores".into()];
     let mut seed = 1u32;
     let mut i = 0;
@@ -95,7 +127,7 @@ fn economy_report(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         };
         let (_, _, ed, _, mut economy) = make_world(map, seed)?;
         let start = std::time::Instant::now();
-        economy.run_days(&ed, years * ed.days_per_year);
+        economy.run_days(&ed, (years * ed.days_per_year as f64).round() as u32);
         println!("== {} (seed {seed}) ==", data.maps[map].name);
         println!("{}", econ::report::report(&economy, &ed));
         println!("({} years of {} nations simulated in {:.2} s)\n", years, economy.nations.len(), start.elapsed().as_secs_f64());
@@ -106,7 +138,7 @@ fn economy_report(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = duckforge::game_args();
     if let Some(at) = args.iter().position(|a| a == "--economy-trace") {
-        // --economy-trace MAP NATION DAYS EVERY [--world-seed N] [--detail] [--world] [--good ID] [--budget]
+        // --economy-trace MAP NATION DAYS EVERY [--world-seed N] [--cpi] [--detail] [--world] [--good ID] [--budget]
         let get = |k: usize, d: &str| args.get(at + k).cloned().unwrap_or_else(|| d.to_string());
         let data = data::Data::load()?;
         let map = data.maps.iter().position(|m| m.id == get(1, "grand")).unwrap_or(0);
@@ -116,7 +148,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("{}", economy.nations[nation].name);
         for _ in 0..days {
             if economy.day % every == 0 {
-                println!("{}", econ::report::trace_line(&economy, &ed, nation));
+                if args.iter().any(|a| a == "--cpi") {
+                    println!("{}", econ::report::cpi_line(&economy, &ed, nation));
+                } else {
+                    println!("{}", econ::report::trace_line(&economy, &ed, nation));
+                }
             }
             economy.tick(&ed);
         }
@@ -135,6 +171,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("{}", econ::report::detail(&economy, &ed, nation));
         }
         return Ok(());
+    }
+    if let Some(at) = args.iter().position(|a| a == "--economy-world") {
+        // --economy-world MAP SEED MONTHS: the world month by month (for balancing).
+        let get = |k: usize, d: &str| args.get(at + k).cloned().unwrap_or_else(|| d.to_string());
+        let data = data::Data::load()?;
+        let map = data.maps.iter().position(|m| m.id == get(1, "grand")).unwrap_or(0);
+        let (_, _, ed, _, mut e) = make_world(map, get(2, "1").parse()?)?;
+        let months: u32 = get(3, "120").parse()?;
+        for _ in 0..months {
+            e.run_days(&ed, 30);
+            println!("{}", econ::report::world_line(&e, &ed));
+        }
+        return Ok(());
+    }
+    if let Some(at) = args.iter().position(|a| a == "--economy-health") {
+        return economy_health(&args[at + 1..]);
     }
     if let Some(at) = args.iter().position(|a| a == "--economy-report") {
         return economy_report(&args[at + 1..]);

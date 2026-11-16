@@ -78,6 +78,8 @@ struct OptionFile {
     #[serde(default)]
     max: Option<f64>,
     #[serde(default)]
+    per_person: Option<[f64; 2]>,
+    #[serde(default)]
     tags: Vec<String>,
     #[serde(default)]
     color: Option<String>,
@@ -238,6 +240,10 @@ pub struct WheelOption {
     pub level: f64,
     pub min: f64,
     pub max: f64,
+    /// Number wheels: the band per person instead, once the Population wheel
+    /// has landed (`min`/`max` are then population x these). Until then
+    /// `min`/`max` are shown.
+    pub per_person: Option<[f64; 2]>,
     pub tags: Vec<String>,
     pub color: Color,
     pub unique: Option<Unique>,
@@ -420,6 +426,7 @@ impl Data {
                 level: i as f64,
                 min: 0.0,
                 max: 0.0,
+                per_person: None,
                 tags: c.tags.clone(),
                 color: c.color,
                 unique: None,
@@ -548,6 +555,11 @@ fn build(file: WheelsFile, maps: MapsFile, names: NamesFile) -> Result<Data, Dat
                 Some("continent") => Some(Unique::Continent),
                 Some(other) => return err(format!("{at}: unique = \"{other}\" isn't known (\"world\" or \"continent\")")),
             };
+            if let Some([lo, hi]) = of.per_person {
+                if kind != Kind::Number || !(0.0 < lo && lo <= hi) {
+                    return err(format!("{at}: per_person = [low, high] needs a number wheel and 0 < low <= high"));
+                }
+            }
             options.push(WheelOption {
                 id: of.id,
                 label: of.label,
@@ -557,6 +569,7 @@ fn build(file: WheelsFile, maps: MapsFile, names: NamesFile) -> Result<Data, Dat
                 level,
                 min,
                 max,
+                per_person: of.per_person,
                 tags: of.tags,
                 color,
                 unique,

@@ -81,14 +81,17 @@ impl Economy {
             economy.nations.push(n);
         }
         // What some nations can't dig, others with spare land do.
-        economy.balance_raw(ed);
+        let (trade, sold) = economy.balance_raw(ed);
         economy.fit_transport(ed);
+        economy.fit_ports(ed, &trade);
+        economy.price_at_parity(ed, &sold);
         for i in 0..economy.nations.len() {
             let mut n = economy.nations[i].clone();
             let gdp = n.gdp_start;
             economy.calibrate(ed, &mut n, gdp);
             economy.nations[i] = n;
         }
+        economy.price_at_cost(ed);
         // Colonies pay tribute to the strongest nation that isn't one.
         let strongest = (0..economy.nations.len())
             .filter(|&i| !ed.models[economy.nations[i].model].id.eq("colony"))
@@ -107,6 +110,9 @@ impl Economy {
             n.imports_from_last = vec![0.0; count];
         }
         economy.refresh_trade_capacity(ed);
+        for n in economy.nations.iter_mut() {
+            n.trade_capacity_start = n.trade_capacity;
+        }
         for i in 0..count {
             economy.refresh_hire_order(ed, i);
         }
@@ -230,6 +236,8 @@ impl Economy {
             hdi,
             tech_cal: 1.0,
             tech_progress: 1.0,
+            public_works: 0.0,
+            retrained: 0.0,
             need_cal: 1.0,
             duty,
             skilled: 0.0,
@@ -256,6 +264,8 @@ impl Economy {
             wanted: vec![0.0; goods],
             got: vec![0.0; goods],
             use_rate: vec![0.0; goods],
+            export_rate: vec![0.0; goods],
+            unit_cost: vec![0.0; goods],
             ledger: Ledger::new(goods),
             trade_policy: vec![TradePolicy::Free; goods],
             raw_short: vec![0.0; goods],
@@ -263,6 +273,10 @@ impl Economy {
             wage: 0.0,
             wage0: 0.0,
             wage_anchor: 0.0,
+            pay_scale: 0.0,
+            inflation_recent: 0.02,
+            defaulted: false,
+            service_pay: 1.0,
             wage_w: 0.0,
             tech_start: 1.0,
             hdi_start: 0.5,
@@ -308,6 +322,8 @@ impl Economy {
             budget_last_month: Budget::default(),
             deficit_ema: 0.0,
             trade_capacity: 0.0,
+            trade_routes: 0.0,
+            trade_capacity_start: 0.0,
             trade_used: 0.0,
             exports_w: 0.0,
             imports_w: 0.0,
@@ -343,7 +359,7 @@ impl Economy {
         // day 1's GDP needs, factories pay `labour_share` of what they add in
         // wages; and appetite, so that goods, power and fuel take what
         // households have left after services (see `calibrate`).
-        for _ in 0..25 {
+        for _ in 0..60 {
             n.buildings.clear();
             self.endow(data, ed, &mut n, gdp_w);
             let (va, bill, wants_target, wants) = self.calibrate(ed, &mut n, gdp_w);
@@ -355,8 +371,8 @@ impl Economy {
             if r.ln().abs() < 0.02 && a.ln().abs() < 0.02 {
                 break;
             }
-            n.tech_cal = (n.tech_cal * r.powf(0.6)).clamp(0.02, 50.0);
-            n.need_cal = (n.need_cal * a.powf(0.6)).clamp(0.02, 50.0);
+            n.tech_cal = (n.tech_cal * r.powf(0.6)).clamp(0.001, 1000.0);
+            n.need_cal = (n.need_cal * a.powf(0.6)).clamp(0.001, 1000.0);
         }
         n
     }
@@ -582,7 +598,6 @@ impl Economy {
                 used[i] += gross * per;
             }
         }
-        let flow: Vec<f64> = (0..goods).map(|g| made[g].max(used[g])).collect();
         // Wage and service workers together: day 1's GDP is the wheel's, and
         // households can afford the services they buy.
         let mut goods_wages_per_w = 0.0;
@@ -632,7 +647,12 @@ impl Economy {
         let unemployed = (u_nat * (labour - army)).min(room);
         let services = room - unemployed;
         let floor = 0.2 * gdp_day / labour.max(1.0);
-        let wage = ((gdp_day - va_goods) / ((1.0 + m) * services + state_workers).max(1.0)).max(floor);
+        // Never more than the buildings can pay (80% of what they add): when
+        // the wheels give a nation more GDP than its land, people and skills
+        // can make (and the fits below can't close the gap), day 1 starts
+        // poorer than the wheel said rather than with every firm losing money.
+        let can_pay = if goods_wages_per_w > 0.0 { 0.8 * va_goods.max(0.0) / goods_wages_per_w } else { f64::INFINITY };
+        let wage = ((gdp_day - va_goods) / ((1.0 + m) * services + state_workers).max(1.0)).max(floor).min(can_pay).max(1e-9);
         let serv_spend = services * wage * (1.0 + m);
         let wage_bill = wage * (goods_wages_per_w + services + state_workers);
         let welfare = unemployed * wage * ed.welfare_rate + ed.pension_share * wage_bill;
@@ -659,11 +679,21 @@ impl Economy {
         n.government = gov;
         n.unemployed = unemployed;
 
-        // Stocks: a month of what flows; weapons: years of buying.
+        // Stocks: a month of what flows; weapons: years of buying. What is
+        // used at home and what is made beyond it (sold abroad) are kept
+        // apart, so an exporter doesn't take its exports for a glut.
+        // An importer starts as far under its month as keeps its bids at
+        // what it buys in a day (so trade flows from day 1: with full stocks
+        // nobody bid for months, the exporters' stocks piled up, they dug
+        // less, and when the bids came there was too little ore for steel).
         for g in 0..goods {
-            let daily = flow[g].max(target[g]).max(k * 0.01);
-            n.stock[g] = if ed.goods[g].military { 0.0 } else { ed.prices.days_of_cover * daily };
-            n.use_rate[g] = daily;
+            let home = (used[g] + target[g]).max(k * 0.01);
+            let abroad = if ed.goods[g].trade { (made[g] - home).max(0.0) } else { 0.0 };
+            let bought = if ed.goods[g].trade { (home - made[g]).max(0.0) } else { 0.0 };
+            let month = ed.prices.days_of_cover * home;
+            n.stock[g] = if ed.goods[g].military { 0.0 } else { (month + abroad / super::OFFER_SHARE - bought / super::BID_SHARE).max(0.5 * month) };
+            n.use_rate[g] = home;
+            n.export_rate[g] = abroad;
         }
         n.stock[ed.electricity] = 0.0;
         let years = ed.state.starting_stockpile_years;
@@ -684,6 +714,10 @@ impl Economy {
         n.treasury = (0.02 + n.mods.get("treasury")).max(0.0) * gdp_year;
         let debt_share = if md.planned { 0.2 } else { 0.35 };
         n.debt = ((debt_share + n.mods.get("debt")).max(0.0)) * gdp_year;
+        // Day 1's GDP as it really adds up (the wheel's, unless capped above).
+        let gdp_day = (va_goods + serv_spend + wage * state_workers).max(1e-9);
+        n.gdp = gdp_day * n.exchange * ed.days_per_year as f64;
+        n.gdp_start = n.gdp;
         n.gdp_local = gdp_day;
         n.real_gdp = gdp_day;
         n.real_trend = gdp_day;
@@ -699,54 +733,207 @@ impl Economy {
 
     /// The world starts able to dig what it needs: raw goods some nations
     /// can't produce are dug where there is spare land and labour.
-    fn balance_raw(&mut self, ed: &EconData) {
+    /// Digs what some nations can't in others with spare land. Gives back
+    /// each nation's day-1 trade (weight a day) in raw goods: what it must
+    /// buy in, what it digs for the world and its Main Resource exports; and
+    /// what each digs for the world, good by good.
+    fn balance_raw(&mut self, ed: &EconData) -> (Vec<f64>, Vec<Vec<f64>>) {
+        let mut sold: Vec<Vec<f64>> = vec![vec![0.0; ed.goods.len()]; self.nations.len()];
         let wpl = ed.workers_per_level;
-        // No nation digs for the world more than a tenth of its GDP's worth.
+        let dpy = ed.days_per_year as f64;
+        let mut trade: Vec<f64> = self
+            .nations
+            .iter()
+            .map(|n| {
+                let bought: f64 = n.raw_short.iter().enumerate().map(|(g, q)| q * ed.goods[g].weight).sum();
+                let main = n.main_resource.map_or(0.0, |g| 0.04 * n.gdp_start / dpy / ed.goods[g].price * ed.goods[g].weight);
+                bought + main
+            })
+            .collect();
+        // No nation digs for the world more than a tenth of its GDP's worth
+        // (a fifth in the second pass).
         let mut allowance: Vec<f64> = self.nations.iter().map(|n| 0.10 * n.gdp_start / ed.days_per_year as f64).collect();
-        for (bi, bd) in ed.buildings.iter().enumerate() {
-            if !bd.deposit {
-                continue;
+        // Pass 1: good deposits, as deep as they go. Pass 2 (whatever is still
+        // short): poorer ones too, worked twice as hard, with twice the
+        // allowance. Pass 3: the buyers dig what is left at home, on any
+        // deposit they have. (Without the last two, a world could start a
+        // third short of its ore or oil: the buyers lived on a month's stock,
+        // then their power and steel failed and their prices soared.)
+        for pass in 0..3 {
+            if pass == 1 {
+                allowance.iter_mut().zip(&self.nations).for_each(|(a, n)| *a += 0.10 * n.gdp_start / ed.days_per_year as f64);
             }
-            let g = bd.output;
-            let mut short: f64 = self.nations.iter().map(|n| n.raw_short[g]).sum();
-            if short <= 0.0 {
-                continue;
-            }
-            // Every spare place, most productive first.
-            let mut places: Vec<(f64, usize, usize, f64)> = Vec::new(); // (output per level, nation, province, spare levels)
-            for (i, n) in self.nations.iter().enumerate() {
-                let t = tech(ed, n);
-                let out_mod = output_mod(ed, n, g);
-                for &q in &n.provinces {
-                    let pe = &self.provinces[q];
-                    if pe.deposits[g] < 0.2 {
+            for (bi, bd) in ed.buildings.iter().enumerate() {
+                if !bd.deposit {
+                    continue;
+                }
+                let g = bd.output;
+                let mut short: f64 = self.nations.iter().map(|n| n.raw_short[g]).sum::<f64>() - sold.iter().map(|s| s[g]).sum::<f64>();
+                if short <= 0.0 {
+                    continue;
+                }
+                // Every spare place, most productive first.
+                let (floor, depth) = if pass == 0 { (0.2, 1.0) } else { (0.05, 2.0) };
+                let mut places: Vec<(f64, usize, usize, f64)> = Vec::new(); // (output per level, nation, province, spare levels)
+                for (i, n) in self.nations.iter().enumerate() {
+                    if pass == 2 && n.raw_short[g] <= 0.0 {
                         continue;
                     }
-                    let have: f64 = n.buildings.iter().filter(|b| b.kind == bi && b.province == q).map(|b| b.levels).sum();
-                    let spare = pe.deposits[g].min(3.0) * pe.hexes * bd.cap_per_hex - have;
-                    if spare > 0.5 {
-                        places.push((bd.amount * t * skill_factor(n, bd) * pe.deposits[g] * out_mod, i, q, spare));
+                    let t = tech(ed, n);
+                    let out_mod = output_mod(ed, n, g);
+                    for &q in &n.provinces {
+                        let pe = &self.provinces[q];
+                        let d = pe.deposits[g];
+                        if d < if pass == 2 { 0.01 } else { floor } {
+                            continue;
+                        }
+                        let have: f64 = n.buildings.iter().filter(|b| b.kind == bi && b.province == q).map(|b| b.levels).sum();
+                        let spare = d.clamp(0.2, 3.0) * depth * pe.hexes * bd.cap_per_hex - have;
+                        if spare > 0.5 {
+                            places.push((bd.amount * t * skill_factor(n, bd) * d * out_mod, i, q, spare));
+                        }
                     }
                 }
-            }
-            places.sort_by(|a, b| b.0.total_cmp(&a.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
-            for (per_level, i, q, spare) in places {
-                if short <= 0.0 {
-                    break;
-                }
-                let n = &mut self.nations[i];
-                let room = labour_room(ed, n) / wpl;
-                let by_value = allowance[i] / (per_level * ed.goods[g].price).max(1e-9);
-                let add = spare.min(short / per_level.max(1e-9)).min(room.max(0.0)).min(by_value);
-                if add > 0.01 {
-                    push_building(&mut n.buildings, bi, q, add);
-                    short -= add * per_level;
-                    allowance[i] -= add * per_level * ed.goods[g].price;
+                places.sort_by(|a, b| b.0.total_cmp(&a.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
+                for (per_level, i, q, spare) in places {
+                    if short <= 0.0 {
+                        break;
+                    }
+                    let n = &mut self.nations[i];
+                    let room = labour_room(ed, n) / wpl;
+                    let by_value = if pass == 2 { f64::INFINITY } else { allowance[i] / (per_level * ed.goods[g].price).max(1e-9) };
+                    let add = spare.min(short / per_level.max(1e-9)).min(room.max(0.0)).min(by_value);
+                    if add > 0.01 {
+                        push_building(&mut n.buildings, bi, q, add);
+                        if pass == 2 {
+                            // Dug at home: that much less to buy in.
+                            let own = (add * per_level).min(n.raw_short[g]);
+                            trade[i] -= own * ed.goods[g].weight;
+                            n.raw_short[g] -= own;
+                        } else {
+                            trade[i] += add * per_level * ed.goods[g].weight;
+                            sold[i][g] += add * per_level;
+                        }
+                        short -= add * per_level;
+                        if pass < 2 {
+                            allowance[i] -= add * per_level * ed.goods[g].price;
+                        }
+                    }
                 }
             }
         }
-        for n in self.nations.iter_mut() {
+        (trade, sold)
+    }
+
+    /// Day 1's price of a raw good a nation buys in is what it costs landed
+    /// (import parity), and of one it digs for the world what it fetches
+    /// there (export parity): where trade would take them, so year 1 isn't
+    /// spent getting there (a burst of inflation in every big importer).
+    fn price_at_parity(&mut self, ed: &EconData, sold: &[Vec<f64>]) {
+        for (n, sold) in self.nations.iter_mut().zip(sold) {
+            for (g, &dug) in sold.iter().enumerate() {
+                if !ed.goods[g].trade {
+                    continue;
+                }
+                let (ip, ep) = super::tick::parity(ed, n, g, ed.goods[g].price);
+                if n.raw_short.get(g).is_some_and(|&q| q > 0.0) {
+                    n.price[g] = ip;
+                } else if dug > 0.0 || n.main_resource == Some(g) {
+                    n.price[g] = ep;
+                }
+            }
             n.raw_short = Vec::new();
+        }
+    }
+
+    /// No made good starts below what it costs to make on day 1 (inputs,
+    /// wages and upkeep a unit: where the cost pull would take it in the first
+    /// months, a level shift that showed as a year of inflation in nations
+    /// that buy their raw goods dear). The CPI's history starts at day 1's.
+    fn price_at_cost(&mut self, ed: &EconData) {
+        let wpl = ed.workers_per_level;
+        for n in self.nations.iter_mut() {
+            let t = tech(ed, n);
+            let mut cost = vec![(0.0, 0.0); ed.goods.len()];
+            for b in &n.buildings {
+                let bd = &ed.buildings[b.kind];
+                if bd.deposit || b.levels <= 0.0 {
+                    continue;
+                }
+                let gross = b.levels * bd.amount * t * skill_factor(n, bd) * output_mod(ed, n, bd.output);
+                let inputs: f64 = bd.inputs.iter().map(|&(g, per)| gross * per * n.price[g]).sum();
+                let wages = b.levels * wpl * n.wage * (1.0 + bd.skill * ed.skill_pay);
+                let upkeep = b.levels * bd.upkeep / n.exchange;
+                let c = &mut cost[bd.output];
+                c.0 += inputs + wages + upkeep;
+                c.1 += gross * (1.0 - defect_rate(n, bd));
+            }
+            for (g, &(c, made)) in cost.iter().enumerate() {
+                if made > 0.0 && !ed.models[n.model].planned {
+                    n.price[g] = n.price[g].max(c / made);
+                }
+            }
+            let (cpi, goods_cpi) = super::tick::cpi_parts(ed, n);
+            n.cpi = cpi;
+            n.goods_cpi = goods_cpi;
+            n.cpi_ring = vec![cpi; ed.days_per_year as usize];
+            n.goods_ring = vec![goods_cpi; ed.days_per_year as usize];
+        }
+    }
+
+    /// Day 1's ports (or, landlocked, border roads and rail) carry day 1's
+    /// trade with room to spare. (Without it a big grain buyer's port was
+    /// nine-tenths full on day 1, and when grain imports grew they crowded
+    /// out the iron ore its steel needed.)
+    fn fit_ports(&mut self, ed: &EconData, trade: &[f64]) {
+        for (i, need) in trade.iter().map(|t| ed.port_headroom * t).enumerate() {
+            let n = &self.nations[i];
+            let carry = n.mods.get("transport").max(0.1);
+            let mut short;
+            if !n.landlocked {
+                let coast: Vec<usize> = n.provinces.iter().copied().filter(|&q| self.provinces[q].coastal).collect();
+                let per_level = ed.port_capacity * n.mods.get("port") * carry;
+                let have: f64 = coast.iter().map(|&q| self.provinces[q].port).sum::<f64>() * per_level;
+                short = need - have;
+                if per_level > 0.0 {
+                    for &q in &coast {
+                        if short <= 0.0 {
+                            break;
+                        }
+                        let p = &mut self.provinces[q];
+                        let add = (10.0 - p.port).max(0.0).min(short / per_level);
+                        p.port += add;
+                        short -= add * per_level;
+                    }
+                }
+            } else {
+                let border = n.border_provinces.clone();
+                let per_level = ed.land_capacity * carry;
+                let have: f64 = border.iter().map(|&q| self.provinces[q].road + self.provinces[q].rail).sum::<f64>() * per_level;
+                short = need - have;
+                // Rail first, then roads, each up to the most a province holds.
+                for &q in &border {
+                    if short <= 0.0 {
+                        break;
+                    }
+                    let p = &mut self.provinces[q];
+                    let rail = (MAX_INFRA - p.rail).max(0.0).min(short / per_level);
+                    p.rail += rail;
+                    short -= rail * per_level;
+                }
+                for &q in &border {
+                    if short <= 0.0 {
+                        break;
+                    }
+                    let p = &mut self.provinces[q];
+                    let road = (MAX_INFRA - p.road).max(0.0).min(short / per_level);
+                    p.road += road;
+                    short -= road * per_level;
+                }
+            }
+            // What no port or crossing could carry (a crowded city-state, say)
+            // goes by old trade routes.
+            self.nations[i].trade_routes = short.max(0.0) / carry;
         }
     }
 
@@ -792,7 +979,7 @@ impl Economy {
                     cap += (self.provinces[q].road + self.provinces[q].rail) * ed.land_capacity;
                 }
             }
-            n.trade_capacity = cap * n.mods.get("transport").max(0.1);
+            n.trade_capacity = (cap + n.trade_routes) * n.mods.get("transport").max(0.1);
         }
     }
 }
@@ -824,6 +1011,7 @@ fn push_building(list: &mut Vec<Building>, kind: usize, province: usize, levels:
         hired: 0.0,
         output: 0.0,
         input_factor: 1.0,
+        fed: 1.0,
         profit: 0.0,
         losing_days: 0,
         utilization: 1.0,

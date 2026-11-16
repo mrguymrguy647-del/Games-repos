@@ -41,6 +41,9 @@ pub struct Building {
     pub output: f64,
     /// Inputs it got as a share of what it needed today (1: all).
     pub input_factor: f64,
+    /// Inputs it has been getting, smoothed over a few weeks: it only keeps
+    /// on the crews it can feed (the rest are let go to work elsewhere).
+    pub fed: f64,
     /// Profit per level per day (local money), smoothed over about a month.
     pub profit: f64,
     /// Days in a row it has lost money.
@@ -237,6 +240,10 @@ pub struct NationEcon {
     pub tech_cal: f64,
     /// Technical progress since day 1 (grows `tech_growth` a year).
     pub tech_progress: f64,
+    /// People on public works (a slump programme), and the skilled share
+    /// retraining has added.
+    pub public_works: f64,
+    pub retrained: f64,
     /// Day 1's appetite fit: the basket households can afford.
     pub need_cal: f64,
     pub duty: f64,
@@ -270,6 +277,11 @@ pub struct NationEcon {
     pub got: Vec<f64>,
     /// Smoothed daily use of each good (inputs, households, state).
     pub use_rate: Vec<f64>,
+    /// Smoothed daily exports of each good (over about ten days).
+    pub export_rate: Vec<f64>,
+    /// What a unit of each good costs to make at home (inputs, wages and
+    /// upkeep over output), smoothed over about a month; 0 if nobody makes it.
+    pub unit_cost: Vec<f64>,
     pub ledger: Ledger,
     pub trade_policy: Vec<TradePolicy>,
     /// Raw goods it couldn't dig at home on day 1 (used once, at the start).
@@ -282,6 +294,17 @@ pub struct NationEcon {
     pub wage0: f64,
     /// What factories can pay per worker, in W$ (smoothed): wages are pulled there.
     pub wage_anchor: f64,
+    /// Day 1's wage over what the buildings could pay then: what they can pay
+    /// later is scaled by it, so day 1 is a steady state for wages.
+    pub pay_scale: f64,
+    /// Inflation over the last three months, at a yearly rate (smoothed).
+    pub inflation_recent: f64,
+    /// Set when the state defaulted this month (for the news).
+    pub defaulted: bool,
+    /// What service work pays, as a share of the wage: 1 in a normal labour
+    /// market, less when work is scarce (informal work: street stalls, odd
+    /// jobs), so the same spending on services employs more people.
+    pub service_pay: f64,
     /// The wage in W$ (the local wage is this over the exchange rate).
     pub wage_w: f64,
     /// Day 1's tech level (real wages grow with tech).
@@ -343,6 +366,12 @@ pub struct NationEcon {
 
     // Trade.
     pub trade_capacity: f64,
+    /// Trade (weight a day) carried by old routes (rivers, caravans,
+    /// pipelines) on top of ports and border crossings: whatever day 1 needed
+    /// beyond what they could ever carry.
+    pub trade_routes: f64,
+    /// Day 1's trade capacity (border crossings worn below it are rebuilt).
+    pub trade_capacity_start: f64,
     pub trade_used: f64,
     pub exports_w: f64,
     pub imports_w: f64,
@@ -448,7 +477,19 @@ pub fn output_mod(_data: &EconData, n: &NationEcon, g: usize) -> f64 {
     n.mod_out[g]
 }
 
+/// The share of its stock above home cover a nation offers abroad each day.
+pub const OFFER_SHARE: f64 = 0.15;
+/// The share of its stock gap below home cover a nation bids for each day.
+pub const BID_SHARE: f64 = 0.3;
+
 impl NationEcon {
+    /// The stock a nation keeps of a good: a month (`days_of_cover`) of home
+    /// use, plus what it holds for sale abroad (its exports over
+    /// `OFFER_SHARE`, about a week of them).
+    pub fn stock_target(&self, ed: &EconData, g: usize) -> f64 {
+        ed.prices.days_of_cover * self.use_rate[g] + self.export_rate[g] / OFFER_SHARE
+    }
+
     /// Reads the modifiers the daily loop needs most out of `mods`.
     pub fn refresh_fast_mods(&mut self, data: &EconData) {
         self.mod_tech = self.mods.get("tech");
