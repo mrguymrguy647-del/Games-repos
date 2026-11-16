@@ -20,6 +20,7 @@ pub fn declare(w: &mut Wars, e: &mut Economy, ed: &EconData, attacker: Faction, 
         sides: [vec![attacker], vec![defender]],
         level,
         start_level: level,
+        motive: String::new(),
         max_level: level,
         goal,
         cause: cause.clone(),
@@ -42,7 +43,8 @@ pub fn declare(w: &mut Wars, e: &mut Economy, ed: &EconData, attacker: Faction, 
 
 /// Joins a war on a side (ganging up, layer 5c).
 pub fn join(w: &mut Wars, war: usize, side: usize, f: Faction) {
-    if w.wars[war].side_of(f).is_some() {
+    // A side has at most `max_side` nations: wars don't swallow the world.
+    if w.wars[war].side_of(f).is_some() || w.wars[war].sides[side].len() >= w.data.ai.max_side {
         return;
     }
     w.wars[war].sides[side].push(f);
@@ -59,6 +61,8 @@ pub fn escalate(w: &mut Wars, war: usize, side: usize) {
     if wr.level >= 4 || wr.pending.is_some() || !wr.active() {
         return;
     }
+    w.count("escalations", 1.0);
+    let wr = &mut w.wars[war];
     wr.level += 1;
     wr.max_level = wr.max_level.max(wr.level);
     let deadline = w.day + w.data.levels.match_days;
@@ -92,6 +96,13 @@ pub fn respond(w: &mut Wars, e: &mut Economy, ed: &EconData, war: usize, matches
 /// proxies, and (with brains) the decisions to fight.
 pub fn day(w: &mut Wars, e: &mut Economy, ed: &EconData, mut brains: Option<&mut Brains>) {
     peace::pay_reparations(w, e);
+    // The economy's overlords are the truth: note who became a vassal when.
+    for i in 0..w.nations {
+        if e.nations[i].overlord != w.overlords[i] {
+            w.overlords[i] = e.nations[i].overlord;
+            w.vassal_since[i] = w.day;
+        }
+    }
     levels(w, e, ed);
     exhaustion(w, e);
     prisoners(w, e);
@@ -99,6 +110,9 @@ pub fn day(w: &mut Wars, e: &mut Economy, ed: &EconData, mut brains: Option<&mut
         return;
     }
     civil_wars(w, e, ed);
+    if w.day % 30 == 20 {
+        independence(w, e, ed, brains.as_deref_mut());
+    }
     for k in 0..w.wars.len() {
         if w.wars[k].active() {
             decide(w, e, ed, k, brains.as_deref_mut());
@@ -106,6 +120,9 @@ pub fn day(w: &mut Wars, e: &mut Economy, ed: &EconData, mut brains: Option<&mut
     }
     proxies(w, e, ed);
     if let Some(b) = brains {
+        if w.day % 30 == 15 {
+            coalitions(w, e, ed, b);
+        }
         start_wars(w, e, ed, b);
     }
 }
@@ -144,7 +161,11 @@ fn exhaustion(w: &mut Wars, e: &mut Economy) {
             let own: Vec<usize> = (0..w.owner.len()).filter(|&q| w.owner[q] == Some(nation)).collect();
             let occupied = own.iter().filter(|&&q| w.control[q] != Some(f)).count() as f64 / own.len().max(1) as f64;
             let occupied = if f < w.nations { occupied } else { 0.0 };
-            e_now += x.losses * lost / pop + x.level * level as f64 + x.occupied * occupied + x.blockaded * blockaded;
+            let parts = [x.losses * lost / pop, x.level[level.min(4)], x.occupied * occupied, x.blockaded * blockaded];
+            e_now += parts.iter().sum::<f64>();
+            for (k, name) in ["exhaustion from losses", "exhaustion from the level", "exhaustion from occupation", "exhaustion from blockade"].into_iter().enumerate() {
+                w.stats.entry(name).and_modify(|v| *v += parts[k]).or_insert(parts[k]);
+            }
         } else {
             e_now *= 1.0 - x.recover;
         }
@@ -168,6 +189,11 @@ fn exhaustion(w: &mut Wars, e: &mut Economy) {
         } else {
             w.forces[f].war_unrest_days = 0;
         }
+        // Vassals cost their overlord: garrisons, governors, resentment.
+        let vassals = (0..w.nations).filter(|&v| w.overlords[v] == Some(f)).count() as f64;
+        stab -= w.data.ai.vassal_stability * vassals;
+        output -= w.data.ai.vassal_output * vassals;
+        let n = &mut e.nations[f];
         n.war_stability = stab;
         n.war_output = output.clamp(0.3, 1.0);
     }
@@ -246,7 +272,7 @@ fn decide(w: &mut Wars, e: &mut Economy, ed: &EconData, k: usize, mut brains: Op
     }
     let years = (day - wr.start) as f64 / ed.days_per_year as f64;
     // A skirmish doesn't last: after 90 days it grows or fades.
-    if wr.level == 1 && day >= wr.start + 90 {
+    if wr.level == 1 && day >= wr.start + w.data.levels.skirmish_days {
         let s = if score >= 0.0 { 0 } else { 1 };
         let lead = wr.sides[s][0];
         if aggression(w, lead, brains.as_deref()) > 0.75 && player_side != Some(s) {
@@ -286,9 +312,16 @@ fn decide(w: &mut Wars, e: &mut Economy, ed: &EconData, k: usize, mut brains: Op
         let lead = wr.sides[s][0];
         let my = if s == 0 { score } else { -score };
         let ex = w.forces[lead].exhaustion;
-        let limit = p.offer_exhaustion * (1.0 + risk(lead, brains.as_deref()));
+        let limit = p.offer_exhaustion * p.stake[wr.level.min(4)] * (1.0 + risk(lead, brains.as_deref()));
         let old_enough = (day - wr.start) as f64 >= p.min_days;
-        if ex > limit || (old_enough && (my < -40.0 || (my > 40.0 && years > 1.0))) {
+        // A side sues for peace when worn out, when the war is hopeless for
+        // it (deeper wars are fought on longer), or when it has won and
+        // the war has gone on long enough.
+        let lv = wr.level.min(4);
+        let hopeless = my < -p.hopeless[lv] && (day - wr.start) as f64 >= p.min_days * p.stake[lv];
+        let won = my > 40.0 && years > p.won_years[lv];
+        if ex > limit || (old_enough && (hopeless || won)) {
+            w.count(if ex > limit { "peace offered: worn out" } else if hopeless { "peace offered: hopeless" } else { "peace offered: won" }, 1.0);
             let t = peace::terms(w, k, score);
             let other = wr.sides[1 - s][0];
             let accept = if player_side == Some(1 - s) {
@@ -316,9 +349,11 @@ fn decide(w: &mut Wars, e: &mut Economy, ed: &EconData, k: usize, mut brains: Op
         // Losing a war it cares about: climb a rung (if its ideology lets it).
         let cost = w.data.escalation.cost(&w.ideology[lead]) * (1.0 - risk(lead, brains.as_deref()));
         let stake = if s == 1 { 1.3 } else { 1.0 };
-        if my < w.data.ai.escalate_score && wr.level < 4 && cost < stake && ex < limit * 0.8 {
+        // Total war is the last resort: only a side losing badly goes there.
+        let needed = if wr.level >= 3 { w.data.ai.total_war_score } else { w.data.ai.escalate_score };
+        if my < needed && wr.level < 4 && cost < stake && ex < limit * 0.8 {
             let roll = w.rng.next_f32() as f64;
-            if roll < 0.15 {
+            if roll < w.data.ai.escalate_chance {
                 escalate(w, k, s);
                 return;
             }
@@ -351,6 +386,7 @@ fn start_wars(w: &mut Wars, e: &mut Economy, ed: &EconData, b: &mut Brains) {
     let day = w.day;
     let year = ed.days_per_year as f64;
     let n = w.nations;
+    let at_war_share = (0..n).filter(|&x| w.level_of(x) >= 3).count() as f64 / n.max(1) as f64;
     for i in 0..n {
         if (day + i as u32 * 7) % 30 != 0 || Some(i) == w.player {
             continue;
@@ -380,31 +416,40 @@ fn start_wars(w: &mut Wars, e: &mut Economy, ed: &EconData, b: &mut Brains) {
         if busy || cooldown {
             continue;
         }
-        // Candidates: weak neighbours, the counterweight target, grudges.
+        // Candidates: weak neighbours, the counterweight target, grudges,
+        // lost land, neighbours with what it lacks, other ideologies.
         let mut cands: Vec<usize> = brain.opportunities.iter().map(|o| o.target).collect();
         if let Some(c) = brain.counter {
             cands.push(c);
         }
         for j in 0..n {
-            if j != i && brain.relations[j].regard < -0.4 && !cands.contains(&j) {
+            if j != i && !cands.contains(&j) && (brain.relations[j].regard < -0.4 || w.lost.iter().any(|l| l.0 == i && w.owner[l.1] == Some(j)) || w.ideology[j] != w.ideology[i] || touches(w, i, j)) {
                 cands.push(j);
             }
         }
-        let mut best: Option<(usize, f64)> = None;
+        let mut best: Option<(usize, f64, Motive)> = None;
         for &j in &cands {
             if j == i || w.forces[i].truces.iter().any(|&(t, until)| t == j && day < until) || !reachable(w, e, ed, i, j) || w.strength(j).0 <= 0.0 {
                 continue;
             }
             let ratio = my_power / brain.estimates[j].power(&b.data).max(1.0);
-            let weak = brain.opportunities.iter().find(|o| o.target == j).map_or(0.0, |o| o.reasons.len() as f64 / 3.0);
-            let grudge = (-brain.relations[j].regard).max(0.0);
-            let gang = if brain.hegemon == Some(j) { a.gang_up * 0.5 } else { 0.0 };
-            let desire = aggr * (ratio - 1.0).min(2.0) + a.weakness * weak + a.grudge * grudge + gang - a.exhaustion_cost * ex - a.debt_cost * debt;
-            if desire > a.war_threshold && best.is_none_or(|(_, d)| desire > d) {
-                best = Some((j, desire));
+            let ms = motives(w, e, ed, b, i, j, ratio, aggr);
+            // A world already at war makes a new one riskier (who would
+            // come to whose aid?): the more nations at war, the less desire.
+            let costs = a.exhaustion_cost * ex + a.debt_cost * debt + a.world_at_war_cost * at_war_share;
+            // Weakness on its own needs the power to win; the other motives
+            // add to it (a grudge, a lost province, a holy war...).
+            let desire = ms.iter().map(|m| m.1).sum::<f64>() - costs;
+            let reasons = ms.iter().filter(|m| m.0 != "strength" && m.1 > 0.0).count();
+            let top = ms.into_iter().max_by(|x, y| x.1.total_cmp(&y.1)).unwrap();
+            if reasons == 0 {
+                continue;
+            }
+            if desire > a.war_threshold && ratio > 0.7 && best.as_ref().is_none_or(|(_, d, _)| desire > *d) {
+                best = Some((j, desire, top));
             }
         }
-        let Some((j, desire)) = best else { continue };
+        let Some((j, desire, motive)) = best else { continue };
         // How far to go, and what for.
         let level = if aggr + 0.2 * (desire - a.war_threshold) > a.declare_aggression { 3 } else if aggr > a.operation_aggression { 2 } else { 1 };
         let mine: Vec<usize> = w.held(i);
@@ -414,8 +459,16 @@ fn start_wars(w: &mut Wars, e: &mut Economy, ed: &EconData, b: &mut Brains) {
             border = w.held(j).into_iter().filter(|&q| w.geo.coastal[q]).take(1).collect();
         }
         border.sort_by_key(|&q| (w.geo.city[q], q));
+        // A war for something wants that something first.
+        if let Some(q) = motive.3 {
+            border.retain(|&x| x != q);
+            border.insert(0, q);
+        }
+        border.retain(|q| !w.capital.contains(q));
         let ratio = my_power / brain.estimates[j].power(&b.data).max(1.0);
-        let goal = if level >= 3 && ratio > 3.0 && aggr > 0.7 {
+        let goal = if motive.0 == "ideology" && level >= 3 {
+            Goal::Ideology
+        } else if level >= 3 && ratio > 3.0 && aggr > 0.7 {
             Goal::Vassal
         } else if level >= 3 && ratio > 2.0 && w.ideology[i] != w.ideology[j] && aggr > 0.6 {
             Goal::Ideology
@@ -424,13 +477,9 @@ fn start_wars(w: &mut Wars, e: &mut Economy, ed: &EconData, b: &mut Brains) {
         } else {
             Goal::Provinces(border.into_iter().take(if level >= 3 { 3 } else { 1 }).collect())
         };
-        let why = brain
-            .opportunities
-            .iter()
-            .find(|o| o.target == j)
-            .map(|o| format!("it sees weakness: {}", o.reasons.join(", ")))
-            .unwrap_or_else(|| if brain.counter == Some(j) { "it fears its power".to_string() } else { "an old grudge".to_string() });
+        let why = motive.2;
         let k = declare(w, e, ed, i, j, level, goal, why);
+        w.wars[k].motive = motive.0.to_string();
         pick_proxies(w, b, k);
         remember(b, j, i, day, MemoryKind::AttackedUs, -0.6);
         for x in 0..n {
@@ -483,6 +532,192 @@ fn start_wars(w: &mut Wars, e: &mut Economy, ed: &EconData, b: &mut Brains) {
             }
         }
     }
+}
+
+/// Vassals weigh their freedom each month (docs/WAR.md, section 10): an
+/// overlord at war, worn out, weaker than them or holding too many; years
+/// under it; another ideology; resentment. A vassal stronger than its
+/// overlord just leaves; one that wants it enough fights for it, and its
+/// overlord's other restless vassals join in.
+fn independence(w: &mut Wars, e: &mut Economy, ed: &EconData, mut brains: Option<&mut Brains>) {
+    let a = w.data.ai.clone();
+    let year = ed.days_per_year as f64;
+    let day = w.day;
+    let liberty = |w: &Wars, b: Option<&Brains>, v: usize, o: usize| -> f64 {
+        let years = (day - w.vassal_since[v]) as f64 / year;
+        let pv = w.strength(v).0 + 1.0;
+        let po = w.strength(o).0 + 1.0;
+        let resent = b.and_then(|b| b.brain(v)).map_or(0.0, |br| (-br.relations[o].regard).max(0.0));
+        0.2 + 0.5 * (years / 20.0).min(1.0)
+            + 0.8 * (pv / po).min(1.5)
+            + if w.level_of(o) >= 2 { 0.4 } else { 0.0 }
+            + 0.5 * w.forces[o].exhaustion.min(1.0)
+            + 0.2 * (w.vassals_of(o).len() as f64 - 1.0).max(0.0)
+            + if w.ideology[v] != w.ideology[o] { 0.3 } else { 0.0 }
+            + 0.3 * resent
+    };
+    for v in 0..w.nations {
+        let Some(o) = w.overlords[v] else { continue };
+        if Some(v) == w.player || w.at_war(v, o).is_some() || w.in_any_war(v) {
+            continue;
+        }
+        let want = liberty(w, brains.as_deref(), v, o);
+        if w.strength(v).0 > 1.3 * w.strength(o).0 {
+            e.nations[v].overlord = None;
+            w.overlords[v] = None;
+            w.count("vassals walked away", 1.0);
+            let text = format!("{} breaks free of {}: its overlord can't hold it", w.names[v], w.names[o]);
+            w.say(vec![v, o], text);
+            continue;
+        }
+        // A real chance is needed: an army a third of its overlord's (or
+        // the overlord busy at war), no truce, no war of its own lately.
+        let truce = w.forces[v].truces.iter().any(|&(t, until)| t == o && day < until);
+        let cooldown = w.forces[v].last_war.is_some_and(|d| (day - d) as f64 / year < a.cooldown_years);
+        let chance = w.strength(v).0 >= 0.33 * w.strength(o).0 || w.level_of(o) >= 2;
+        if want <= a.liberty_threshold || truce || cooldown || !chance {
+            continue;
+        }
+        let k = declare(w, e, ed, v, o, 2, Goal::Independence, format!("a war of independence from {}", w.names[o]));
+        w.wars[k].motive = "independence".to_string();
+        w.count("wars of independence", 1.0);
+        for u in w.vassals_of(o) {
+            if u != v && Some(u) != w.player && !w.in_any_war(u) && liberty(w, brains.as_deref(), u, o) > 0.7 * a.liberty_threshold {
+                join(w, k, 0, u);
+            }
+        }
+        if let Some(b) = brains.as_deref_mut() {
+            remember(b, o, v, day, MemoryKind::AttackedUs, -0.3);
+        }
+    }
+}
+
+/// The balance of power: nations that fear the same hegemon (the player
+/// too) go to war on it together, at most once in `coalition_years`.
+fn coalitions(w: &mut Wars, e: &mut Economy, ed: &EconData, b: &mut Brains) {
+    let a = w.data.ai.clone();
+    let year = ed.days_per_year as f64;
+    let day = w.day;
+    // Not in the first two years (a hegemon has to be seen to grow), and
+    // not while much of the world is already at war.
+    let busy = (0..w.nations).filter(|&x| w.level_of(x) >= 3).count() as f64 / w.nations.max(1) as f64;
+    if (day as f64) < 2.0 * year || busy > 0.1 {
+        return;
+    }
+    for h in 0..w.nations {
+        let recent = w.wars.iter().any(|x| x.cause.starts_with("a coalition") && x.sides[1].contains(&h) && (day - x.start) as f64 / year < a.coalition_years);
+        if recent || w.strength(h).0 <= 0.0 {
+            continue;
+        }
+        let mut members: Vec<usize> = (0..w.nations)
+            .filter(|&i| i != h && Some(i) != w.player && !w.in_any_war(i) && w.strength(i).0 > 0.0)
+            .filter(|&i| b.brain(i).is_some_and(|br| br.hegemon == Some(h)))
+            .filter(|&i| !w.forces[i].truces.iter().any(|&(t, until)| t == h && day < until))
+            .filter(|&i| e.nations[i].overlord.is_none_or(|o| o != h))
+            .filter(|&i| reachable(w, e, ed, i, h))
+            .collect();
+        if members.len() < a.coalition_min {
+            continue;
+        }
+        members.sort_by(|&x, &y| w.strength(y).0.total_cmp(&w.strength(x).0).then(x.cmp(&y)));
+        members.truncate(a.max_side);
+        let lead = members[0];
+        let mine = w.held(lead);
+        let goal = match w.held(h).into_iter().filter(|&q| !w.capital.contains(&q) && w.geo.neighbours[q].iter().any(|r| mine.contains(r))).take(2).collect::<Vec<_>>() {
+            ps if ps.is_empty() => Goal::Reparations,
+            ps => Goal::Provinces(ps),
+        };
+        let cause = format!("a coalition against {}, grown too strong", w.names[h]);
+        let k = declare(w, e, ed, lead, h, 3, goal, cause);
+        w.wars[k].motive = "coalition".to_string();
+        for &m in &members[1..] {
+            join(w, k, 0, m);
+        }
+        for &m in &members {
+            remember(b, h, m, day, MemoryKind::AttackedUs, -0.4);
+        }
+    }
+}
+
+/// One reason to go to war: (kind, weight, in words, the province it is about).
+type Motive = (&'static str, f64, String, Option<usize>);
+
+/// Whether two nations share a land border.
+fn touches(w: &Wars, i: usize, j: usize) -> bool {
+    w.held(i).iter().any(|&q| w.geo.neighbours[q].iter().any(|&r| w.control[r] == Some(j)))
+}
+
+/// Why `i` might go to war on `j`, each reason weighed (docs/WAR.md, section 11).
+#[allow(clippy::too_many_arguments)]
+fn motives(w: &Wars, e: &Economy, ed: &EconData, b: &Brains, i: usize, j: usize, ratio: f64, aggr: f64) -> Vec<Motive> {
+    let a = &w.data.ai;
+    let Some(brain) = b.brain(i) else { return Vec::new() };
+    let year = ed.days_per_year as f64;
+    let mut out: Vec<Motive> = Vec::new();
+    // Weakness (and plain strength): the old motive.
+    let opp = brain.opportunities.iter().find(|o| o.target == j);
+    let weak = opp.map_or(0.0, |o| o.reasons.len() as f64 / 3.0);
+    // Being the stronger is a reason only next to another one (half of it
+    // with no weakness to exploit).
+    let strength = a.strength * aggr * (ratio - 1.0).min(2.0);
+    if let Some(o) = opp {
+        out.push(("weakness", strength + a.weakness * weak, format!("it sees weakness: {}", o.reasons.join(", ")), None));
+    } else {
+        out.push(("strength", 0.5 * strength, "it is the stronger".to_string(), None));
+    }
+    // Grudges: memory. Being attacked weighs most.
+    let rel = &brain.relations[j];
+    let attacked = rel.log.iter().filter(|m| m.kind == MemoryKind::AttackedUs).count() as f64;
+    let grudge = a.grudge * ((-rel.regard).max(0.0) + 0.3 * attacked.min(3.0));
+    if grudge > 0.0 {
+        let last = rel.log.iter().rev().find(|m| m.kind == MemoryKind::AttackedUs || m.kind == MemoryKind::EmbargoedUs || m.kind == MemoryKind::ArmedOurEnemy);
+        let words = last.map_or_else(|| "an old grudge".to_string(), |m| format!("an old grudge: it {} in year {:.0}", m.kind.words(), m.day as f64 / year + 1.0));
+        out.push(("grudge", grudge, words, None));
+    }
+    // Lost land: provinces taken from it in a peace deal, held by j.
+    if let Some(l) = w.lost.iter().filter(|l| l.0 == i && w.owner[l.1] == Some(j) && (w.day - l.2) as f64 / year < a.revanche_years).max_by_key(|l| l.2) {
+        out.push(("revanche", a.revanche, format!("to take back {}, lost in year {:.0}", w.geo.names[l.1], l.2 as f64 / year + 1.0), Some(l.1)));
+    }
+    // Ideology: spreading the revolution, a holy war, the empire, democracy.
+    if w.ideology[i] != w.ideology[j] {
+        if let Some(&zeal) = a.crusade.get(&w.ideology[i]) {
+            let words = match w.ideology[i].as_str() {
+                "communism" => "to spread the revolution",
+                "theocracy" => "a holy war",
+                "imperialism" => "for the empire",
+                "democracy" => "to bring it democracy",
+                _ => "to bring it order",
+            };
+            out.push(("ideology", zeal * aggr.max(0.2), format!("{words} ({} rules there)", w.ideology[j].replace('_', " ")), None));
+        }
+    }
+    // Resources: a raw good it must import, rich in a border province of j's.
+    if i < e.nations.len() {
+        let n = &e.nations[i];
+        let mine = w.held(i);
+        let mut best: Option<(f64, usize, usize)> = None;
+        for g in 0..ed.goods.len() {
+            if ed.goods[g].tier != crate::econ::data::Tier::Raw {
+                continue;
+            }
+            let need = n.ledger.used[g] + n.ledger.consumed[g];
+            if need <= 0.0 || n.ledger.imported[g] < 0.15 * need {
+                continue;
+            }
+            for q in w.held(j) {
+                if w.geo.neighbours[q].iter().any(|r| mine.contains(r)) && e.provinces[q].deposits[g] >= 0.4 && !w.capital.contains(&q) {
+                    let v = e.provinces[q].deposits[g] * n.ledger.imported[g] / need;
+                    if best.is_none_or(|x| v > x.0) {
+                        best = Some((v, g, q));
+                    }
+                }
+            }
+        }
+        if let Some((v, g, q)) = best {
+            out.push(("resources", a.resources * v.min(1.0), format!("for the {} it lacks ({})", ed.goods[g].name.to_lowercase(), w.geo.names[q]), Some(q)));
+        }
+    }
+    out
 }
 
 /// Whether `i` can get at `j`: a land border, or the sea with transports
@@ -629,7 +864,17 @@ fn rise(w: &mut Wars, e: &mut Economy, ed: &EconData, i: usize) {
         w.forces[r].stores[g] += q;
     }
     w.forces[r].exhaustion = 0.0;
-    let k = declare(w, e, ed, r, i, 3, Goal::Rebellion, "stability collapsed".to_string());
+    // What broke it: the biggest drag on its people's mood.
+    let n = &e.nations[i];
+    let drags = [
+        (-n.war_stability, "the war has worn the people out".to_string()),
+        (100.0 * (0.85 - n.food_sat).max(0.0), "famine".to_string()),
+        (100.0 * (n.unemployment(ed) - 0.12).max(0.0), format!("{:.0}% out of work", n.unemployment(ed) * 100.0)),
+        (if n.rating >= 6 { 15.0 } else { 0.0 }, "a debt crisis".to_string()),
+        (w.forces[i].lost_wars as f64 * 8.0, "lost wars".to_string()),
+    ];
+    let why = drags.iter().max_by(|a, b| a.0.total_cmp(&b.0)).filter(|d| d.0 > 0.0).map_or("stability collapsed".to_string(), |d| format!("stability collapsed: {}", d.1));
+    let k = declare(w, e, ed, r, i, 3, Goal::Rebellion, why);
     w.wars[k].civil = true;
     let who = w.names[i].clone();
     w.say(vec![i, r], format!("Civil war in {who}: rebels take {} provinces", taken.len()));
@@ -663,6 +908,25 @@ fn civil_outcome(w: &mut Wars, e: &mut Economy, ed: &EconData, k: usize) {
         return;
     }
     let rebels_left = w.divisions.iter().any(|d| d.alive && d.faction == r);
+    // Years of stalemate: a settlement. The rebels lay down their arms for
+    // an amnesty and rejoin the army; their provinces go back.
+    let years = (w.day - w.wars[k].start) as f64 / ed.days_per_year as f64;
+    if rebels_left && years >= w.data.other.civil_war_years {
+        for d in w.divisions.iter_mut().filter(|d| d.faction == r) {
+            d.faction = i;
+            d.battle = None;
+            d.moving = None;
+        }
+        for q in 0..w.control.len() {
+            if w.control[q] == Some(r) {
+                w.set_control(e, q, Some(i));
+            }
+        }
+        e.nations[i].stability = (e.nations[i].stability + 15.0).min(100.0);
+        w.forces[i].low_stability_days = 0;
+        peace::make_peace(w, e, ed, k, PeaceTerms::white(0.0), "a settlement: the rebels lay down their arms for an amnesty");
+        return;
+    }
     if !rebels_left {
         for q in 0..w.control.len() {
             if w.control[q] == Some(r) {

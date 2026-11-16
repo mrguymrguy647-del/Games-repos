@@ -538,14 +538,25 @@ Worth keeping as they are:
 
 ## The war's known weak spots (game, not tools)
 
-- **Generals pile in.** An AI general sends every idle division at the
-  best target, so one battle can have 250 divisions on one side. Frontage
-  caps who fights (12,000 × √hexes a side), so it isn't a slaughter, but
-  real generals would spread out across the front.
-- **Small neighbours fall in days.** A 14-province nation at declared war
-  can overrun a 6-province one in two weeks. The defender's generals
-  don't yet fall back to a line, and reserves aren't held back.
-- **Short declared wars.** Exhaustion from mobilising millions can end a
-  declared war in a few months with a white peace.
+- ~~Generals pile in~~ (fixed in the balance pass: an attack takes at most
+  3 frontages' worth, and the rest attack elsewhere).
+- ~~Short declared wars~~ (fixed in the balance pass: declared wars
+  average 1.2 years, total wars 3.2; docs/WAR.md, section 14).
+- **Small neighbours can still fall fast.** Defenders regroup and pockets
+  break out, but generals don't yet fall back to a planned line.
+- **Few wars for lost land** (2 of 848): most peace deals end in
+  reparations or white peace, so little land is there to win back.
+- **Many deserters** in long wars (43 million over 18 worlds), 18.5
+  million of them slipping out of collapsing pockets.
 - **The player's orders are per front**, not per division; dragging a
   single division on the map is for a later pass.
+
+# Phase 5 war balance pass
+
+No Duck tool problems: this pass was all game rules and their numbers.
+One finding about the engine's way of testing worth keeping: the speed
+fix (battles look only at their own divisions) first changed the results
+by a quarter, because a division that retreats mid-hour into another
+battle's province used to join that battle the same hour. A probe that
+compared both lists every hour on all three maps found it; the fix keeps
+the results identical to the full look.

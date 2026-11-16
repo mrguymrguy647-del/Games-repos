@@ -46,11 +46,57 @@ pub fn hour(w: &mut Wars, e: &mut Economy, ed: &EconData) {
             }
         }
     }
+    // Who may be in each battle: its attackers, and everyone in its province.
+    // (The lists are reused hour to hour, so nothing is allocated.)
+    let mut lists = std::mem::take(&mut w.in_battle);
+    lists.resize_with(w.battles.len(), Vec::new);
+    lists.iter_mut().for_each(|l| l.clear());
+    let mut at = std::mem::take(&mut w.battle_at);
+    at.clear();
+    at.resize(w.control.len(), usize::MAX);
+    // (A province can have more than one battle: the second and later go in `more`.)
+    let mut more: Vec<(usize, usize)> = Vec::new();
+    for (b, bt) in w.battles.iter().enumerate() {
+        if !bt.over {
+            if at[bt.province] == usize::MAX {
+                at[bt.province] = b;
+            } else {
+                more.push((bt.province, b));
+            }
+        }
+    }
+    for (d, dv) in w.divisions.iter().enumerate() {
+        if !dv.alive {
+            continue;
+        }
+        let mine = dv.battle.filter(|&b| b < lists.len());
+        if let Some(b) = mine {
+            lists[b].push(d);
+        }
+        let b = at[dv.province];
+        if b != usize::MAX {
+            if mine != Some(b) {
+                lists[b].push(d);
+            }
+            for &(p, b2) in &more {
+                if p == dv.province && mine != Some(b2) {
+                    lists[b2].push(d);
+                }
+            }
+        }
+    }
+    w.battle_at = at;
+    w.in_battle = lists;
+    w.in_battle_live = true;
     for b in 0..w.battles.len() {
         if !w.battles[b].over {
             battle_hour(w, e, ed, b);
         }
     }
+    for l in w.in_battle.iter_mut() {
+        l.clear();
+    }
+    w.in_battle_live = false;
 }
 
 /// A division reaches a province: it moves in, takes it, or fights for it.
@@ -170,8 +216,19 @@ pub fn equipped(w: &Wars, d: &super::Division) -> f64 {
 /// The divisions fighting on each side of a battle now.
 fn sides_now(w: &Wars, b: usize) -> [Vec<usize>; 2] {
     let bt = &w.battles[b];
-    let a: Vec<usize> = (0..w.divisions.len()).filter(|&x| w.divisions[x].alive && w.divisions[x].battle == Some(b) && bt.attackers.contains(&w.divisions[x].id)).collect();
-    let d: Vec<usize> = (0..w.divisions.len())
+    // In the hour's loop only the battle's own list is looked at.
+    let all: Vec<usize>;
+    let pool: &[usize] = match w.in_battle.get(b).filter(|_| w.in_battle_live) {
+        Some(l) => l,
+        None => {
+            all = (0..w.divisions.len()).collect();
+            &all
+        }
+    };
+    let a: Vec<usize> = pool.iter().copied().filter(|&x| w.divisions[x].alive && w.divisions[x].battle == Some(b) && bt.attackers.contains(&w.divisions[x].id)).collect();
+    let d: Vec<usize> = pool
+        .iter()
+        .copied()
         .filter(|&x| {
             let dv = &w.divisions[x];
             dv.alive && dv.province == bt.province && dv.moving.is_none() && bt.sides[1].contains(&dv.faction) && !bt.attackers.contains(&dv.id)
@@ -217,9 +274,15 @@ fn battle_hour(w: &mut Wars, e: &mut Economy, ed: &EconData, b: usize) {
     let mut hits = [0.0f64; 2];
     let mut tank_hits = [0.0f64; 2];
     let mut engaged_of: [Vec<f64>; 2] = [Vec::new(), Vec::new()];
+    let totals: [f64; 2] = [0, 1].map(|s| sides[s].iter().map(|&x| w.divisions[x].soldiers).sum::<f64>());
+    // An attacker that outnumbers the defenders spreads round their flanks:
+    // its line is wider, up to `flank_max` (the defenders' can't be).
+    let ratio = totals[0] / totals[1].max(1.0);
+    let flank = if ratio > 1.0 { (1.0 + c.flank * ratio.ln()).min(c.flank_max) } else { 1.0 };
     for s in 0..2 {
-        let total: f64 = sides[s].iter().map(|&x| w.divisions[x].soldiers).sum();
-        let share = (frontage / total.max(1.0)).min(1.0);
+        let total = totals[s];
+        let line = if s == 0 { frontage * flank } else { frontage };
+        let share = (line / total.max(1.0)).min(1.0);
         let luck = (c.luck_sd * normal(&mut w.rng)).exp();
         let faction = w.divisions[sides[s][0]].faction;
         let air = 1.0 + w.data.air.support * w.air_over(faction, p).max(0.0) - w.data.air.support_enemy * (-w.air_over(faction, p)).max(0.0);
@@ -317,6 +380,7 @@ fn battle_hour(w: &mut Wars, e: &mut Economy, ed: &EconData, b: usize) {
             let _ = wounded_frac;
             let tanks_lost = whole(tank_hits[s] * share, &mut w.rng).min(w.divisions[x].tanks);
             casualties(w, e, ed, x, killed, wounded, captured, 0.0, Some(captor));
+            w.count("captured in battle", captured);
             let f = w.divisions[x].faction;
             {
                 let dv = &mut w.divisions[x];
@@ -382,7 +446,24 @@ fn battle_hour(w: &mut Wars, e: &mut Economy, ed: &EconData, b: usize) {
         let share = |s: &super::SideReport| (s.killed + s.wounded + s.captured + s.surrendered + s.deserted) / s.soldiers_start.max(1.0);
         let losing = share(&r.attacker) > share(&r.defender);
         let stuck = r.hours as f64 >= 24.0 * w.data.combat.attack_days && losing;
-        if !a[0].is_empty() && (morale < w.data.combat.call_off_morale || stuck || r.hours as f64 >= 24.0 * 3.0 * w.data.combat.attack_days) {
+        let long = r.hours as f64 >= 24.0 * 3.0 * w.data.combat.attack_days;
+        // A long battle the attackers are winning by attrition: the
+        // defenders who can pull back do (in order: no stragglers).
+        if !a[0].is_empty() && long && !losing && morale >= w.data.combat.call_off_morale {
+            let d = sides_now(w, b);
+            let mut left = 0;
+            for &x in &d[1] {
+                if !withdraw(w, x) {
+                    left += 1;
+                }
+            }
+            w.count("defenders worn down and withdrew", (d[1].len() - left) as f64);
+            if left == 0 {
+                end_battle(w, e, ed, b, 0);
+                return;
+            }
+        }
+        if !a[0].is_empty() && (morale < w.data.combat.call_off_morale || stuck || long && losing) {
             for &x in &a[0] {
                 w.divisions[x].battle = None;
                 w.divisions[x].entrench = 0.0;
@@ -475,6 +556,19 @@ pub fn break_division(w: &mut Wars, e: &mut Economy, ed: &EconData, x: usize, en
             (enemies, r)
         })
     };
+    // Encircled: break out through an empty neighbour the enemy holds
+    // (not across the sea), back towards its own lines.
+    let breakout = retreat.is_none();
+    let retreat = retreat.or_else(|| {
+        w.geo.neighbours[here]
+            .iter()
+            .copied()
+            .filter(|&r| w.control[r].is_some() && !w.divisions.iter().any(|d| d.alive && d.province == r && w.at_war(f, d.faction).is_some()))
+            .min()
+    });
+    if breakout && retreat.is_some() {
+        w.count("pockets broke out", 1.0);
+    }
     let m = &w.data.morale;
     let morale = w.divisions[x].morale;
     let straggle = m.stragglers_min + (m.stragglers_max - m.stragglers_min) * ((m.break_point - morale) / m.break_point).clamp(0.0, 1.0);
@@ -484,10 +578,21 @@ pub fn break_division(w: &mut Wars, e: &mut Economy, ed: &EconData, x: usize, en
         let fuel_need = dv.tanks * w.data.supply.fuel_tank_day;
         (if dv.fuel < fuel_need { dv.tanks } else { dv.tanks_broken }, dv.tanks_faulty)
     };
+    // Nowhere to go: a pocket fights on unless its morale is gone or it has
+    // nothing left to fight with.
+    if retreat.is_none() {
+        let eq = equipped(w, &w.divisions[x]);
+        if w.divisions[x].soldiers >= 200.0 && morale >= m.surrender_morale && eq >= m.surrender_equipped {
+            w.count("pockets fought on", 1.0 / 24.0);
+            return;
+        }
+    }
     match retreat {
         Some(to) => {
             let lost = whole(w.divisions[x].soldiers * straggle, &mut w.rng);
             casualties(w, e, ed, x, 0.0, 0.0, lost, 0.0, Some(enemy));
+            w.count("captured as stragglers", lost);
+            w.count("divisions broke and retreated", 1.0);
             {
                 let dv = &mut w.divisions[x];
                 dv.tanks -= abandon;
@@ -498,6 +603,7 @@ pub fn break_division(w: &mut Wars, e: &mut Economy, ed: &EconData, x: usize, en
                 dv.entrench = 0.0;
                 dv.order = Order::Auto;
             }
+            moved_in(w, x);
             w.forces[f].flows.captured_from[ed.tanks] += abandon;
             for war in w.wars.iter_mut().filter(|war| war.active()) {
                 if let Some(s) = war.side_of(f) {
@@ -514,8 +620,15 @@ pub fn break_division(w: &mut Wars, e: &mut Economy, ed: &EconData, x: usize, en
             }
         }
         None => {
-            // Surrender: everyone a prisoner, everything the enemy's.
+            // The pocket collapses: some slip away in small groups and make
+            // their way home (counted as deserted); the rest surrender, and
+            // everything they had is the enemy's.
+            let escape = whole(w.divisions[x].soldiers * w.data.morale.pocket_escape, &mut w.rng);
+            casualties(w, e, ed, x, 0.0, 0.0, 0.0, escape, None);
+            w.count("slipped out of collapsing pockets", escape);
             let soldiers = w.divisions[x].soldiers;
+            w.count("captured in surrenders", soldiers);
+            w.count("divisions surrendered", 1.0);
             {
                 let dv = &mut w.divisions[x];
                 dv.tally.surrendered += soldiers;
@@ -558,6 +671,40 @@ pub fn break_division(w: &mut Wars, e: &mut Economy, ed: &EconData, x: usize, en
             let (name, who) = (w.divisions[x].name.clone(), w.names[f].clone());
             let place = w.geo.names[here].clone();
             w.say(vec![f, enemy], format!("{who}'s {name} surrenders at {place}: {} prisoners", super::report::big(soldiers)));
+        }
+    }
+}
+
+/// A defender pulls back in order to a friendly neighbour (no stragglers,
+/// its tanks with it if it has the fuel). False if it has nowhere to go.
+fn withdraw(w: &mut Wars, x: usize) -> bool {
+    let f = w.divisions[x].faction;
+    let friends = w.friends(f);
+    let here = w.divisions[x].province;
+    let Some(to) = w.geo.neighbours[here].iter().copied().filter(|&r| w.control[r].is_some_and(|c| friends.contains(&c))).min_by_key(|&r| (w.divisions.iter().filter(|d| d.alive && d.province == r && w.at_war(f, d.faction).is_some()).count(), r)) else {
+        return false;
+    };
+    let dv = &mut w.divisions[x];
+    dv.province = to;
+    dv.moving = None;
+    dv.battle = None;
+    dv.entrench = 0.0;
+    moved_in(w, x);
+    true
+}
+
+/// A division moved mid-hour: the battles in its new province count it
+/// from now on (as they would looking through every division).
+fn moved_in(w: &mut Wars, x: usize) {
+    if !w.in_battle_live {
+        return;
+    }
+    let p = w.divisions[x].province;
+    for b in 0..w.in_battle.len().min(w.battles.len()) {
+        if !w.battles[b].over && w.battles[b].province == p && !w.in_battle[b].contains(&x) {
+            // Kept in division order, as a full look would find them.
+            let at = w.in_battle[b].partition_point(|&d| d < x);
+            w.in_battle[b].insert(at, x);
         }
     }
 }
@@ -771,6 +918,17 @@ fn invasions(w: &mut Wars, e: &mut Economy, ed: &EconData, f: Faction, border: &
     }
 }
 
+/// The most soldiers an attack on `r` sends: `reserve_frontages` lines' worth.
+fn attack_cap(w: &Wars, r: usize) -> f64 {
+    let c = &w.data.combat;
+    w.data.generals.reserve_frontages * c.frontage_base * w.geo.hexes[r].sqrt() * w.geo.terrain[r].frontage * c.flank_max
+}
+
+/// `f`'s soldiers fighting in `r` or marching there.
+fn attacking(w: &Wars, f: Faction, r: usize) -> f64 {
+    w.divisions.iter().filter(|d| d.alive && d.faction == f && (d.moving.is_some_and(|m| m.0 == r) || d.battle.is_some_and(|b| w.battles.get(b).is_some_and(|x| x.province == r)))).map(|d| d.soldiers).sum()
+}
+
 /// The generals' day: fronts, marches, attacks, digging in.
 pub fn generals(w: &mut Wars, e: &mut Economy, ed: &EconData) {
     let _ = ed;
@@ -857,6 +1015,10 @@ pub fn generals(w: &mut Wars, e: &mut Economy, ed: &EconData) {
                 if level <= 1 && theirs <= 0.0 && !ordered {
                     continue;
                 }
+                // An attack that already has its reserves needs no more.
+                if !ordered && attacking(w, f, r) >= attack_cap(w, r) {
+                    continue;
+                }
                 let cover = w.geo.terrain[r].defence * if w.geo.city[r] { w.data.combat.city_defence } else { 1.0 };
                 let river = if w.geo.river[r] { w.data.combat.river_penalty } else { 1.0 };
                 let ratio = if theirs <= 0.0 { 99.0 } else { mine * river / (theirs / cover) };
@@ -871,9 +1033,22 @@ pub fn generals(w: &mut Wars, e: &mut Economy, ed: &EconData) {
                 // province mustn't be left empty for the enemy to walk into).
                 let ordered = idle.iter().filter(|&&d| w.divisions[d].order == Order::Attack(r)).count();
                 let keep = if idle.len() >= 2 { (idle.len() as f64 / 3.0).ceil() as usize } else { 0 };
-                let take = if level <= 1 { skirmish_cap.min(idle.len().saturating_sub(keep).max(1)) } else { (idle.len() - keep).max(ordered).max(1) };
+                let mut take = if level <= 1 { skirmish_cap.min(idle.len().saturating_sub(keep).max(1)) } else { (idle.len() - keep).max(ordered).max(1) };
                 let mut idle = idle.clone();
                 idle.sort_by_key(|&d| (w.divisions[d].order != Order::Attack(r), std::cmp::Reverse((own_power(w, &w.divisions[d]) as u64) / 1000), d));
+                // No more than the line can use, with reserves to rotate in:
+                // the rest stay for the next attack (or another front).
+                let room = attack_cap(w, r) - attacking(w, f, r);
+                let mut sum = 0.0;
+                let mut fits = 0;
+                for &d in &idle {
+                    if sum >= room {
+                        break;
+                    }
+                    sum += w.divisions[d].soldiers;
+                    fits += 1;
+                }
+                take = take.min(fits.max(ordered).max(1));
                 let hours = 0.5 * move_hours(w, e, r);
                 for &d in idle.iter().take(take) {
                     w.divisions[d].moving = Some((r, hours, false));

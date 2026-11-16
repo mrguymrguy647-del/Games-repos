@@ -204,6 +204,8 @@ pub enum Goal {
     Ideology,
     /// A civil war: take the capital.
     Rebellion,
+    /// A vassal's war of independence.
+    Independence,
 }
 
 impl Goal {
@@ -217,6 +219,7 @@ impl Goal {
             Goal::Vassal => "make it a vassal".to_string(),
             Goal::Ideology => "change its government".to_string(),
             Goal::Rebellion => "overthrow the government".to_string(),
+            Goal::Independence => "win its independence".to_string(),
         }
     }
 }
@@ -243,6 +246,8 @@ pub struct War {
     pub level: usize,
     /// The level it was declared at.
     pub start_level: usize,
+    /// Why, in one word (weakness, grudge, revanche, ideology, resources, coalition...).
+    pub motive: String,
     pub max_level: usize,
     pub goal: Goal,
     pub cause: String,
@@ -357,6 +362,8 @@ pub struct Force {
     pub last_war: Option<u32>,
     pub truces: Vec<(Faction, u32)>,
     pub low_stability_days: u32,
+    /// Wars lost in a peace deal (each one a humiliation; fades over the years).
+    pub lost_wars: u32,
     pub war_unrest_days: u32,
     /// The dead (killed, died of wounds or hunger), ever.
     pub dead: f64,
@@ -387,6 +394,7 @@ impl Force {
             last_war: None,
             truces: Vec::new(),
             low_stability_days: 0,
+            lost_wars: 0,
             war_unrest_days: 0,
             dead: 0.0,
             blockaded: 0.0,
@@ -475,9 +483,23 @@ pub struct Wars {
     pub offers: Vec<(usize, usize, peace::PeaceTerms, u32)>,
     /// Reparations: (payer, payee, share of GDP a year, days left).
     pub reparations: Vec<(usize, usize, f64, u32)>,
+    /// Each nation's overlord, as the war last saw it (the economy's is the truth).
+    pub overlords: Vec<Option<usize>>,
+    /// The day each nation became a vassal.
+    pub vassal_since: Vec<u32>,
+    /// Provinces lost in peace deals: (the nation that lost it, province, day).
+    /// The loser wants them back (a cause of war).
+    pub lost: Vec<(usize, usize, u32)>,
     /// A peace deal moved a border (the map must be redrawn).
     pub borders_changed: bool,
     pub day: u32,
+    /// Counters for the reports (where prisoners came from, how wars ended...).
+    pub stats: std::collections::BTreeMap<&'static str, f64>,
+    /// During an hour of battles: each battle's divisions that may be in it
+    /// (so a battle doesn't look through every division in the world).
+    pub(crate) in_battle: Vec<Vec<usize>>,
+    pub(crate) in_battle_live: bool,
+    pub(crate) battle_at: Vec<usize>,
 }
 
 const FIRST: [&str; 24] = [
@@ -567,8 +589,15 @@ impl Wars {
             player: None,
             offers: Vec::new(),
             reparations: Vec::new(),
+            lost: Vec::new(),
+            overlords: e.nations.iter().map(|n| n.overlord).collect(),
+            vassal_since: vec![0; e.nations.len()],
             borders_changed: false,
             day: e.day,
+            stats: Default::default(),
+            in_battle: Vec::new(),
+            in_battle_live: false,
+            battle_at: Vec::new(),
         };
         for i in 0..n {
             let soldiers = (e.nations[i].population * e.nations[i].duty).min(e.nations[i].population * w.data.army.max_share);
@@ -896,6 +925,21 @@ impl Wars {
         for i in 0..self.nations {
             self.sync_soldiers(e, i);
         }
+    }
+
+    /// A nation's overlord, if it is a vassal.
+    pub fn overlord_of(&self, i: usize) -> Option<usize> {
+        self.overlords.get(i).copied().flatten()
+    }
+
+    /// A nation's vassals.
+    pub fn vassals_of(&self, o: usize) -> Vec<usize> {
+        (0..self.overlords.len()).filter(|&v| self.overlords[v] == Some(o)).collect()
+    }
+
+    /// Adds to a report counter.
+    pub fn count(&mut self, key: &'static str, x: f64) {
+        *self.stats.entry(key).or_insert(0.0) += x;
     }
 
     /// Who holds the province, in words.

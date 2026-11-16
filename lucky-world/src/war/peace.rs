@@ -67,7 +67,8 @@ impl PeaceTable for ByExhaustion {
         if !loses {
             return true;
         }
-        w.forces[who].exhaustion + (-score).max(0.0) / 100.0 > w.data.peace.accept || wr.pending.is_some_and(|p| p.0 != side)
+        let stake = w.data.peace.stake[wr.level.min(4)];
+        w.forces[who].exhaustion + (-score).max(0.0) / 100.0 > w.data.peace.accept * stake || wr.pending.is_some_and(|p| p.0 != side)
     }
 }
 
@@ -131,9 +132,13 @@ pub fn terms(w: &Wars, war: usize, score: f64) -> PeaceTerms {
         }
         t.provinces = taken;
     }
+    // No vassal for a winner that is itself a vassal, or already holds
+    // `max_vassals`: empires don't snowball (reparations instead).
+    let lead = w.nation_of(wr.sides[winner][0]);
+    let can_vassal = lead < w.nations && w.overlord_of(lead).is_none() && w.vassals_of(lead).len() < w.data.ai.max_vassals;
     if s >= p.provinces && winner == 0 {
         match wr.goal {
-            Goal::Vassal => t.vassal = true,
+            Goal::Vassal if can_vassal => t.vassal = true,
             Goal::Ideology => t.ideology = true,
             _ => {}
         }
@@ -153,6 +158,8 @@ pub fn make_peace(w: &mut Wars, e: &mut Economy, ed: &EconData, war: usize, t: P
                 if from != to && !w.is_rebel(lead(win)) {
                     e.transfer_province(ed, q, from, to);
                     w.owner[q] = Some(to);
+                    w.lost.retain(|l| !(l.0 == to && l.1 == q));
+                    w.lost.push((from, q, w.day));
                     if w.capital[from] == q {
                         w.capital[from] = e.nations[from].capital;
                     }
@@ -160,15 +167,39 @@ pub fn make_peace(w: &mut Wars, e: &mut Economy, ed: &EconData, war: usize, t: P
             }
         }
         let loser = w.nation_of(lead(1 - win));
+        // Losing is a humiliation at home.
+        if !w.is_rebel(lead(1 - win)) {
+            let hit = w.data.peace.lost_war_stability * if t.vassal || t.ideology { 1.5 } else if t.provinces.is_empty() { 0.5 } else { 1.0 };
+            e.nations[loser].stability = (e.nations[loser].stability - hit).max(0.0);
+            w.forces[loser].lost_wars += 1;
+        }
         if t.reparations > 0.0 && !w.is_rebel(lead(win)) {
             w.reparations.push((loser, to, t.reparations, (t.years * ed.days_per_year as f64) as u32));
         }
         if t.vassal {
             e.nations[loser].overlord = Some(to);
+            w.overlords[loser] = Some(to);
+            // A new vassal's own vassals go free: the empire doesn't nest.
+            for v in 0..w.nations {
+                if w.overlords[v] == Some(loser) {
+                    e.nations[v].overlord = None;
+                    w.overlords[v] = None;
+                }
+            }
         }
         if t.ideology {
             let new = w.ideology[to].clone();
             set_ideology(w, e, ed, loser, &new);
+        }
+    }
+    // A war of independence the overlord didn't win sets the vassals free.
+    if wr.goal == Goal::Independence && t.winner != Some(1) {
+        for &f in &wr.sides[0] {
+            let v = w.nation_of(f);
+            if v < w.nations {
+                e.nations[v].overlord = None;
+                w.overlords[v] = None;
+            }
         }
     }
     // Everything else goes back to its owner; armies go home.

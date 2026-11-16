@@ -337,7 +337,8 @@ fn the_player_war_playthrough_declares_orders_supplies_and_reads_reports() {
     let played = PlayTest::new(crate::config(), game()).inputs("playthroughs/war_player.json").run();
     assert_eq!(played.text("screen"), "Map");
     assert!(!played.flag("spectating"));
-    assert_eq!(most(&played, "player_war_level"), 3.0, "the player declared war");
+    // The player declared war (level 3); the enemy may have climbed to total war since.
+    assert!(most(&played, "player_war_level") >= 3.0, "the player declared war");
     assert!(most(&played, "divisions_order_not_auto") > 0.0, "no order was given");
     assert!(played.history("supply_auto").iter().any(|(_, v)| matches!(v, duckforge::prelude::ReportValue::Bool(false))), "Auto was never turned off");
     assert_eq!(most(&played, "priority_0"), 3.0);

@@ -32,6 +32,7 @@ pub struct Generals {
     pub balanced_ratio: f64,
     pub cautious_ratio: f64,
     pub initiative: f64,
+    pub reserve_frontages: f64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -70,6 +71,8 @@ pub struct Combat {
     pub occupied_output: f64,
     pub attack_days: f64,
     pub call_off_morale: f64,
+    pub flank: f64,
+    pub flank_max: f64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -85,6 +88,9 @@ pub struct Morale {
     pub win: f64,
     pub lose: f64,
     pub break_point: f64,
+    pub surrender_morale: f64,
+    pub surrender_equipped: f64,
+    pub pocket_escape: f64,
     pub desert_below: f64,
     pub desertion: f64,
     pub stragglers_min: f64,
@@ -183,6 +189,7 @@ pub struct Levels {
     pub mobilisation: [f64; 5],
     pub arms_share: [f64; 5],
     pub skirmish_divisions: usize,
+    pub skirmish_days: u32,
     pub total_conversion: f64,
     pub total_stability: f64,
     pub total_happiness: f64,
@@ -233,13 +240,14 @@ pub struct Other {
     pub civil_war_days: u32,
     pub civil_war_chance: f64,
     pub rebel_share: f64,
+    pub civil_war_years: f64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Exhaustion {
     pub losses: f64,
-    pub level: f64,
+    pub level: [f64; 5],
     pub occupied: f64,
     pub blockaded: f64,
     pub recover: f64,
@@ -260,6 +268,10 @@ pub struct Peace {
     pub max_war_years: f64,
     pub offer_exhaustion: f64,
     pub min_days: f64,
+    pub stake: [f64; 5],
+    pub hopeless: [f64; 5],
+    pub lost_war_stability: f64,
+    pub won_years: [f64; 5],
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -273,14 +285,29 @@ pub struct Ai {
     pub leader: BTreeMap<String, f64>,
     pub ideology: BTreeMap<String, f64>,
     pub weakness: f64,
+    pub strength: f64,
     pub grudge: f64,
     pub gang_up: f64,
     pub exhaustion_cost: f64,
     pub debt_cost: f64,
     pub busy_cost: f64,
     pub escalate_score: f64,
+    pub escalate_chance: f64,
+    pub total_war_score: f64,
     pub match_ratio: f64,
     pub declare_aggression: f64,
+    pub crusade: BTreeMap<String, f64>,
+    pub resources: f64,
+    pub revanche: f64,
+    pub revanche_years: f64,
+    pub coalition_min: usize,
+    pub max_side: usize,
+    pub max_vassals: usize,
+    pub liberty_threshold: f64,
+    pub vassal_output: f64,
+    pub vassal_stability: f64,
+    pub world_at_war_cost: f64,
+    pub coalition_years: f64,
     pub operation_aggression: f64,
 }
 

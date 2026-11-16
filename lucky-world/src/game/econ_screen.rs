@@ -502,10 +502,12 @@ impl Lucky {
         ui::plain(canvas, &a.font, &e.date(ed), vec2(990.0, 30.0), 16.0, Color::WHITE, Align::Right);
         let facts = if self.spectating {
             let (now, start): (f64, f64) = e.nations.iter().fold((0.0, 0.0), |(a, b), n| (a + n.gdp, b + n.gdp_start));
-            let years = (e.day as f64 / ed.days_per_year as f64).max(1.0 / 12.0);
-            let growth = (now / start.max(1.0)).powf(1.0 / years) - 1.0;
+            let years = e.day as f64 / ed.days_per_year as f64;
             let jobless = e.nations.iter().filter(|n| n.unemployment(ed) > 0.15).count();
-            format!("World GDP {}  ·  {} a year  ·  {} over 15% jobless", money(now), pct(growth), jobless)
+            // A yearly rate from a few weeks says nothing (one good month
+            // compounds to +20%): it waits for a whole year.
+            let growth = if years >= 1.0 { format!("{} a year", pct((now / start.max(1.0)).powf(1.0 / years) - 1.0)) } else { "growth after a year".to_string() };
+            format!("World GDP {}  ·  {growth}  ·  {} over 15% jobless", money(now), jobless)
         } else {
             format!(
                 "GDP {}  ·  Inflation {}  ·  Jobless {}  ·  Treasury {}",

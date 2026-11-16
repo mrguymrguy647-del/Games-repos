@@ -157,8 +157,27 @@ Not everyone can fight at once:
 
 ```
 frontage(P) = frontage_base (12,000) × sqrt(hexes of P) × terrain frontage
-engaged soldiers of a side = min(soldiers, frontage)  (shared out by size)
+engaged defenders = min(soldiers, frontage)   (shared out by size)
+engaged attackers = min(soldiers, frontage × flank)
+flank = min(1 + 0.3 × ln(attackers / defenders), 2)   (1 if not outnumbering)
 ```
+
+An attacker that outnumbers the defenders spreads round their flanks: at
+20 to 1 its line is 1.9 times as wide. The defenders' line can't grow.
+
+**Why the first Battle of Tolsai went wrong.** Tolsai is 8 steppe hexes,
+so its frontage is about 34,000 a side. Before the balance pass, 4.58
+million attackers (458 divisions, the whole army) piled into it against
+219,000 defenders. Only 34,000 of the attackers could fire each hour (0.7%
+of them), against 34,000 dug-in defenders (15%). The attackers were winning
+by attrition (they lost 0.7% of their men, the defenders 10%), but the
+"called off after 30 days whatever the score" rule ended it, and the report
+said the defenders held. Three things were wrong, and are fixed: the
+flanks above; an attack now sends at most `reserve_frontages` (3) ×
+frontage × 2 soldiers (the rest go to other provinces, which opens new
+fronts); and a long battle the attackers are winning ends with the
+defenders pulling back (below). Tolsai in the same world now starts as
+370,000 against 150,000.
 
 ### Fire
 
@@ -185,7 +204,7 @@ accuracy    = (0.5 + training) × (1 + 0.5 × experience)
 terrain     = the TARGET province's defence (defender only; attackers stand in the open)
               plains 1.0, steppe 1.0, desert 1.0, tundra 0.85, forest 0.75, hills 0.7,
               marsh 0.7, jungle 0.65, glacier 0.6, mountains 0.5; city ×0.7 more;
-              entrenchment: × (1 − 0.35 × entrenchment)
+              entrenchment: × (1 − 0.5 × entrenchment)
 river       = attacking across a river: the attacker's hits × 0.75
 weather     = clear 1.0, rain 0.85, snow 0.75, storm 0.6
 general     = skill (0.6 to 1.4)
@@ -229,7 +248,7 @@ A broken tank is repaired in 2 days with spare parts.
 
 ```
 each hour in battle:
-  morale −= shock (4) × casualties this hour / soldiers × (2 − general skill)
+  morale −= shock (2) × casualties this hour / soldiers × (2 − general skill)
   morale −= 0.002 × (1 − equipped)          (shortages)
   morale −= 0.001 × war exhaustion           (section 9)
 each day out of battle:
@@ -239,15 +258,26 @@ a won battle: +0.1 for the winners · a lost battle: −0.15 for the losers
 
 Past the **breaking point**:
 - **break** (morale under 0.25): the division retreats to a friendly
-  neighbour. Stragglers are captured (2% to 6%, worse at lower morale).
-  Broken or fuelless tanks are abandoned, and the enemy captures them
-  into its stockpile.
-- **surrender**: a division that breaks with nowhere to retreat (all
-  neighbours enemy or sea) surrenders. All its soldiers become prisoners,
-  and the enemy captures its equipment.
-- **desertion**: below morale 0.4, soldiers desert, `desertion` (2%) ×
+  neighbour and regroups there (morale recovers out of battle).
+  Stragglers are captured (1% to 3%, worse at lower morale). Broken or
+  fuelless tanks are abandoned, and the enemy captures them into its
+  stockpile.
+- **breakout**: with no friendly neighbour, it breaks out through a
+  neighbour the enemy holds but has no troops in (not across the sea).
+- **pocket**: with nowhere at all to go, it fights on. It surrenders only
+  when its morale is under `surrender_morale` (0.05) or it is out of ammo
+  and food (equipped under `surrender_equipped`, 0.15). Then
+  `pocket_escape` (40%) slip away in small groups and make their way home
+  (counted as deserted), and the rest become prisoners; the enemy captures
+  their equipment.
+- **desertion**: below morale 0.4, soldiers desert, `desertion` (0.8%) ×
   (0.4 − morale) / 0.4 of them a day. Deserters go home: they leave the
   army but stay in the population.
+
+Before the balance pass, 9.5 million soldiers were captured in 50-year
+runs against 2.1 million killed: four in five prisoners came from whole
+divisions surrendering the moment they broke with no friendly
+neighbour. Now captured is about equal to killed (section 14).
 
 ### Who wins
 
@@ -260,8 +290,12 @@ the attackers' morale < call_off_morale (0.4), or
 after attack_days (10): the attackers lost a bigger share of the soldiers they
   brought than the defenders did   (killed + wounded + captured + surrendered
   + deserted) / soldiers at the start, or
-after 3 × attack_days (30), whatever the score
+after 3 × attack_days (30), if the attackers are losing by that share
 ```
+
+After 30 days with the attackers **winning** by attrition, the defenders
+are worn down: those with a friendly neighbour pull back in order (no
+stragglers), and the province falls when none are left.
 
 So numbers count the way attrition counts: a 20-to-1 attacker that trades
 two of its men for each defender is still winning, and keeps grinding.
@@ -303,8 +337,12 @@ Every day, for each nation at war, the generals:
 2. **Attack.** A division attacks a neighbouring enemy province when the
    strength ratio there beats its general's threshold:
    `own power / enemy power ≥ threshold`, with power = soldiers × equipped
-   × (0.5 + training) × terrain. The level of the war limits targets
-   (section 8).
+   × (0.5 + training) × terrain. The side that started the war attacks at
+   `initiative` (0.6) × the threshold: it has a plan. The level of the war
+   limits targets (section 8); a border skirmish only attacks where the
+   enemy stands. An attack takes at most `reserve_frontages` (3) ×
+   frontage × `flank_max` soldiers, and a province already attacked by that
+   many gets no more, so big armies attack on many fronts at once.
 3. **Dig in** when not attacking. **Retreat** when broken. **Reinforce**
    threatened provinces from the rear.
 
@@ -489,8 +527,14 @@ check, below).
   can't start another for 10 years. It ends when regard recovers or a
   real war starts.
 - **Civil war**: a luck event. When a nation's stability has stayed under
-  `civil_war_stability` (20) for `civil_war_days` (45), each day has a
-  `civil_war_chance` (1%) of rebellion:
+  `civil_war_stability` (20) for `civil_war_days` (60), each day has a
+  `civil_war_chance` (0.6%) of rebellion. What pushes stability that low
+  (the war names the biggest drag as its cause): war exhaustion and
+  occupation (section 9), a lost war (−12 stability, × 1.5 for becoming
+  a vassal or losing the government, × 0.5 for reparations only), famine
+  and unemployment (through happiness, ECONOMY.md), a debt default (−10)
+  and junk credit, a democracy's unpopular war, and an empire's vassals
+  (section 10).
   - **Rebels** take the provinces with the worst unrest, a share of the
     army (up to 40% of the divisions, the least loyal ones) and their
     equipment. They fight with the same rules and are supplied from what
@@ -498,6 +542,10 @@ check, below).
   - **They win** if they take the capital: the ideology changes (a new
     economic model), stability resets to 50, and the war ends.
   - **They lose** when their last division is gone.
+  - **A settlement** after `civil_war_years` (3) of stalemate: the rebels
+    lay down their arms for an amnesty and rejoin the army.
+- **War of independence**: a vassal fights its overlord (a military
+  operation; section 10).
 - **Blockade**: a navy controls an enemy's coastal zones (from a
   military operation up) and its sea trade is cut (section 7).
 
@@ -508,15 +556,20 @@ check, below).
 Each side's **war exhaustion** E grows every day:
 
 ```
-dE = 20 × (killed + wounded + captured that day) / population
-   + 0.002 × level
-   + 0.004 × (share of its provinces occupied)
-   + 0.003 if blockaded
+dE = 10 × (killed + wounded + captured that day) / population
+   + level rate: skirmish 0.0015, operation 0.001, declared 0.0006, total 0.0006
+   + 0.0025 × (share of its provinces occupied)
+   + 0.0015 if blockaded
 E falls 1% a day in peace.
 ```
 
+(Before the balance pass the level term was 0.002 × level a day, so a
+declared war reached the 0.5 peace-offer line in about 80 days and wars
+averaged 0.1-0.3 years. Now how much exhaustion a side bears before
+suing for peace grows with the stakes: section 10.)
+
 It drains the country:
-- stability −0.5 × E a day (through the economy's stability target);
+- stability −0.25 × E (through the economy's stability target);
 - output × (1 − 0.1 × min(E, 1));
 - morale −0.001 × E an hour in battle.
 
@@ -552,15 +605,46 @@ war score (attacker's view, −100 to +100)
 Prisoners are returned in every deal unless the winner keeps them as a
 bargaining chip (the hook: `PeaceTerms::prisoners`).
 
-**When peace comes.** A side **offers peace** when:
-- its exhaustion is over its personality's limit,
-- or its war score is under −40,
+**When peace comes.** The deeper the war, the more a side bears before
+it gives up: `stake` by level is skirmish 1, operation 1.5, declared war
+2.5, total war 9. A side **offers peace** when:
+- its exhaustion is over `offer_exhaustion` (0.5) × stake × (1 + risk),
+- or the war is hopeless for it: its score under −`hopeless` (operation
+  40, declared 60, total 85) after `min_days` (120) × stake,
+- or it is 40 ahead and the war has gone on `won_years` (operation 0.3,
+  declared 1, total 3),
 - or the goal is reached,
 - or the war has lasted `max_war_years` (6).
 
+A border skirmish grows or fades after `skirmish_days` (45).
+
 A side **accepts** when the terms cost it less than fighting on:
-`exhaustion + war score / 100 > 0.6`. No side offers peace in the first
-`min_days` (120) unless it is exhausted.
+`exhaustion + war score / 100 > 0.6 × stake`. No side offers peace in the
+first `min_days` (120) unless it is exhausted.
+
+**Vassals.** A vassal pays tribute (ECONOMY.md, section 10), and costs its
+overlord `vassal_output` (1%) of output and `vassal_stability` (3) of
+stability each (garrisons, governors, resentment). No empire snowballs:
+an overlord holds at most `max_vassals` (3), a vassal can't take
+vassals, and when an overlord becomes someone's vassal its own vassals go
+free. Each month a vassal weighs its freedom:
+
+```
+liberty = 0.2 + 0.5 × min(years as a vassal / 20, 1)
+        + 0.8 × min(its soldiers / its overlord's, 1.5)
+        + 0.4 if the overlord is at war (military operation up)
+        + 0.5 × min(overlord's exhaustion, 1)
+        + 0.2 × (overlord's other vassals)
+        + 0.3 if their ideologies differ
+        + 0.3 × its resentment (−regard)
+```
+
+A vassal stronger than 1.3 × its overlord simply leaves. One whose
+liberty passes `liberty_threshold` (1.0), with an army at least a third of
+its overlord's (or the overlord busy at war), no truce and no war of its
+own in `cooldown_years`, fights a **war of independence** (a military
+operation), and the overlord's other restless vassals (liberty over 0.7)
+join it. If the overlord doesn't win the peace, they are free.
 
 The losses term of the score counts against the size of both armies:
 `30 × clamp((enemy lost − own lost) / (0.1 × both armies), −1, 1)` (lost
@@ -586,23 +670,33 @@ Strategy (every 3 months) reads the hooks Phase 4 left:
 
 ### Starting a war
 
-For each possible target `j` (an opportunity, its counter target, or a
-hostile neighbour):
+For each possible target `j` (an opportunity, its counter target, a
+hostile nation, a holder of its lost land, a neighbour, another ideology),
+the desire is the sum of its **motives**, less the costs. The biggest
+motive is the war's cause, and goes in the report:
 
 ```
-desire = aggression × (power ratio − 1)          (my power / theirs, from estimates)
-       + 0.4 × weakness of j                     (its opportunity reasons)
-       + 0.5 × max(0, −regard_ij)                (grudges)
-       + 0.6 if j is the hegemon and others are fighting it (gang up)
-       − 0.8 × own war exhaustion − 0.3 × own debt need − 0.5 if already at war
+weakness   = 0.5 × aggression × min(power ratio − 1, 2) + 0.4 × weakness of j
+             (its opportunity reasons; without any, half of the first term: "strength")
+grudge     = 1.0 × (max(0, −regard) + 0.3 × times it attacked us, up to 3)   (memory)
+revanche   = 1.3 if j holds a province taken from it in a peace deal in the last 40 years
+ideology   = zeal × max(aggression, 0.2), if their ideologies differ:
+             communism 1.0 ("to spread the revolution"), theocracy 1.1 ("a holy war"),
+             imperialism 0.7, military rule 0.5, democracy 0.35
+resources  = 0.9 × deposit × import share, for a raw good it imports (15%+ of its use)
+             found in one of j's border provinces (deposit 0.4+)
+costs      = 0.8 × own war exhaustion + 0.3 × own debt need
+           + 5 × the share of the world's nations already at declared or total war
 aggression = 0.3 + leader (warlord +0.4, coward −0.3, genius 0, builder −0.1, diplomat −0.2)
            + ideology (military rule +0.3, imperialism +0.25, authoritarianism +0.15,
              democracy −0.25, colony −0.2, others 0)
            + risk
 ```
 
-If `desire > war_threshold` (0.9), and the target can be reached (a land
-border, or the sea with transports and warships), the brain starts:
+Being the stronger is never a reason on its own: at least one other
+motive must be there. If `desire > war_threshold` (1.2), its power is at
+least 0.7 of the target's, and the target can be reached (a land border,
+or the sea with transports and warships), the brain starts:
 
 ```
 declared war (3)        if aggression + 0.2 × (desire − 0.9) > declare_aggression (1.0)
@@ -610,7 +704,8 @@ military operation (2)  else if aggression > operation_aggression (0.6)
 border skirmish (1)     otherwise
 ```
 
-A border skirmish lasts at most 90 days: then it grows (if its leader's
+A war about a province (lost land, a resource) aims at that province
+first. A border skirmish lasts at most 45 days: then it grows (if its leader's
 aggression is over 0.75) or the border goes quiet. Each nation may
 start a war at most once every `war_cooldown_years` (5), and no war
 against a nation it made peace with in the last 8 years.
@@ -619,10 +714,19 @@ against a nation it made peace with in the last 8 years.
 `alliance_wishes` share it join any war against it on the other side, at
 that war's level, if their desire (with the gang-up bonus) passes 0.6.
 
+**Coalitions** (the balance of power). Once a month, when at least
+`coalition_min` (3) nations see the same hegemon (the player included),
+are at peace, can reach it and have no truce with it, the strongest of
+them declares war on it and the others join: a declared war "against X,
+grown too strong", at most once in `coalition_years` (12) per hegemon,
+never in the first two years or while over 10% of the world is already
+at war. No side of any war has more than `max_side` (4) nations.
+
 ### During a war
 
-- **Escalate** when losing a war it cares about (score under −20, goal
-  important) and its escalation cost × (1 − risk) < the stake.
+- **Escalate** when losing a war it cares about (score under −30, or −55
+  to go from declared to total war) and its escalation cost × (1 − risk)
+  < the stake, with a 5% chance a week.
 - **Match** an enemy's escalation when its power ratio is above 0.7, or
   **back down**.
 - **Make peace** as in section 10.
@@ -725,32 +829,71 @@ how far it escalated, losses on each side, prisoners, and how it ended.
 ## 14. Results
 
 From `--war-report 50 1 2 3 4 5 6 --battles`: 18 NPC worlds (every map,
-seeds 1-6), 450 nations, 50 years each, in 114 s on 4 cores. The whole
-report, with every war and each world's bloodiest battle, is
-[war_report_50y.txt](war_report_50y.txt).
+seeds 1-6), 450 nations, 50 years each, in about 140 s on 4 cores. The
+whole report, with every war and each world's bloodiest battle, is
+[war_report_50y.txt](war_report_50y.txt). The report also prints where
+prisoners came from, why peace was offered, and what drove exhaustion.
 
-| | Grand Continent | Thousand Isles | Five Shores | All 18 worlds |
-|---|---|---|---|---|
-| Wars (cold wars not counted) | 195 | 118 | 162 | **475** (0.21 a nation per decade) |
-| Battles | 1,854 | 495 | 1,483 | **3,832** |
-| Soldiers killed | 987,675 | 231,730 | 911,183 | **2.13 million** |
+### The war balance pass: before and after
 
-- **How far they went**: 239 stayed border skirmishes, 45 military
-  operations, 162 declared wars, 29 total wars; also 18 cold wars and 24
-  wars with proxy suppliers.
-- **How they ended**: all 475 in peace. 207 skirmishes went quiet, 101
-  surrenders, 83 white peaces, 53 peace deals, 27 operations reached their
-  goal, 4 ended with one side backing down from an escalation.
-- **The world doesn't burn down**: a nation spends 0.4 of 50 years at war
-  on average, and at worst 16% of a world's nations were at declared or
-  total war at once.
-- **Weak spots, honestly**: 136 of the 475 wars (29%) never had a battle:
-  79 skirmishes that stayed a stand-off, and most of the rest wars across
-  the sea that neither side had the ships to fight. There were no civil
-  wars in these 18 worlds (stability rarely stays under 20 for 45 days);
-  the civil-war code is covered by its tests and showed up in other runs.
+| | Before | After | Target |
+|---|---|---|---|
+| Border skirmish, years (longest) | 0.24 (0.25) | **0.11 (0.12)** | weeks |
+| Military operation | 0.27 (0.50) | **0.79 (2.31)** | months |
+| Declared war | 0.10 (0.34) | **1.24 (5.83)** | 1-3 years |
+| Total war | 0.12 (0.19) | **3.18 (4.84)** | 2-6 years |
+| Civil war | none | 1.51 (3.00) | |
+| War of independence | none | 0.42 (1.95) | |
+| Captured ÷ killed | 4.5 (9.55M ÷ 2.13M) | **1.0 (62.1M ÷ 60.3M)** | not far above 1 |
+| Civil wars | 0 | **63** (3.5 a world) | a few a world |
+| Nations whose stability fell under 20 | 0 | 102 | |
+| Causes | weakness 463, grudge 12 | **weakness 225, ideology 163, grudge 157, resources 133, civil war 63, independence 62, coalition 42, revanche 2** | many |
+| Vassals made / broke free | 87 / 0 | **27 / 20** (1 walked away, 62 wars of independence) | |
+| Biggest bloc (overlord + vassals) | 39% of a world | **32%** (the world that starts at 39%: its colonies) | no snowball |
+| Wars (a nation per decade) | 475 (0.21) | 848 (0.38), incl. civil and independence | |
+| Most nations at declared or total war at once | 16% | 32% | at most a third |
+| Soldiers killed | 2.1M | 60.3M | |
 
-**Tuning that got here** (each change checked on this report):
+Wars are now ten times as long and fought by mass armies, so far more
+soldiers die: 60 million over 18 worlds and 50 years (about 3.3 million a
+world). Desertion is high too (43 million, 18.5 million of them slipping
+out of collapsing pockets to go home): mass armies in long wars bleed
+deserters.
+
+What did it:
+1. **Morale and surrender** (section 3): morale shock halved (4 → 2), a
+   broken division retreats and regroups, breaks out of an encirclement
+   through empty enemy land, and a pocket fights on until its morale or
+   supplies are gone; then 40% slip away. Defenders dig in better (cover
+   0.35 → 0.5 × entrenchment).
+2. **Exhaustion and stakes** (sections 9-10): the daily cost of being at
+   war is a third of what it was, and the exhaustion a side bears before
+   suing for peace grows with the level (stake 1 to 9). A losing side
+   holds out longer in a deeper war (hopeless at −60 / −85), and a winner
+   presses on (1 / 3 years).
+3. **Frontage, flanks and reserves** (sections 3-4): see Tolsai. Armies
+   now attack on many fronts instead of piling into one province.
+4. **Civil wars** (section 8): lost wars, the empire's burden and war
+   exhaustion join famine, unemployment and debt in pulling stability
+   down; rebellion needs 60 days under 20, then 0.6% a day; a three-year
+   stalemate ends in an amnesty.
+5. **Motives and coalitions** (section 11), **vassals** (section 10).
+6. **Speed**: battles look only at their own divisions each hour (the same
+   result as looking at all, checked on all three maps), so a year of the
+   heaviest total war with 25 nations takes about 2.0 s of CPU for the
+   economy, brains and war together (top speed allows 4).
+
+### Weak spots, honestly
+
+- Only 2 wars were for lost land: few provinces change hands in peace
+  deals (most end in reparations or white peace), so there is little to
+  win back.
+- The one world whose 39% bloc comes from its colonies at the start ends
+  at 32%: its colonies break away slowly.
+- One world in six peaks at 32% of its nations at declared or total war,
+  just under the one-third rule.
+
+### Tuning in phase 5 (before the balance pass)
 
 | Change | Why |
 |---|---|

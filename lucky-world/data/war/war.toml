@@ -32,6 +32,7 @@ aggressive_ratio = 1.15        # the strength ratio each style attacks at
 balanced_ratio = 1.4
 cautious_ratio = 1.8
 initiative = 0.6               # the side that started the war attacks at this x its ratio (it has a plan)
+reserve_frontages = 3.0        # an attack sends at most this many frontages' worth of soldiers (the rest attack elsewhere)
 
 [combat]                       # [3]
 frontage_base = 12000          # engaged soldiers a side = min(soldiers, base x sqrt(hexes) x terrain frontage)
@@ -52,7 +53,7 @@ luck_sd = 0.25                 # the dice: hits x exp(luck_sd x Normal) a side a
 river_penalty = 0.75
 city_defence = 0.7
 city_tanks = 0.7
-entrench_defence = 0.35
+entrench_defence = 0.5
 killed = 0.25                  # a hit is killed, wounded or (when losing) captured
 wounded = 0.65
 captured = 0.1
@@ -66,10 +67,12 @@ road_damage = 0.1              # road levels lost a battle day
 amphibious = 0.6               # a landing's hits for its first two days
 attack_days = 10.0             # an attack losing a bigger share of its soldiers than the defenders is called off after this many days (any after 3x)
 call_off_morale = 0.4          # ...or when its soldiers' morale falls under this
+flank = 0.3                    # an attacker that outnumbers the defenders spreads round them: its frontage x (1 + flank x ln ratio)...
+flank_max = 2.0                # ...at most this much wider
 occupied_output = 0.4          # an occupied province makes this share of its output for its owner
 
 [morale]                       # [3]
-shock = 4.0                    # morale lost = shock x casualties / soldiers x (2 - general skill)
+shock = 2.0                    # morale lost = shock x casualties / soldiers x (2 - general skill)
 shortage = 0.002               # an hour, x (1 - equipped)
 exhaustion = 0.001             # an hour, x war exhaustion
 recover = 0.06                 # a day out of battle, towards the target
@@ -78,11 +81,14 @@ target_training = 0.3
 target_equipped = 0.15
 win = 0.1
 lose = 0.15
-break_point = 0.25             # retreat (or surrender, with nowhere to go)
+break_point = 0.25             # under this a division breaks and retreats to regroup...
+surrender_morale = 0.05        # ...and only surrenders if it has nowhere to go AND its morale is under this...
+surrender_equipped = 0.15      # ...or it is out of ammo and food (equipped under this); otherwise a pocket fights on
+pocket_escape = 0.4            # when a pocket collapses, this share slips away home; the rest surrender
 desert_below = 0.4
-desertion = 0.02               # a day at morale 0
-stragglers_min = 0.02          # captured in a retreat, at the break point...
-stragglers_max = 0.06          # ...and at morale 0
+desertion = 0.008              # a day at morale 0
+stragglers_min = 0.01          # captured in a retreat, at the break point...
+stragglers_max = 0.03          # ...and at morale 0
 starving_deaths = 0.0005       # a day, with no food
 
 [terrain]                      # [3] defence (x hits taken by a defender), tanks (x their fire), frontage, move (days)
@@ -160,6 +166,7 @@ transport_tanks = 10           # ...or tanks
 mobilisation = [1.0, 1.0, 1.4, 2.0, 3.0]
 arms_share = [0.0, 0.0, 0.0, 0.06, 0.15]
 skirmish_divisions = 2
+skirmish_days = 45             # a border skirmish grows or fades after this many days
 total_conversion = 0.4
 total_stability = -0.15        # a day
 total_happiness = -0.1
@@ -183,17 +190,18 @@ democracy_days = 90            # ...and its government falls if it hasn't made p
 [other]                        # [8]
 proxy_share = 0.05             # of a stockpile, sent a month in a proxy war
 civil_war_stability = 20.0
-civil_war_days = 45
-civil_war_chance = 0.01
+civil_war_days = 60
+civil_war_chance = 0.006
 rebel_share = 0.4              # of the army that joins a rebellion, at most
+civil_war_years = 3.0          # a civil war still undecided after this ends in a settlement (an amnesty)
 
 [exhaustion]                   # [9]
-losses = 20.0
-level = 0.002
-occupied = 0.004
-blockaded = 0.003
+losses = 10.0
+level = [0.0, 0.0015, 0.001, 0.0006, 0.0006]  # a day, by level (the cost of being at war at all)
+occupied = 0.0025
+blockaded = 0.0015
 recover = 0.01
-stability = 0.5
+stability = 0.25
 output = 0.1
 prisoner_release_days = 720
 
@@ -207,22 +215,41 @@ accept = 0.6
 max_war_years = 6
 offer_exhaustion = 0.5
 min_days = 120                 # no peace offers before this (unless a side is exhausted)
+stake = [1.0, 1.0, 1.5, 2.5, 9.0]  # how much exhaustion a side bears before offering or accepting peace, by level
+lost_war_stability = 12.0      # stability a nation loses for a lost war (x 1.5 made a vassal or a new government; x 0.5 only reparations)
+hopeless = [40.0, 30.0, 40.0, 60.0, 85.0]   # a side this far behind sues for peace (after min_days x stake)...
+won_years = [1.0, 0.1, 0.3, 1.0, 3.0]       # ...and a side 40 ahead offers terms after this many years
 
 [ai]                           # [11]
-war_threshold = 0.9
+war_threshold = 1.2
 gang_up_threshold = 0.6
 cooldown_years = 5
 truce_years = 8
 base_aggression = 0.3
 leader = { warlord = 0.4, coward = -0.3, genius = 0.0, builder = -0.1, diplomat = -0.2 }
 ideology = { military_rule = 0.3, imperialism = 0.25, authoritarianism = 0.15, democracy = -0.25, colony = -0.2 }
-weakness = 0.4
-grudge = 0.5
+weakness = 0.4                 # a weak target (its opportunity reasons)...
+strength = 0.5                 # ...x aggression x (power ratio - 1): being the stronger
+grudge = 1.0                   # x (-regard + 0.3 a time it attacked us)
 gang_up = 0.6
 exhaustion_cost = 0.8
 debt_cost = 0.3
 busy_cost = 0.5
-escalate_score = -20.0
+escalate_score = -30.0         # losing this badly, a side may climb a rung...
+escalate_chance = 0.05         # ...with this chance a week
+total_war_score = -55.0        # declared war to total war only when losing this badly
 match_ratio = 0.7
+crusade = { communism = 1.0, theocracy = 1.1, imperialism = 0.7, military_rule = 0.5, democracy = 0.35 }   # wanting to spread its ideology to a nation of another
+resources = 0.9                # wanting a raw good it must import, from a neighbour's border province rich in it
+revanche = 1.3                 # wanting back a province lost in a peace deal...
+revanche_years = 40            # ...for this long
+coalition_min = 3              # this many nations that fear the same hegemon go to war on it together...
+coalition_years = 12           # ...at most once in this many years
+max_side = 4                   # no side of a war has more nations than this
+max_vassals = 3                # an overlord holds at most this many vassals (a vassal holds none)
+liberty_threshold = 1.0        # a vassal whose wish for freedom passes this fights for it (docs/WAR.md, section 10)
+vassal_output = 0.01           # each vassal costs its overlord this share of output (garrisons, governors)...
+vassal_stability = 3.0         # ...and this much stability (the empire's burden)
+world_at_war_cost = 5.0        # less desire for a new war x the share of nations already at declared or total war
 declare_aggression = 1.0       # a brain this aggressive declares war outright...
 operation_aggression = 0.6     # ...this aggressive starts a military operation (else a border skirmish)

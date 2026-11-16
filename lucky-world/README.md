@@ -312,28 +312,36 @@ and the math are in [docs/WAR.md](docs/WAR.md).
   and military rule are aggressive, cowards and democracies avoid war, and
   everyone gangs up on whoever gets too strong, you included.
 
-Over 50 years on all three maps and six seeds (18 worlds, 450 nations):
+Over 50 years on all three maps and six seeds (18 worlds, 450 nations),
+after the war balance pass (before → after; the whole comparison is in
+[docs/WAR.md](docs/WAR.md), section 14):
 
-| | Grand Continent | Thousand Isles | Five Shores | All 18 worlds |
-|---|---|---|---|---|
-| Wars (cold wars not counted) | 195 | 118 | 162 | **475** (0.21 a nation per decade) |
-| Battles | 1,854 | 495 | 1,483 | **3,832** |
-| Soldiers killed | 987,675 | 231,730 | 911,183 | **2.13 million** |
+| | Before | After |
+|---|---|---|
+| Border skirmish | 0.24 years | **0.11** (weeks) |
+| Military operation | 0.27 years | **0.79** (months) |
+| Declared war | 0.10 years | **1.24** (longest 5.8) |
+| Total war | 0.12 years | **3.18** (longest 4.8) |
+| Captured ÷ killed | 4.5 | **1.0** |
+| Civil wars | 0 | **63** (3.5 a world) |
+| Causes of war | weakness 463, grudge 12 | weakness 225, ideology 163, grudge 157, resources 133, civil 63, independence 62, coalition 42 |
+| Vassals made / broke free | 87 / 0 | 27 / 20 |
+| Most nations at declared or total war at once | 16% | 32% |
 
-- **How far they went**: 239 stayed border skirmishes, 45 military
-  operations, 162 declared wars, 29 total wars; also 18 cold wars and 24
-  wars with proxy suppliers.
-- **How they ended**: all 475 in peace. 207 skirmishes went quiet, 101
-  surrenders, 83 white peaces, 53 peace deals, 27 operations reached their
-  goal, 4 ended with one side backing down from an escalation.
-- **The world doesn't burn down**: a nation spends 0.4 of 50 years at war
-  on average, and at worst 16% of a world's nations were at declared or
-  total war at once.
-- **Weak spots, honestly**: 136 of the 475 wars (29%) never had a battle:
-  79 skirmishes that stayed a stand-off, and most of the rest wars across
-  the sea that neither side had the ships to fight. There were no civil
-  wars in these 18 worlds (stability rarely stays under 20 for 45 days);
-  the civil-war code is covered by its tests and showed up in other runs.
+- **Morale**: a broken division retreats and regroups, breaks out of an
+  encirclement, and a pocket fights on until its morale or supplies are
+  gone. Defenders dig in; attackers that outnumber them spread round the
+  flanks, and big armies attack on many fronts instead of piling into one
+  province.
+- **Why wars start**: weakness, grudges remembered, spreading an ideology
+  (the revolution, a holy war), a resource it has to import, land lost in
+  a peace deal, and coalitions of up to four against a nation grown too
+  strong, the player included.
+- **Vassals** cost their overlord output and stability, want their
+  freedom more the longer and the weaker their overlord, and fight wars of
+  independence; an overlord holds at most three, and vassals hold none.
+- **Civil wars** come from war exhaustion, lost wars, occupation, famine,
+  unemployment, debt crises and an empire's burden.
 
 ```sh
 cargo run --release --no-default-features -- --war-report 50 1 2 3 4 5 6 --battles   # every war, and the bloodiest battle of each world

@@ -283,6 +283,29 @@ pub struct WorldWars {
     pub years_at_war: f64,
     pub nations: usize,
     pub battles: usize,
+    /// By the highest level a war reached: (count, days, longest days).
+    pub length: [(usize, f64, f64); 6],
+    pub killed: f64,
+    pub captured: f64,
+    pub deserted: f64,
+    /// Why wars started (the first words of their cause).
+    pub causes: std::collections::BTreeMap<String, usize>,
+    /// Peace deals that made a vassal, vassals that broke free, vassals at the end.
+    pub vassalised: usize,
+    pub freed: usize,
+    pub vassals_end: usize,
+    /// The biggest overlord at the end: its share of the world's provinces (with its vassals').
+    pub biggest_bloc: f64,
+    /// Nations whose stability ever fell under 20.
+    pub unstable: usize,
+    pub stats: std::collections::BTreeMap<String, f64>,
+}
+
+/// A war's cause, in a few words (for the report's tally).
+pub fn cause_kind(cause: &str) -> String {
+    let c = cause.split(':').next().unwrap_or(cause).trim();
+    let words: Vec<&str> = c.split_whitespace().take(4).collect();
+    words.join(" ")
 }
 
 /// Runs one NPC world with war and sums up its wars.
@@ -292,18 +315,56 @@ pub fn run_wars(map: usize, seed: u32, years: f64, battles: bool) -> Res<WorldWa
     let mut out = WorldWars { nations: ww.wars.nations, ..WorldWars::default() };
     let mut nation_days_at_war = 0.0;
     let mut low: Vec<usize> = Vec::new();
+    let mut worst_day = 0;
+    let mut worst_who = String::new();
+    let mut overlords: Vec<Option<usize>> = ww.e.nations.iter().map(|n| n.overlord).collect();
     for _ in 0..days {
         ww.day();
         let hot = (0..ww.wars.nations).filter(|&i| ww.wars.level_of(i) >= 3).count();
         nation_days_at_war += (0..ww.wars.nations).filter(|&i| ww.wars.level_of(i) >= 1).count() as f64;
-        out.worst_share = out.worst_share.max(hot as f64 / ww.wars.nations as f64);
+        if hot as f64 / ww.wars.nations as f64 > out.worst_share {
+            out.worst_share = hot as f64 / ww.wars.nations as f64;
+            worst_day = ww.wars.day;
+            let w = &ww.wars;
+            worst_who = w.wars.iter().filter(|x| x.active() && x.level >= 3).map(|x| format!("{} [{}] {}v{}", x.motive, x.level, x.sides[0].len(), x.sides[1].len())).collect::<Vec<_>>().join("; ");
+        }
         for i in 0..ww.wars.nations {
-            if ww.e.nations[i].stability < 25.0 && !low.contains(&i) {
+            if ww.e.nations[i].stability < 20.0 && !low.contains(&i) {
                 low.push(i);
+            }
+            let now = ww.e.nations[i].overlord;
+            if now != overlords[i] {
+                if now.is_some() {
+                    out.vassalised += 1;
+                } else {
+                    out.freed += 1;
+                }
+                overlords[i] = now;
             }
         }
     }
-    out.text = format!("({} nations' stability ever fell under 25)\n", low.len());
+    out.unstable = low.len();
+    out.vassals_end = overlords.iter().filter(|o| o.is_some()).count();
+    let top = |mut i: usize| {
+        let mut n = 0;
+        while let Some(o) = ww.e.nations[i].overlord {
+            i = o;
+            n += 1;
+            if n > 30 {
+                break;
+            }
+        }
+        i
+    };
+    let mut bloc = vec![0usize; ww.wars.nations];
+    for q in 0..ww.wars.owner.len() {
+        if let Some(o) = ww.wars.owner[q] {
+            bloc[top(o)] += 1;
+        }
+    }
+    out.biggest_bloc = *bloc.iter().max().unwrap_or(&0) as f64 / ww.wars.owner.iter().filter(|o| o.is_some()).count().max(1) as f64;
+    out.text = format!("(at worst {:.0}% of nations at declared or total war at once, on day {}: {}) ", out.worst_share * 100.0, worst_day, worst_who);
+    out.text = format!("{}({} nations' stability ever fell under 20; {} vassals made, {} broke free, {} at the end; the biggest bloc holds {:.0}% of the land)\n", out.text, low.len(), out.vassalised, out.freed, out.vassals_end, out.biggest_bloc * 100.0);
     let w = &ww.wars;
     let mut lines = vec![format!("== {} (seed {seed}), {years} years: {} wars ==", ww.data.maps[map].name, w.wars.iter().filter(|x| x.max_level > 0).count())];
     for (k, x) in w.wars.iter().enumerate() {
@@ -314,6 +375,19 @@ pub fn run_wars(map: usize, seed: u32, years: f64, battles: bool) -> Res<WorldWa
         }
         out.wars += 1;
         out.by_level[x.max_level] += 1;
+        let days = (x.end.unwrap_or(w.day) - x.start) as f64;
+        // (Civil wars are counted on their own, in slot 0.)
+        let l = &mut out.length[if x.civil { 0 } else if x.goal == super::Goal::Independence { 5 } else { x.max_level }];
+        l.0 += 1;
+        l.1 += days;
+        l.2 = l.2.max(days);
+        for s in 0..2 {
+            out.killed += x.losses[s].killed;
+            out.captured += x.losses[s].captured;
+            out.deserted += x.losses[s].deserted;
+        }
+        let kind = if !x.motive.is_empty() { x.motive.clone() } else if x.civil { "civil war".to_string() } else { cause_kind(&x.cause) };
+        *out.causes.entry(kind).or_insert(0) += 1;
         if x.civil {
             out.civil += 1;
         }
@@ -328,6 +402,16 @@ pub fn run_wars(map: usize, seed: u32, years: f64, battles: bool) -> Res<WorldWa
         out.dead += x.losses[0].killed + x.losses[1].killed;
         out.battles += x.battles as usize;
         lines.push(war_text(w, k, ww.ed.days_per_year, &ww.atlas, &ww.world));
+    }
+    for (k, v) in &w.stats {
+        out.stats.insert(k.to_string(), *v);
+    }
+    for x in w.wars.iter().filter(|x| x.max_level > 0) {
+        if let Some(r) = &x.result {
+            let how = r.split(':').next().unwrap_or("").to_string();
+            let how = if how.ends_with("backs down") { "one side backs down".to_string() } else { how };
+            *out.stats.entry(format!("ended: {how}")).or_insert(0.0) += 1.0;
+        }
     }
     out.years_at_war = nation_days_at_war / ww.ed.days_per_year as f64 / w.nations as f64;
     if battles {
@@ -387,6 +471,25 @@ pub fn war_report(args: &[String]) -> Res<()> {
         for k in 0..5 {
             t.by_level[k] += r.by_level[k];
         }
+        for k in 0..6 {
+            t.length[k].0 += r.length[k].0;
+            t.length[k].1 += r.length[k].1;
+            t.length[k].2 = t.length[k].2.max(r.length[k].2);
+        }
+        t.killed += r.killed;
+        t.captured += r.captured;
+        t.deserted += r.deserted;
+        for (k, v) in &r.causes {
+            *t.causes.entry(k.clone()).or_insert(0) += v;
+        }
+        t.vassalised += r.vassalised;
+        t.freed += r.freed;
+        t.vassals_end += r.vassals_end;
+        t.biggest_bloc = t.biggest_bloc.max(r.biggest_bloc);
+        t.unstable += r.unstable;
+        for (k, v) in &r.stats {
+            *t.stats.entry(k.clone()).or_insert(0.0) += v;
+        }
     }
     let worlds = results.len() as f64;
     println!("SUMMARY: {} worlds x {years} years ({} nations)", results.len(), t.nations);
@@ -395,6 +498,27 @@ pub fn war_report(args: &[String]) -> Res<()> {
     println!("  ended in peace: {} of {} ({} still going at the end)", t.ended, t.wars, t.still_on);
     println!("  a nation spends {:.1} of {years} years at war, on average; at worst {:.0}% of a world's nations were at declared or total war at once", t.years_at_war / worlds, t.worst_share * 100.0);
     println!("  {} battles, {} soldiers killed", t.battles, big(t.dead));
+    println!("  killed {}, captured {} ({:.1}x killed), deserted {}", big(t.killed), big(t.captured), t.captured / t.killed.max(1.0), big(t.deserted));
+    let dpy = 360.0;
+    for k in 0..6 {
+        let name = match k {
+            0 => "Civil war",
+            5 => "War of independence",
+            _ => super::LEVELS[k],
+        };
+        let (n, d, m) = t.length[k];
+        if n > 0 {
+            println!("  {name}: {n} wars, {:.2} years on average, longest {:.2}", d / n as f64 / dpy, m / dpy);
+        }
+    }
+    let mut causes: Vec<(&String, &usize)> = t.causes.iter().collect();
+    causes.sort_by(|a, b| b.1.cmp(a.1));
+    println!("  causes: {}", causes.iter().map(|(k, v)| format!("{k} {v}")).collect::<Vec<_>>().join(", "));
+    println!("  vassals: {} made, {} broke free, {} at the end; the biggest bloc held {:.0}% of a world's land", t.vassalised, t.freed, t.vassals_end, t.biggest_bloc * 100.0);
+    println!("  {} nations' stability ever fell under 20", t.unstable);
+    for (k, v) in &t.stats {
+        println!("  {k}: {}", big(*v));
+    }
     println!("({:.0} s)", start.elapsed().as_secs_f64());
     Ok(())
 }
