@@ -85,11 +85,11 @@ pub struct Assets {
 
 impl Assets {
     pub fn load() -> Result<Assets, duckforge::LoadError> {
-        let art = |name: &str| Sprite::load_png(format!("assets/art/{name}.png"));
-        let sound = |name: &str| Wav::load(format!("assets/sound/{name}.wav"));
+        let art = |name: &str| crate::files::sprite(format!("assets/art/{name}.png"));
+        let sound = |name: &str| crate::files::load(format!("assets/sound/{name}.wav"), |p| Wav::load(p));
         Ok(Assets {
-            font: Font::load("assets/fonts/Inter-Bold.otf")?,
-            serif: Font::load("assets/fonts/DejaVuSerif-Bold.ttf")?,
+            font: crate::files::font("assets/fonts/Inter-Bold.otf")?,
+            serif: crate::files::font("assets/fonts/DejaVuSerif-Bold.ttf")?,
             backdrop: art("backdrop")?,
             pointer: art("pointer")?,
             hub: art("hub")?,
@@ -133,7 +133,7 @@ impl Assets {
             icon_handshake: art("icon_handshake")?,
             icon_spy: art("icon_spy")?,
             icon_treaty: art("icon_treaty")?,
-            stand: Mesh::load_glb("assets/models/wheel_stand.glb")?,
+            stand: crate::files::load("assets/models/wheel_stand.glb", |p| Mesh::load_glb(p))?,
             tick: sound("tick")?,
             tick_low: sound("tick_low")?,
             land: sound("land")?,

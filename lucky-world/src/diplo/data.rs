@@ -203,7 +203,7 @@ pub struct DiploData {
 impl DiploData {
     pub fn load() -> Result<DiploData, String> {
         let path = "data/diplomacy/diplomacy.toml";
-        let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: can't be read ({e}); run the game from the lucky-world folder"))?;
+        let text = crate::files::read_text(path).map_err(|e| format!("{path}: can't be read ({e}); run the game from the lucky-world folder"))?;
         Self::parse(&text)
     }
 

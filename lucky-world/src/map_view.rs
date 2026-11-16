@@ -81,26 +81,26 @@ const LANDMARKS: [&str; 6] = ["lighthouse", "pyramid", "great_tower", "temple", 
 impl Models {
     pub fn load() -> Result<Models, duckforge::LoadError> {
         let path = |name: &str| format!("assets/models/{name}.glb");
-        let capital_model = duckforge::glb::GlbModel::load(path("capital"))?;
+        let capital_model = crate::files::load(path("capital"), |p| duckforge::glb::GlbModel::load(p))?;
         let capital_roofs = capital_model.part("roofs").map(|p| p.range());
         let mut decor = Vec::new();
         for name in DECOR {
-            decor.push((name.to_string(), Mesh::load_glb(path(name))?));
+            decor.push((name.to_string(), crate::files::load(path(name), |p| Mesh::load_glb(p))?));
         }
         let mut landmarks = Vec::new();
         for name in LANDMARKS {
-            landmarks.push((name.to_string(), Mesh::load_glb(path(name))?));
+            landmarks.push((name.to_string(), crate::files::load(path(name), |p| Mesh::load_glb(p))?));
         }
         let mut war = Vec::new();
         for (name, part) in [("soldier", "uniform"), ("tank", "hull"), ("jet", "wings"), ("warship", "flag"), ("transport", "flag")] {
-            let m = duckforge::glb::GlbModel::load(path(name))?;
+            let m = crate::files::load(path(name), |p| duckforge::glb::GlbModel::load(p))?;
             let range = m.part(part).map(|p| p.range());
             war.push((m.to_mesh(), range));
         }
         Ok(Models {
             capital: capital_model.to_mesh(),
             capital_roofs,
-            town: Mesh::load_glb(path("town"))?,
+            town: crate::files::load(path("town"), |p| Mesh::load_glb(p))?,
             decor,
             landmarks,
             war,

@@ -567,7 +567,7 @@ impl EconData {
     pub fn load_from(dir: &Path, data: &Data) -> Result<EconData, DataError> {
         let read = |name: &str| -> Result<String, DataError> {
             let path = dir.join(name);
-            std::fs::read_to_string(&path).map_err(|e| DataError(format!("couldn't read {} ({e})", path.display())))
+            crate::files::read_text(&path).map_err(|e| DataError(format!("couldn't read {} ({e})", path.display())))
         };
         let texts = [
             read("goods.toml")?,

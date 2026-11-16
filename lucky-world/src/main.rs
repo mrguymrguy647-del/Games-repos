@@ -11,6 +11,7 @@
 
 mod country;
 mod data;
+mod files;
 mod diplo;
 mod ai;
 mod econ;
@@ -53,6 +54,14 @@ pub fn new_game() -> Result<game::Lucky, Box<dyn std::error::Error>> {
     let ai_data = ai::AiData::load()?;
     let war_data = war::WarData::load()?;
     let diplo_data = diplo::DiploData::load()?;
+    let notes = files::notes();
+    if !notes.is_empty() && !cfg!(test) {
+        // The game started on built-in copies; say which files Windows held back.
+        let _ = std::fs::write(
+            "lucky-world-notes.txt",
+            format!("LUCKY WORLD started, but couldn't read these files beside it:\n{}\n", notes.join("\n")),
+        );
+    }
     Ok(game::Lucky::new(data, atlas, assets, models, econ_data, ai_data, war_data, diplo_data))
 }
 
@@ -169,7 +178,14 @@ fn main() {
     if let Err(e) = run() {
         // With no console to show it (a double-clicked app), the error goes
         // to a file beside the game too.
-        let words = format!("LUCKY WORLD couldn't start: {e}");
+        let mut words = format!("LUCKY WORLD couldn't start: {e}");
+        if words.contains("os error 5") || words.contains("denied") {
+            words.push_str(
+                "\n\nWindows wouldn't let the game open one of its files. Right-click the zip, choose \
+                 \"Extract All...\", extract to a normal folder (Desktop or Documents, not OneDrive), \
+                 and run LuckyWorld.exe from there. If your antivirus quarantined a file, restore it.",
+            );
+        }
         eprintln!("{words}");
         let _ = std::fs::write("lucky-world-error.txt", format!("{words}\n"));
         std::process::exit(1);

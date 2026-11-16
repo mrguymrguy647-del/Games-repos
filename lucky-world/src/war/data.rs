@@ -337,7 +337,7 @@ pub struct WarData {
 impl WarData {
     pub fn load() -> Result<WarData, String> {
         let path = "data/war/war.toml";
-        let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: can't be read ({e}); run the game from the lucky-world folder"))?;
+        let text = crate::files::read_text(path).map_err(|e| format!("{path}: can't be read ({e}); run the game from the lucky-world folder"))?;
         Self::parse(&text)
     }
 

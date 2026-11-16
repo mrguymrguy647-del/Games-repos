@@ -49,15 +49,21 @@ missions succeed or fail by real odds. It is built with Duck Forge (engine), Duc
 
 ## Play it (no install)
 
-Download a zip from [dist/](dist/), unzip the whole folder, and double-click:
+Download a zip from [dist/](dist/), extract the whole folder (on Windows:
+right-click → "Extract All...", to Desktop or Documents, not from inside the
+zip), and double-click:
 
 | | |
 |---|---|
 | Windows | [LuckyWorld-Windows.zip](dist/LuckyWorld-Windows.zip) → `LuckyWorld.exe` (the first time, "Windows protected your PC": More info → Run anyway; the game isn't signed) |
 | Linux | [LuckyWorld-Linux.zip](dist/LuckyWorld-Linux.zip) → `LuckyWorld` |
 
-Keep the app next to its `data` and `assets` folders. If it can't start, it
-writes why in `lucky-world-error.txt` beside it. `HOW_TO_PLAY.txt` in the
+The app reads the `data` and `assets` folders beside it, and every one of
+those files is also built into the app (`build.rs`, `src/files.rs`): if
+Windows or antivirus blocks a file ("Access is denied"), a read is retried
+for about a second and then the built-in copy is used, and the file is
+listed in `lucky-world-notes.txt`. If it still can't start, it writes why in
+`lucky-world-error.txt` beside it. `HOW_TO_PLAY.txt` in the
 zip lists the keys. To rebuild both zips: `tools/package.sh` (Windows is
 cross-built from Linux with mingw-w64). There is no macOS build yet.
 

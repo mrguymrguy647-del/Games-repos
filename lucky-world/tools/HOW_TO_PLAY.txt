@@ -1,12 +1,17 @@
 LUCKY WORLD
 
-Windows: unzip the whole folder, then double-click LuckyWorld.exe.
+Windows: right-click the zip, choose "Extract All...", pick a normal folder
+  (Desktop or Documents; not OneDrive, and don't run it from inside the zip),
+  then double-click LuckyWorld.exe in the extracted folder.
   (The first time, Windows may say "Windows protected your PC" because the
    game isn't signed: click "More info", then "Run anyway".)
 Linux: unzip, then double-click LuckyWorld (or run ./LuckyWorld).
 
-Keep LuckyWorld next to its "data" and "assets" folders: it reads them.
-If it can't start, it writes why in lucky-world-error.txt beside it.
+The game reads its "data" and "assets" folders beside it, and also has a
+copy of every one of those files built in: if Windows or antivirus blocks a
+file ("Access is denied"), it uses its own copy and lists the file in
+lucky-world-notes.txt. If it still can't start, it writes why in
+lucky-world-error.txt beside it.
 
 Keys
   Title:        Left/Right choose a world · Space spin · S skip spin · W watch NPC brains

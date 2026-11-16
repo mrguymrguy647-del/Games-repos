@@ -599,3 +599,24 @@ Worth keeping as they are:
   from the log alone.
 - Duck Quill's `check` gave a clean answer at once once the palettes were
   trimmed.
+
+## After Phase 6: the Windows app
+
+44. **A loaded file can't come from memory.** On a player's Windows PC the
+    game stopped at "couldn't open the image file
+    assets/art/icon_handshake.png (Access is denied. (os error 5))":
+    antivirus held the freshly unzipped icons. The PNG was fine. The game
+    now builds every file into the exe and falls back to that copy, but
+    Duck Forge has only `Sprite::load_png(path)`, `Wav::load(path)` and
+    `Mesh::load_glb(path)` (`from_png_bytes` exists but is `pub(crate)`),
+    so the game decodes PNGs itself with the `png` crate and writes sounds
+    and models to a temp folder before loading them.
+    - Fix: public `Sprite::from_png_bytes`, `Wav::from_bytes`,
+      `Mesh::from_glb_bytes`; better, an `include_assets!("assets")` that
+      makes every loader try the file, then the built-in copy.
+45. **Every load is all-or-nothing, and never retried.** One locked icon
+    out of 44 stopped the whole game. A loader that waits a moment on
+    "access denied" (antivirus usually lets go within a second), and a
+    `LoadError` the game can build itself (`LoadError::new` is
+    `pub(crate)`), would let games recover without copying the engine's
+    decoder.

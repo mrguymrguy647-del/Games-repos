@@ -2,3 +2,5 @@ target/
 out/
 duckforge-out/
 *.quill
+lucky-world-notes.txt
+lucky-world-error.txt

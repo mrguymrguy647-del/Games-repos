@@ -879,6 +879,7 @@ name = "lucky-world"
 version = "0.1.0"
 dependencies = [
  "duckforge",
+ "png",
  "serde",
  "toml",
 ]

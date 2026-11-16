@@ -288,7 +288,7 @@ impl<'a> Table<'a> {
 }
 
 fn read(path: &str) -> R<Value> {
-    let text = match std::fs::read_to_string(path) {
+    let text = match crate::files::read_text(path) {
         Ok(t) => t,
         Err(e) => return err(format!("{path}: can't be read ({e}); run the game from the lucky-world folder")),
     };

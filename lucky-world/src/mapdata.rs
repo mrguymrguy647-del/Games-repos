@@ -240,7 +240,7 @@ impl Atlas {
     pub fn load_from(dir: &Path, data: &Data) -> Result<Atlas, DataError> {
         let read = |name: &str| -> Result<String, DataError> {
             let path = dir.join(name);
-            std::fs::read_to_string(&path).map_err(|e| {
+            crate::files::read_text(&path).map_err(|e| {
                 DataError(format!("couldn't read {} ({e}); run the game from the lucky-world folder", path.display()))
             })
         };
