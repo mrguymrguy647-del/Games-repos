@@ -35,6 +35,44 @@ pub struct Models {
     pub town: Mesh,
     pub decor: Vec<(String, Mesh)>,
     pub landmarks: Vec<(String, Mesh)>,
+    /// The war's pieces (soldier, tank, jet, warship, transport), each with
+    /// the triangles recoloured per nation (uniform, hull, wings, flag).
+    pub war: Vec<(Mesh, Option<std::ops::Range<usize>>)>,
+}
+
+/// A war piece on the map (`Models::war` in this order).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Piece {
+    Soldier,
+    Tank,
+    Jet,
+    Warship,
+    Transport,
+}
+
+/// One model on the war layer: where it stands, in whose colour.
+#[derive(Debug, Clone, Copy)]
+pub struct WarPiece {
+    pub piece: Piece,
+    /// A land cell to stand on (its height), or none: at sea level.
+    pub cell: Option<usize>,
+    /// Map-plane position.
+    pub at: (f32, f32),
+    pub lift: f32,
+    pub color: Color,
+    pub turn: f32,
+}
+
+/// Everything the war layer shows (rebuilt when the war moves).
+#[derive(Debug, Clone, Default)]
+pub struct WarScene {
+    pub pieces: Vec<WarPiece>,
+    /// Province pairs held by enemies at war (the front line between them).
+    pub fronts: Vec<(usize, usize)>,
+    /// Provinces held by someone other than their owner, and the holder's colour.
+    pub occupied: Vec<(usize, Color)>,
+    /// Attacks under way: from province, to province, colour.
+    pub arrows: Vec<(usize, usize, Color)>,
 }
 
 const DECOR: [&str; 7] = ["tree", "pine", "palm", "cactus", "peak", "hill", "reeds"];
@@ -53,12 +91,19 @@ impl Models {
         for name in LANDMARKS {
             landmarks.push((name.to_string(), Mesh::load_glb(path(name))?));
         }
+        let mut war = Vec::new();
+        for (name, part) in [("soldier", "uniform"), ("tank", "hull"), ("jet", "wings"), ("warship", "flag"), ("transport", "flag")] {
+            let m = duckforge::glb::GlbModel::load(path(name))?;
+            let range = m.part(part).map(|p| p.range());
+            war.push((m.to_mesh(), range));
+        }
         Ok(Models {
             capital: capital_model.to_mesh(),
             capital_roofs,
             town: Mesh::load_glb(path("town"))?,
             decor,
             landmarks,
+            war,
         })
     }
 
@@ -120,6 +165,10 @@ pub struct MapView {
     lines: Mesh,
     cities: Mesh,
     highlight: Option<Mesh>,
+    /// The war layer: armies, fleets and jets...
+    armies: Mesh,
+    /// ...and front lines, occupation and attack arrows.
+    fronts: Mesh,
     /// An economy overlay (resources, industry): land coloured by province,
     /// drawn instead of the terrain while it's set.
     overlay: Option<Vec<Mesh>>,
@@ -150,6 +199,8 @@ impl MapView {
             lines: Mesh::new(),
             cities: Mesh::new(),
             highlight: None,
+            armies: Mesh::new(),
+            fronts: Mesh::new(),
             overlay: None,
             orbit: Orbit {
                 target: Vec2::ZERO,
@@ -632,9 +683,123 @@ impl MapView {
         if self.mode == Mode::Political || self.overlay.is_some() {
             canvas.draw_mesh(&self.borders, &Transform::default(), camera);
         }
+        canvas.draw_mesh(&self.fronts, &Transform::default(), camera);
+        canvas.draw_mesh(&self.armies, &Transform::default(), camera);
         if let Some(h) = &self.highlight {
             canvas.draw_mesh(h, &Transform::default(), camera);
         }
+    }
+
+    /// Redraws borders, cities, the minimap and the names after provinces
+    /// change hands (a peace deal): the camera stays where it is.
+    pub fn rebuild_borders(&mut self, atlas: &Atlas, world: &World, models: &Models) {
+        let map = atlas.map(world.map);
+        self.build_terrain(atlas, map, world);
+        self.build_lines(atlas, map, world);
+        self.build_cities(atlas, map, world, models);
+        self.build_minimap(atlas, map, world);
+        self.build_labels(map, world);
+    }
+
+    /// The war layer: one model per piece, red front lines between enemies,
+    /// dots of the holder's colour over occupied land, and attack arrows.
+    pub fn set_war(&mut self, atlas: &Atlas, world: &World, models: &Models, scene: &WarScene) {
+        let map = atlas.map(world.map);
+        let mut armies = Mesh::new();
+        for p in &scene.pieces {
+            let (mesh, range) = &models.war[p.piece as usize];
+            let mut m = mesh.clone();
+            if let Some(range) = range {
+                for t in range.clone() {
+                    if let Some(tri) = m.triangles.get_mut(t) {
+                        tri.color = p.color;
+                    }
+                }
+            }
+            let y = p.cell.map_or(SEA_LEVEL + 0.02, |i| self.heights[i].max(SEA_LEVEL)) + p.lift;
+            let at = self.world(p.at.0, p.at.1, y);
+            let size = match p.piece {
+                Piece::Soldier => 1.6,
+                Piece::Tank => 1.5,
+                Piece::Jet => 1.6,
+                Piece::Warship | Piece::Transport => 1.4,
+            };
+            armies.merge(&m, &Transform::at(at).rotated(vec3(0.0, p.turn, 0.0)).sized(size));
+        }
+        self.armies = armies;
+
+        let mut fronts = Mesh::new();
+        let red = Color::rgb(235, 40, 40);
+        if !scene.fronts.is_empty() {
+            let pairs: std::collections::HashSet<(usize, usize)> = scene.fronts.iter().flat_map(|&(a, b)| [(a, b), (b, a)]).collect();
+            for i in 0..map.cells.len() {
+                let Some(p) = map.province_of[i] else { continue };
+                let (c, r) = map.cell(i);
+                let here = hex::center(c, r);
+                for (nc, nr) in hex::neighbours(c, r, map.width, map.height) {
+                    let j = map.index(nc, nr);
+                    if let Some(q) = map.province_of[j] {
+                        if q != p && pairs.contains(&(p, q)) {
+                            let (k, _) = hex::shared_edge(here, hex::center(nc, nr));
+                            self.edge_strip(&mut fronts, map, i, k, 0.16, 0.03, red);
+                        }
+                    }
+                }
+            }
+        }
+        for &(p, color) in &scene.occupied {
+            for &i in &map.provinces[p].cells {
+                let (c, r) = map.cell(i);
+                if (c + 2 * r) % 3 != 0 {
+                    continue;
+                }
+                let centre = self.cell_world(map, i, 0.025);
+                let y = centre.y;
+                let v0 = fronts.add_vertex(centre);
+                let corners: Vec<usize> = (0..6)
+                    .map(|k| {
+                        let q = self.corner_world(map, i, k, y);
+                        fronts.add_vertex(centre + (q - centre) * 0.42)
+                    })
+                    .collect();
+                for k in 0..6 {
+                    fronts.add_triangle(v0, corners[k], corners[(k + 1) % 6], color);
+                }
+            }
+        }
+        for &(a, b, color) in &scene.arrows {
+            let pa = map.provinces[a].middle;
+            let pb = map.provinces[b].middle;
+            let from = self.world(pa.0, pa.1, 0.32);
+            let to = self.world(pb.0, pb.1, 0.32);
+            let d = to - from;
+            let len = (d.x * d.x + d.z * d.z).sqrt();
+            if len < 0.1 {
+                continue;
+            }
+            let dir = vec3(d.x / len, 0.0, d.z / len);
+            let side = vec3(-dir.z, 0.0, dir.x);
+            let start = from + dir * (len * 0.15);
+            let tip = from + dir * (len * 0.85);
+            let neck = tip - dir * 0.45;
+            let (w0, w1) = (0.09, 0.26);
+            let quad = [start + side * w0, neck + side * w0, neck - side * w0, start - side * w0];
+            let ids: Vec<usize> = quad.iter().map(|&v| fronts.add_vertex(v)).collect();
+            fronts.add_quad(ids[0], ids[1], ids[2], ids[3], color);
+            fronts.add_quad(ids[0], ids[3], ids[2], ids[1], color);
+            let h = [fronts.add_vertex(neck + side * w1), fronts.add_vertex(tip), fronts.add_vertex(neck - side * w1)];
+            fronts.add_triangle(h[0], h[1], h[2], color);
+            fronts.add_triangle(h[0], h[2], h[1], color);
+        }
+        self.fronts = fronts.glowing();
+    }
+
+    /// The ground point of a province's middle (for markers and the camera).
+    pub fn province_point(&self, atlas: &Atlas, world: &World, p: usize, lift: f32) -> Vec3 {
+        let map = atlas.map(world.map);
+        let (x, y) = map.provinces[p].middle;
+        let i = map.index(map.provinces[p].at.0, map.provinces[p].at.1);
+        self.world(x, y, self.heights[i].max(0.0) + lift)
     }
 
     pub fn minimap(&self) -> &Sprite {
@@ -667,5 +832,7 @@ impl MapView {
             + self.borders.triangles.len()
             + self.lines.triangles.len()
             + self.cities.triangles.len()
+            + self.armies.triangles.len()
+            + self.fronts.triangles.len()
     }
 }

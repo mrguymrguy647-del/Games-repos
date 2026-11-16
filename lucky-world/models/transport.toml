@@ -1,0 +1,53 @@
+# A transport ship for the war map, carrying an invasion. The "flag" is recoloured per nation.
+version = 0
+name = "transport"
+description = "Transport ship, about 0.3 long and 0.09 wide, bow to the front (+z), cargo boxes on deck."
+
+[palette]
+hull = "#7A5A44"
+deck = "#B89A70"
+cargo = "#6B7A4A"
+cabin = "#E0D4C0"
+flag = "#C4502F"
+
+[[parts]]
+name = "hull"
+shape = "box"
+size = [0.09, 0.045, 0.26]
+color = "hull"
+move = [0, 0.0225, 0]
+
+[[parts]]
+name = "deck"
+shape = "box"
+size = [0.08, 0.006, 0.24]
+color = "deck"
+move = [0, 0.048, 0]
+
+[[parts]]
+name = "cargo1"
+shape = "box"
+size = [0.06, 0.03, 0.05]
+color = "cargo"
+move = [0, 0.066, 0.06]
+
+[[parts]]
+name = "cargo2"
+shape = "box"
+size = [0.06, 0.03, 0.05]
+color = "cargo"
+move = [0, 0.066, 0.0]
+
+[[parts]]
+name = "cabin"
+shape = "box"
+size = [0.06, 0.05, 0.05]
+color = "cabin"
+move = [0, 0.076, -0.09]
+
+[[parts]]
+name = "flag"
+shape = "box"
+size = [0.002, 0.02, 0.03]
+color = "flag"
+move = [0, 0.11, -0.1]

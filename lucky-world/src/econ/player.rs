@@ -157,6 +157,9 @@ impl Economy {
         let mut best: Option<(usize, f64)> = None;
         for &q in &n.provinces {
             let p = &self.provinces[q];
+            if bd.coastal && !p.coastal {
+                continue;
+            }
             let value = if bd.deposit {
                 let d = p.deposits[bd.output];
                 if d < 0.2 {

@@ -1,0 +1,88 @@
+# War music: a slow march for when the player (or the world they watch) is
+# at war. Low drums on the beat, a snare roll at each bar's end and a dark
+# held chord of horns. A SEAMLESS LOOP: 4 bars at 80 BPM = 12.000 s, and
+# whatever rings past the end is folded back onto the start.
+version = 0
+name = "war_drums"
+description = "Grim 12 s seamless march loop: low drums, snare rolls, dark horns."
+tags = ["music", "war", "loop", "drums"]
+tempo = 80
+beats_per_bar = 4
+bars = 4
+loop = true
+seed = 7
+channels = 2
+
+[master]
+normalize_lufs = -24
+
+[instruments.kick]
+version = 0
+
+[[instruments.kick.layers]]
+name = "skin"
+source = "sine"
+volume = 1.0
+envelope = { attack = 0.002, decay = 0.35 }
+pitch = { start = 110, end = 45 }
+
+[[instruments.kick.layers]]
+name = "hit"
+source = "noise"
+volume = 0.3
+envelope = { attack = 0.001, decay = 0.06 }
+filter = { kind = "lowpass", cutoff = 900 }
+
+[instruments.snare]
+version = 0
+
+[[instruments.snare.layers]]
+name = "rattle"
+source = "noise"
+volume = 0.5
+envelope = { attack = 0.001, decay = 0.09 }
+filter = { kind = "bandpass", cutoff = 2400, resonance = 0.9 }
+
+[instruments.horns]
+version = 0
+
+[[instruments.horns.layers]]
+name = "brass"
+source = "saw"
+volume = 0.35
+envelope = { attack = 1.5, decay = 0, sustain = 1, release = 1.5 }
+pitch = { start = 110 }
+filter = { kind = "lowpass", cutoff = 700, resonance = 0.7 }
+
+[[tracks]]
+name = "drums"
+instrument = "kick"
+volume = 0.9
+notes = [
+  { beat = 0, note = "C2" }, { beat = 2, note = "C2" }, { beat = 2.5, note = "C2", velocity = 0.6 },
+  { beat = 4, note = "C2" }, { beat = 6, note = "C2" }, { beat = 6.5, note = "C2", velocity = 0.6 },
+  { beat = 8, note = "C2" }, { beat = 10, note = "C2" }, { beat = 10.5, note = "C2", velocity = 0.6 },
+  { beat = 12, note = "C2" }, { beat = 14, note = "C2" }, { beat = 14.5, note = "C2", velocity = 0.6 },
+]
+
+[[tracks]]
+name = "roll"
+instrument = "snare"
+volume = 0.5
+pan = 0.2
+notes = [
+  { beat = 3.25, note = "C4", velocity = 0.5 }, { beat = 3.5, note = "C4", velocity = 0.6 }, { beat = 3.75, note = "C4", velocity = 0.8 },
+  { beat = 7.25, note = "C4", velocity = 0.5 }, { beat = 7.5, note = "C4", velocity = 0.6 }, { beat = 7.75, note = "C4", velocity = 0.8 },
+  { beat = 11.25, note = "C4", velocity = 0.5 }, { beat = 11.5, note = "C4", velocity = 0.6 }, { beat = 11.75, note = "C4", velocity = 0.8 },
+  { beat = 15, note = "C4", velocity = 0.5 }, { beat = 15.25, note = "C4", velocity = 0.6 }, { beat = 15.5, note = "C4", velocity = 0.7 }, { beat = 15.75, note = "C4", velocity = 0.9 },
+]
+
+[[tracks]]
+name = "horns"
+instrument = "horns"
+volume = 0.25
+pan = -0.2
+notes = [
+  { beat = 0, note = [110, 130, 165], length = 8 },
+  { beat = 8, note = [98, 123, 147], length = 8 },
+]

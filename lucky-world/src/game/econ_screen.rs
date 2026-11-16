@@ -100,6 +100,9 @@ pub enum Overlay {
     Resources,
     /// Each province by what its buildings make (W$ a day).
     Industry,
+    /// Who holds each province (occupied land in the holder's colour,
+    /// battles in red), with every army shown.
+    War,
 }
 
 /// What the economy screens remember between frames.
@@ -109,6 +112,13 @@ pub struct EconUi {
     pub row: usize,
     pub overlay: Overlay,
     overlay_month: u32,
+}
+
+impl EconUi {
+    /// The overlay is rebuilt on the next frame.
+    pub fn force_overlay(&mut self) {
+        self.overlay_month = u32::MAX;
+    }
 }
 
 /// A colour for each raw good (the resources overlay and the chains).
@@ -216,6 +226,10 @@ impl Lucky {
                 if let Some(b) = self.brains.as_mut() {
                     b.day(e, ed);
                 }
+                // Then the war: battles hour by hour, supply, air, sea, the ladder.
+                if let Some(w) = self.wars.as_mut() {
+                    w.day(e, ed, self.brains.as_mut());
+                }
             }
         }
         // A soft chime each month, and news worth hearing about.
@@ -244,14 +258,17 @@ impl Lucky {
             self.toast = Some((words.clone(), 4.0));
             ctx.play_with(&self.assets.news, 0.6, 0.0);
         }
+        self.after_war_days(ctx);
         self.refresh_overlay();
+        self.refresh_war_scene();
     }
 
     /// Rebuilds the map overlay when it changes (and each month for industry).
     fn refresh_overlay(&mut self) {
         let (Some(e), Some(view), Some(world)) = (self.economy.as_ref(), self.map_view.as_mut(), self.world.as_ref()) else { return };
         let ui = &mut self.map_ui.econ;
-        let month = e.day / 30;
+        // The war overlay follows the war day by day; the others monthly.
+        let month = if ui.overlay == Overlay::War { e.day } else { e.day / 30 };
         if ui.overlay_month == month {
             return;
         }
@@ -295,6 +312,19 @@ impl Lucky {
                         .collect(),
                 )
             }
+            Overlay::War => self.wars.as_ref().map(|w| {
+                let fighting: std::collections::HashSet<usize> = w.battles.iter().filter(|b| !b.over).map(|b| b.province).collect();
+                (0..w.control.len())
+                    .map(|q| {
+                        if fighting.contains(&q) {
+                            return Some(Color::rgb(220, 40, 40));
+                        }
+                        let f = w.control[q]?;
+                        let c = if f < w.nations { world.color[f] } else { Color::rgb(30, 28, 32) };
+                        Some(if w.owner[q] == Some(f) { c.lerp(Color::rgb(40, 40, 48), 0.35) } else { c })
+                    })
+                    .collect()
+            }),
         };
         view.set_overlay(&self.atlas, world, colors.as_deref());
     }
@@ -305,9 +335,12 @@ impl Lucky {
         ui.overlay = match ui.overlay {
             Overlay::Off => Overlay::Resources,
             Overlay::Resources => Overlay::Industry,
-            Overlay::Industry => Overlay::Off,
+            Overlay::Industry if self.wars.is_some() => Overlay::War,
+            Overlay::Industry | Overlay::War => Overlay::Off,
         };
         ui.overlay_month = u32::MAX;
+        self.map_ui.war.all_armies = ui.overlay == Overlay::War;
+        self.map_ui.war.refresh();
         ctx.play_with(&self.assets.click, 0.8, 0.0);
         self.refresh_overlay();
     }
@@ -488,6 +521,15 @@ impl Lucky {
         canvas.blit_sprite(&a.icon_coin, vec2(ECON_BUTTON.x + 2.0, ECON_BUTTON.y - 1.0), Blit::default());
         ui::plain(canvas, &a.font, "O: ECONOMY", vec2(ECON_BUTTON.x + 32.0, ECON_BUTTON.y + 3.0), 13.0, GOLD, Align::Left);
         canvas.label("economy button", ECON_BUTTON);
+        if self.wars.is_some() {
+            let b = super::war_screen::WAR_BUTTON;
+            let hot = self.mouse.is_some_and(|m| b.contains(m));
+            let at_war = self.wars.as_ref().is_some_and(|w| w.level_of(self.war_viewer_pub()) >= 1);
+            canvas.fill_rect(b, if hot { Color::rgba(240, 106, 106, 120) } else if at_war { Color::rgba(240, 70, 70, 90) } else { Color::rgba(240, 106, 106, 45) });
+            canvas.blit_sprite(&a.icon_swords, vec2(b.x + 4.0, b.y + 1.0), Blit { scale: 0.62, ..Blit::default() });
+            ui::plain(canvas, &a.font, "K: WAR ROOM", vec2(b.x + 32.0, b.y + 3.0), 13.0, Color::WHITE, Align::Left);
+            canvas.label("war button", b);
+        }
     }
 
     /// The overlay's key, bottom left.
@@ -522,6 +564,16 @@ impl Lucky {
                 plain(canvas, &a.font, "little", vec2(r.x + 12.0, r.y + 114.0), 13.0, SOFT);
                 right(canvas, &a.font, "most", vec2(r.x + 212.0, r.y + 114.0), 13.0, SOFT);
                 plain(canvas, &a.font, "Grey: none", vec2(r.x + 12.0, r.y + 138.0), 13.0, SOFT);
+            }
+            Overlay::War => {
+                plain(canvas, &a.font, "WAR (V)", vec2(r.x + 12.0, r.y + 8.0), 12.0, GOLD);
+                plain(canvas, &a.font, "Each province in the colour", vec2(r.x + 12.0, r.y + 30.0), 13.0, Color::WHITE);
+                plain(canvas, &a.font, "of whoever holds it", vec2(r.x + 12.0, r.y + 47.0), 13.0, Color::WHITE);
+                plain(canvas, &a.font, "Bright: occupied land", vec2(r.x + 12.0, r.y + 72.0), 13.0, SOFT);
+                canvas.fill_rect(Rect::new(r.x + 12.0, r.y + 96.0, 16.0, 14.0), Color::rgb(220, 40, 40));
+                plain(canvas, &a.font, "A battle", vec2(r.x + 36.0, r.y + 94.0), 13.0, Color::WHITE);
+                plain(canvas, &a.font, "Every army is shown", vec2(r.x + 12.0, r.y + 118.0), 13.0, SOFT);
+                plain(canvas, &a.font, "(1 figure = 1,000 soldiers)", vec2(r.x + 12.0, r.y + 138.0), 13.0, SOFT);
             }
             Overlay::Off => {}
         }

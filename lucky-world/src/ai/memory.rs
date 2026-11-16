@@ -14,6 +14,10 @@ pub enum MemoryKind {
     TradeKept,
     TradeBroken,
     Helped,
+    /// War (docs/WAR.md): they attacked us, made peace with us, armed our enemy.
+    AttackedUs,
+    MadePeace,
+    ArmedOurEnemy,
 }
 
 impl MemoryKind {
@@ -24,6 +28,9 @@ impl MemoryKind {
             MemoryKind::TradeKept => "kept trading with us for a year",
             MemoryKind::TradeBroken => "cut its trade with us",
             MemoryKind::Helped => "sold us what we were short of",
+            MemoryKind::AttackedUs => "attacked us",
+            MemoryKind::MadePeace => "made peace with us",
+            MemoryKind::ArmedOurEnemy => "armed our enemy",
         }
     }
 }
@@ -70,7 +77,7 @@ impl Watch {
     }
 }
 
-fn remember(brain: &mut Brain, ai: &AiData, other: usize, day: u32, kind: MemoryKind, change: f64) {
+pub fn remember(brain: &mut Brain, ai: &AiData, other: usize, day: u32, kind: MemoryKind, change: f64) {
     let r = &mut brain.relations[other];
     r.regard = (r.regard + change).clamp(-1.0, 1.0);
     r.log.push(MemoryEvent { day, kind });

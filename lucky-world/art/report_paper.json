@@ -1,0 +1,118 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Battle report: an old paper sheet 560x430",
+ "seed": 1,
+ "palette": {
+  "ink": "#1A1030",
+  "gold": "#F5C542",
+  "gold_dark": "#A8740E",
+  "gold_hi": "#FFF1B8",
+  "white": "#FFFFFF",
+  "steel": "#C8D0DA",
+  "steel_dark": "#7A8696",
+  "red": "#F06A6A",
+  "brown": "#6B4A2E",
+  "paper": "#EFE3C4",
+  "paper_dark": "#D8C79C",
+  "ink_brown": "#4A3420"
+ },
+ "commands": [
+  {
+   "cmd": "canvas",
+   "width": 560,
+   "height": 430
+  },
+  {
+   "cmd": "layer",
+   "name": "Art"
+  },
+  {
+   "cmd": "rect",
+   "x": 4,
+   "y": 4,
+   "width": 552,
+   "height": 422,
+   "radius": 6,
+   "fill": {
+    "gradient": "linear",
+    "from": [
+     0,
+     0
+    ],
+    "to": [
+     0,
+     430
+    ],
+    "colors": [
+     "#F2E7CC",
+     "#E3D2A8"
+    ]
+   },
+   "outline": "ink_brown",
+   "outline_size": 3
+  },
+  {
+   "cmd": "rect",
+   "x": 14,
+   "y": 14,
+   "width": 532,
+   "height": 402,
+   "radius": 3,
+   "fill": "#00000000",
+   "outline": "#8A6A3E",
+   "outline_size": 1
+  },
+  {
+   "cmd": "rect",
+   "x": 14,
+   "y": 14,
+   "width": 532,
+   "height": 46,
+   "fill": "#B02626"
+  },
+  {
+   "cmd": "gradient",
+   "kind": "linear",
+   "from": [
+    0,
+    14
+   ],
+   "to": [
+    0,
+    60
+   ],
+   "stops": [
+    [
+     0,
+     "#FFFFFF30"
+    ],
+    [
+     1,
+     "#FFFFFF00"
+    ]
+   ],
+   "area": {
+    "rect": [
+     14,
+     14,
+     532,
+     46
+    ]
+   }
+  },
+  {
+   "cmd": "line",
+   "from": [
+    280,
+    70
+   ],
+   "to": [
+    280,
+    404
+   ],
+   "color": "#8A6A3E80",
+   "size": 1
+  }
+ ]
+}

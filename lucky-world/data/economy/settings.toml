@@ -19,7 +19,7 @@ birth_by_hdi = [[0.30, 0.022], [0.60, 0.012], [0.95, 0.002]]
 birth_unemployment = 0.1
 
 # A planned economy hands out scarce inputs in this order (by output good).
-plan_priority = ["ammo", "tanks", "jets", "electricity", "steel", "fuel", "chemicals", "aluminium", "food", "consumer_goods"]
+plan_priority = ["ammo", "rifles", "tanks", "jets", "warships", "transports", "electricity", "steel", "fuel", "chemicals", "aluminium", "food", "consumer_goods"]
 
 # Deposits.
 main_resource_bonus = 2.0
@@ -73,6 +73,20 @@ payout = 0.7                # share of firm profits paid out as dividends
 save_base = 0.12
 save_rate_slope = 1.5
 skill_pay = 0.6             # extra pay per worker = wage * skill * skill_pay
+# How the arms budget (procurement) is split between weapons (docs/WAR.md,
+# section 1). Jets need an HDI of 0.6; ships need a coast. The shares a
+# nation can't use go to the others.
+military_split = { ammo = 0.45, rifles = 0.05, tanks = 0.25, jets = 0.15, warships = 0.06, transports = 0.04 }
+# Of a weapons factory's defects, this share passes quality control and goes
+# into the stockpile, to fail in battle (jams, duds, breakdowns); imports
+# arrive with this share faulty.
+latent_defects = 0.6
+import_defect = 0.03
+# Total war converts consumer goods factories to weapons: their defects are
+# this many times worse, and a unit of consumer goods' worth makes this
+# much worth of weapons (docs/WAR.md, section 8).
+rush_defect = 2.0
+conversion_yield = 0.7
 
 # The household basket, units per 1,000 people per day.
 [basket]

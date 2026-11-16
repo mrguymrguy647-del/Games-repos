@@ -1,0 +1,112 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Battle marker: crossed swords",
+ "seed": 1,
+ "palette": {
+  "ink": "#1A1030",
+  "gold": "#F5C542",
+  "gold_dark": "#A8740E",
+  "gold_hi": "#FFF1B8",
+  "white": "#FFFFFF",
+  "steel": "#C8D0DA",
+  "steel_dark": "#7A8696",
+  "red": "#F06A6A",
+  "brown": "#6B4A2E",
+  "paper": "#EFE3C4",
+  "paper_dark": "#D8C79C",
+  "ink_brown": "#4A3420"
+ },
+ "commands": [
+  {
+   "cmd": "canvas",
+   "width": 32,
+   "height": 32
+  },
+  {
+   "cmd": "layer",
+   "name": "Art"
+  },
+  {
+   "cmd": "ellipse",
+   "center": [
+    16,
+    16
+   ],
+   "radius": 15,
+   "fill": "#B0262699",
+   "outline": "gold",
+   "outline_size": 1.5
+  },
+  {
+   "cmd": "line",
+   "from": [
+    7,
+    7
+   ],
+   "to": [
+    23,
+    23
+   ],
+   "color": "steel",
+   "size": 3
+  },
+  {
+   "cmd": "line",
+   "from": [
+    25,
+    7
+   ],
+   "to": [
+    9,
+    23
+   ],
+   "color": "steel",
+   "size": 3
+  },
+  {
+   "cmd": "line",
+   "from": [
+    19,
+    23
+   ],
+   "to": [
+    25,
+    17
+   ],
+   "color": "gold",
+   "size": 3
+  },
+  {
+   "cmd": "line",
+   "from": [
+    7,
+    17
+   ],
+   "to": [
+    13,
+    23
+   ],
+   "color": "gold",
+   "size": 3
+  },
+  {
+   "cmd": "ellipse",
+   "center": [
+    24,
+    24
+   ],
+   "radius": 2,
+   "fill": "brown"
+  },
+  {
+   "cmd": "ellipse",
+   "center": [
+    8,
+    24
+   ],
+   "radius": 2,
+   "fill": "brown"
+  }
+ ]
+}

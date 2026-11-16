@@ -54,7 +54,8 @@ impl Economy {
 
         // ---- Labour ----
         let labour = n.population * ed.participation;
-        n.army = (n.population * n.duty).min(labour * 0.5);
+        // The war layer counts the soldiers itself (divisions and hospitals).
+        n.army = n.soldiers.unwrap_or_else(|| (n.population * n.duty).min(labour * 0.5));
         // The state's own staff, plus anyone on public works in a slump.
         n.government = labour * md.gov_share + n.public_works;
         let mut remaining = (labour - n.army - n.government).max(0.0);
@@ -112,7 +113,9 @@ impl Economy {
             let staffing = (b.hired / (b.levels * b.utilization * wpl * crew(b)).max(EPS)).min(1.0) * b.utilization;
             let skill = super::skill_factor(n, bd);
             let rich = if bd.deposit { self.provinces[b.province].deposits[bd.output] } else { 1.0 };
-            potential[bi] = b.levels * bd.amount * t * staffing * skill * rich * out_mod[bd.output] * self.provinces[b.province].transport;
+            // An occupied province makes only part of its output for its owner.
+            let held = self.provinces[b.province].output_share;
+            potential[bi] = b.levels * bd.amount * t * staffing * skill * rich * out_mod[bd.output] * self.provinces[b.province].transport * n.war_output * held;
             if bd.output == ed.food {
                 for &(g, per) in &bd.inputs {
                     food_reserve[g] += potential[bi] * per;
@@ -235,7 +238,32 @@ impl Economy {
                     n.got[g] += used;
                 }
                 let defect = super::defect_rate(n, bd);
-                let out = gross * (1.0 - defect);
+                let g_out = bd.output;
+                let out = if ed.goods[g_out].military {
+                    // Weapons: quality control catches only part of the
+                    // defects; the rest go into store faulty.
+                    let passed = gross * (1.0 - defect * (1.0 - ed.latent_defects));
+                    let faulty = gross * defect * ed.latent_defects;
+                    n.stock_faulty[g_out] = super::mix_faulty(n.stock_faulty[g_out], n.stock[g_out], faulty / passed.max(EPS), passed);
+                    passed
+                } else {
+                    gross * (1.0 - defect)
+                };
+                // Total war: part of the consumer goods factories make
+                // weapons (rifles and ammo) instead, in a rush.
+                let out = if g_out == ed.consumer_goods && n.conversion > 0.0 {
+                    let value = out * n.conversion * n.price[g_out] * ed.conversion_yield;
+                    for (g, part) in [(ed.ammo, 0.8), (ed.rifles, 0.2)] {
+                        let made = value * part / n.price[g].max(EPS);
+                        let faulty = (defect * ed.rush_defect * ed.latent_defects).min(0.9);
+                        n.stock_faulty[g] = super::mix_faulty(n.stock_faulty[g], n.stock[g], faulty, made);
+                        n.stock[g] += made;
+                        n.ledger.produced[g] += made;
+                    }
+                    out * (1.0 - n.conversion)
+                } else {
+                    out
+                };
                 n.stock[bd.output] += out;
                 n.ledger.produced[bd.output] += out;
                 let b = &mut n.buildings[bi];
@@ -368,12 +396,11 @@ impl Economy {
         n.budget_today.army += army_goods + upkeep;
         let share = n.arms_share(ed);
         let daily = share * n.gdp_local;
-        let jets_ok = n.hdi >= 0.6;
-        let split = if jets_ok { [(ed.ammo, 0.5), (ed.tanks, 0.3), (ed.jets, 0.2)] } else { [(ed.ammo, 0.5), (ed.tanks, 0.5), (ed.jets, 0.0)] };
-        for (g, part) in split {
+        for (g, part) in super::military_shares(ed, n) {
             let want = daily * part / n.price[g].max(EPS);
             let q = want.min(n.stock[g]);
             n.stock[g] -= q;
+            n.stockpile_faulty[g] = super::mix_faulty(n.stockpile_faulty[g], n.stockpile[g], n.stock_faulty[g], q);
             n.stockpile[g] += q;
             n.ledger.stockpiled[g] += q;
             n.wanted[g] += want;
@@ -831,7 +858,7 @@ impl Economy {
             * (0.35 * food + 0.20 * n.goods_sat.min(1.0) + 0.10 * n.lux_sat.min(1.0) + 0.20 * (1.0 - (u / 0.25).min(1.0))
                 + 0.15 * (1.0 - (n.inflation.max(0.0) / 0.30).min(1.0)));
         n.happiness += 0.03 * (happy - n.happiness);
-        let target_stab = 0.6 * n.happiness + 0.4 * md.base_stability + n.mods.get("stability");
+        let target_stab = 0.6 * n.happiness + 0.4 * md.base_stability + n.mods.get("stability") + n.war_stability;
         n.stability = (n.stability + 0.01 * (target_stab - n.stability)).clamp(0.0, 100.0);
         let birth = interpolate(&ed.birth_by_hdi, n.hdi);
         let famine = 0.2 * ((0.85 - food).max(0.0) / 0.85);

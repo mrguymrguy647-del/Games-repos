@@ -1,0 +1,62 @@
+# Distant rifle fire: four uneven cracks, each a short burst of bright noise
+# with a dull thud under it, in a little valley echo. Plays when a battle starts.
+version = 0
+name = "gunfire"
+description = "A ragged volley of four distant rifle shots."
+tags = ["war", "gun", "battle"]
+
+[master]
+normalize_lufs = -20
+trim_silence = true
+
+[[layers]]
+name = "crack1"
+source = "noise"
+volume = 0.9
+envelope = { attack = 0.001, decay = 0.07 }
+filter = { kind = "highpass", cutoff = 1800 }
+
+[[layers]]
+name = "thud1"
+source = "sine"
+volume = 0.5
+envelope = { attack = 0.001, decay = 0.09 }
+pitch = { start = 140, end = 60 }
+
+[[layers]]
+name = "crack2"
+source = "noise"
+offset = 0.14
+volume = 0.7
+envelope = { attack = 0.001, decay = 0.06 }
+filter = { kind = "highpass", cutoff = 2200 }
+
+[[layers]]
+name = "crack3"
+source = "noise"
+offset = 0.23
+volume = 0.8
+envelope = { attack = 0.001, decay = 0.08 }
+filter = { kind = "highpass", cutoff = 1500 }
+
+[[layers]]
+name = "thud3"
+source = "sine"
+offset = 0.23
+volume = 0.4
+envelope = { attack = 0.001, decay = 0.08 }
+pitch = { start = 130, end = 55 }
+
+[[layers]]
+name = "crack4"
+source = "noise"
+offset = 0.41
+volume = 0.6
+envelope = { attack = 0.001, decay = 0.07 }
+filter = { kind = "highpass", cutoff = 2000 }
+
+[[effects]]
+type = "reverb"
+size = 0.6
+decay = 0.9
+mix = 0.35

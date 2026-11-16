@@ -59,6 +59,8 @@ impl Economy {
                 people: 0.0,
                 tonnage: 0.0,
                 transport: 1.0,
+                occupied_by: None,
+                output_share: 1.0,
             });
         }
 
@@ -357,6 +359,13 @@ impl Economy {
             knowledge: 0.0,
             arms: None,
             works: None,
+            stock_faulty: vec![0.0; goods],
+            stockpile_faulty: vec![0.0; goods],
+            soldiers: None,
+            war_stability: 0.0,
+            war_output: 1.0,
+            blockade: 0.0,
+            conversion: 0.0,
         };
         n.skilled = (interpolate(&ed.skill_by_hdi, hdi) + effects.get("skill")).clamp(0.01, 0.9);
         n.refresh_fast_mods(ed);
@@ -410,11 +419,8 @@ impl Economy {
         // Weapons: the army's yearly buying, a share made at home.
         let procurement = ed.state.procurement.get(&n.army_option).copied().unwrap_or(0.0) * n.mods.get("procurement");
         let military_w = procurement * gdp_w / ed.days_per_year as f64;
-        let jets_ok = n.hdi >= 0.6;
-        target[ed.ammo] += 0.5 * military_w / ed.goods[ed.ammo].price * industrial;
-        target[ed.tanks] += (if jets_ok { 0.3 } else { 0.5 }) * military_w / ed.goods[ed.tanks].price * industrial;
-        if jets_ok {
-            target[ed.jets] += 0.2 * military_w / ed.goods[ed.jets].price * industrial;
+        for (g, share) in super::military_shares(ed, n) {
+            target[g] += share * military_w / ed.goods[g].price * industrial;
         }
         let power_homes = k * b.power * lv;
 
@@ -544,8 +550,16 @@ impl Economy {
             let total: f64 = main_places.iter().map(|&q| self.provinces[q].people).sum::<f64>().max(1e-9);
             main_places.iter().map(|&q| self.provinces[q].people / total).collect()
         };
+        // Shipyards on the coast: the most peopled coastal province.
+        let shipyard_place = by_people.iter().copied().find(|&q| self.provinces[q].coastal);
         for (bi, l) in levels.iter().enumerate() {
             if *l <= 0.0 || ed.buildings[bi].deposit {
+                continue;
+            }
+            if ed.buildings[bi].coastal {
+                if let Some(q) = shipyard_place {
+                    push_building(&mut n.buildings, bi, q, *l);
+                }
                 continue;
             }
             for (j, &q) in main_places.iter().enumerate() {
@@ -560,7 +574,7 @@ impl Economy {
 
         // What couldn't be dug at home, for the world's balance (see `balance_raw`).
         n.raw_short = raw_short;
-        let _ = (workers, military_w, jets_ok, target, power_homes);
+        let _ = (workers, military_w, target, power_homes);
     }
 
     /// Day-1 money, calibrated so the first day's GDP is the wheel's.
@@ -587,7 +601,6 @@ impl Economy {
         target[ed.fuel] = k * b.fuel * lv;
         let procurement = ed.state.procurement.get(&n.army_option).copied().unwrap_or(0.0) * n.mods.get("procurement");
         let military_w = procurement * gdp_w / ed.days_per_year as f64;
-        let jets_ok = n.hdi >= 0.6;
         // Day-1 money, calibrated so the first day's GDP is the wheel's.
         let gdp_day = gdp_w / ed.days_per_year as f64 / n.exchange;
         let mut va_goods = 0.0;
@@ -703,10 +716,15 @@ impl Economy {
         }
         n.stock[ed.electricity] = 0.0;
         let years = ed.state.starting_stockpile_years;
-        n.stockpile[ed.ammo] = years * 0.5 * military_w * ed.days_per_year as f64 / ed.goods[ed.ammo].price;
-        n.stockpile[ed.tanks] = years * (if jets_ok { 0.3 } else { 0.5 }) * military_w * ed.days_per_year as f64 / ed.goods[ed.tanks].price;
-        if jets_ok {
-            n.stockpile[ed.jets] = years * 0.2 * military_w * ed.days_per_year as f64 / ed.goods[ed.jets].price;
+        for (g, share) in super::military_shares(ed, n) {
+            n.stockpile[g] = years * share * military_w * ed.days_per_year as f64 / ed.goods[g].price;
+        }
+        // A rifle for every soldier, and a third more in store.
+        let soldiers = (n.population * n.duty).min(n.population * ed.participation * 0.5);
+        n.stockpile[ed.rifles] += 1.3 * soldiers;
+        // Day 1's weapons are as good as its factories would make them now.
+        for &(g, _) in &ed.military_split {
+            n.stockpile_faulty[g] = ed.buildings.iter().find(|b| b.output == g).map_or(ed.import_defect, |bd| defect_rate(n, bd) * ed.latent_defects);
         }
         n.stockpile = n.stockpile.iter().map(|x| x.floor()).collect();
         n.stockpile[ed.ammo] = n.stockpile[ed.ammo].max(0.0);
@@ -979,7 +997,7 @@ impl Economy {
                 for &q in &n.provinces {
                     cap += self.provinces[q].port * ed.port_capacity;
                 }
-                cap *= n.mods.get("port");
+                cap *= n.mods.get("port") * (1.0 - n.blockade).clamp(0.0, 1.0);
             } else {
                 for &q in &n.border_provinces {
                     cap += (self.provinces[q].road + self.provinces[q].rail) * ed.land_capacity;

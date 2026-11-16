@@ -65,9 +65,9 @@ impl Economy {
                 n.hire_order = (0..n.buildings.len()).collect();
             }
         }
-        // New events.
+        // New events (a nation with no land left has none).
         for (e, ev) in ed.events.iter().enumerate() {
-            if ev.world {
+            if ev.world || self.nations[i].provinces.is_empty() {
                 continue;
             }
             let chance = ev.chance / dpy * self.nations[i].mod_event[e];
@@ -319,6 +319,9 @@ impl Economy {
                 let mut best: Option<(usize, f64, f64)> = None; // (province, richness, room)
                 for &q in &n.provinces {
                     let p = &self.provinces[q];
+                    if bd.coastal && !p.coastal {
+                        continue;
+                    }
                     // A hungry nation farms poorer land and farms it harder,
                     // as day 1 does (food comes first).
                     let hungry = bd.output == ed.grain && (shortage[ed.grain] > 0.05 || shortage[ed.food] > 0.05);
@@ -563,5 +566,81 @@ fn cover_treasury(n: &mut super::NationEcon) {
         n.debt += gap;
         n.savings -= gap;
         n.treasury = 0.0;
+    }
+}
+
+impl Economy {
+    /// A province changes hands (a peace deal, docs/WAR.md section 10): its
+    /// people (its share of `from`'s) become `to`'s, with its buildings,
+    /// building work, roads, rail, port and deposits; both nations' shares
+    /// of people are re-balanced, and a capital lost is moved.
+    pub fn transfer_province(&mut self, ed: &EconData, q: usize, from: usize, to: usize) {
+        if from == to || !self.nations[from].provinces.contains(&q) {
+            return;
+        }
+        let share = self.provinces[q].people.clamp(0.0, 0.95);
+        let moved = self.nations[from].population * share;
+        // The people.
+        {
+            let n = &mut self.nations[from];
+            let keep = 1.0 - share;
+            let before = n.population;
+            n.population = (before - moved).max(1.0);
+            for x in [&mut n.farming, &mut n.mining, &mut n.industry, &mut n.services, &mut n.government, &mut n.unemployed] {
+                *x *= keep;
+            }
+            n.population_start *= keep;
+        }
+        let to_before = self.nations[to].population;
+        {
+            let n = &mut self.nations[to];
+            n.population += moved;
+            n.unemployed += moved * ed.participation * 0.5;
+            n.population_start += moved;
+        }
+        // Shares of the people in each province.
+        let from_provinces: Vec<usize> = self.nations[from].provinces.iter().copied().filter(|&p| p != q).collect();
+        for &p in &from_provinces {
+            self.provinces[p].people /= (1.0 - share).max(0.05);
+        }
+        let to_provinces = self.nations[to].provinces.clone();
+        let total = self.nations[to].population.max(1.0);
+        for &p in &to_provinces {
+            self.provinces[p].people *= to_before / total;
+        }
+        self.provinces[q].people = moved / total;
+        self.provinces[q].occupied_by = None;
+        self.provinces[q].output_share = 1.0;
+        // The buildings and the building work.
+        let (moving, staying): (Vec<_>, Vec<_>) = std::mem::take(&mut self.nations[from].buildings).into_iter().partition(|b| b.province == q);
+        self.nations[from].buildings = staying;
+        for mut b in moving {
+            b.hired = 0.0;
+            b.player_built = false;
+            add_building(&mut self.nations[to].buildings, b.kind, q, b.levels, false);
+        }
+        let (moving, staying): (Vec<_>, Vec<_>) = std::mem::take(&mut self.nations[from].construction).into_iter().partition(|c| c.province == q);
+        self.nations[from].construction = staying;
+        self.nations[to].construction.extend(moving);
+        for n in [from, to] {
+            let len = self.nations[n].buildings.len();
+            self.nations[n].hire_order = (0..len).collect();
+        }
+        // The land.
+        self.nations[from].provinces.retain(|&p| p != q);
+        self.nations[to].provinces.push(q);
+        self.nations[from].border_provinces.retain(|&p| p != q);
+        if self.provinces[q].coastal {
+            self.nations[to].landlocked = false;
+        }
+        if !self.nations[from].provinces.iter().any(|&p| self.provinces[p].coastal) {
+            self.nations[from].landlocked = true;
+        }
+        if self.nations[from].capital == q {
+            if let Some(&c) = self.nations[from].provinces.iter().max_by(|&&a, &&b| self.provinces[a].people.total_cmp(&self.provinces[b].people).then(b.cmp(&a))) {
+                self.nations[from].capital = c;
+            }
+        }
+        self.refresh_trade_capacity(ed);
     }
 }

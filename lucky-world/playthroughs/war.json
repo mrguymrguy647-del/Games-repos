@@ -1,0 +1,165 @@
+{
+ "frames": 920,
+ "events": [
+  {
+   "frame": 4,
+   "press": "Digit4"
+  },
+  {
+   "frame": 6,
+   "release": "Digit4"
+  },
+  {
+   "frame": 30,
+   "press": "J"
+  },
+  {
+   "frame": 32,
+   "release": "J"
+  },
+  {
+   "frame": 40,
+   "press": "R"
+  },
+  {
+   "frame": 62,
+   "release": "R"
+  },
+  {
+   "frame": 66,
+   "press": "J"
+  },
+  {
+   "frame": 68,
+   "release": "J"
+  },
+  {
+   "frame": 130,
+   "press": "K"
+  },
+  {
+   "frame": 132,
+   "release": "K"
+  },
+  {
+   "frame": 160,
+   "press": "Down"
+  },
+  {
+   "frame": 162,
+   "release": "Down"
+  },
+  {
+   "frame": 180,
+   "press": "Tab"
+  },
+  {
+   "frame": 182,
+   "release": "Tab"
+  },
+  {
+   "frame": 210,
+   "press": "Down"
+  },
+  {
+   "frame": 212,
+   "release": "Down"
+  },
+  {
+   "frame": 240,
+   "press": "Tab"
+  },
+  {
+   "frame": 242,
+   "release": "Tab"
+  },
+  {
+   "frame": 270,
+   "press": "Tab"
+  },
+  {
+   "frame": 272,
+   "release": "Tab"
+  },
+  {
+   "frame": 300,
+   "press": "Enter"
+  },
+  {
+   "frame": 302,
+   "release": "Enter"
+  },
+  {
+   "frame": 340,
+   "press": "Escape"
+  },
+  {
+   "frame": 342,
+   "release": "Escape"
+  },
+  {
+   "frame": 360,
+   "press": "K"
+  },
+  {
+   "frame": 362,
+   "release": "K"
+  },
+  {
+   "frame": 380,
+   "press": "V"
+  },
+  {
+   "frame": 382,
+   "release": "V"
+  },
+  {
+   "frame": 390,
+   "press": "V"
+  },
+  {
+   "frame": 392,
+   "release": "V"
+  },
+  {
+   "frame": 400,
+   "press": "V"
+  },
+  {
+   "frame": 402,
+   "release": "V"
+  },
+  {
+   "frame": 440,
+   "press": "J"
+  },
+  {
+   "frame": 442,
+   "release": "J"
+  },
+  {
+   "frame": 500,
+   "press": "V"
+  },
+  {
+   "frame": 502,
+   "release": "V"
+  },
+  {
+   "frame": 520,
+   "press": "Digit6"
+  },
+  {
+   "frame": 522,
+   "release": "Digit6"
+  },
+  {
+   "frame": 900,
+   "press": "Space"
+  },
+  {
+   "frame": 902,
+   "release": "Space"
+  }
+ ]
+}

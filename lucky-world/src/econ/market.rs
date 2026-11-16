@@ -152,6 +152,7 @@ impl Economy {
                         {
                             let im = &mut self.nations[i];
                             let c = trade_cost(ed, im, g, w);
+                            im.stock_faulty[g] = super::mix_faulty(im.stock_faulty[g], im.stock[g], ed.import_defect, f);
                             im.stock[g] += f;
                             im.ledger.imported[g] += f;
                             let tariff = value * im.tariff / im.exchange;

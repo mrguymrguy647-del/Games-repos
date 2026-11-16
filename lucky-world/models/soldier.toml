@@ -1,0 +1,51 @@
+# A soldier for the war map: one figure stands for about 1,000 soldiers.
+# The "uniform" part is recoloured in each nation's colour by the game.
+version = 0
+name = "soldier"
+description = "Soldier figure, about 0.06 wide and 0.2 tall, rifle on the shoulder, facing front."
+
+[palette]
+uniform = "#6B7A4A"
+skin = "#E2B48C"
+helmet = "#4A5434"
+boots = "#2E2A24"
+rifle = "#3A2E22"
+
+[[parts]]
+name = "legs"
+shape = "box"
+size = [0.05, 0.07, 0.03]
+color = "boots"
+move = [0, 0.035, 0]
+
+[[parts]]
+name = "uniform"
+shape = "box"
+size = [0.06, 0.08, 0.035]
+color = "uniform"
+move = [0, 0.11, 0]
+
+[[parts]]
+name = "head"
+shape = "sphere"
+radius = 0.02
+segments = 6
+color = "skin"
+move = [0, 0.17, 0]
+
+[[parts]]
+name = "helmet"
+shape = "cylinder"
+radius = 0.024
+height = 0.014
+segments = 6
+color = "helmet"
+move = [0, 0.188, 0]
+
+[[parts]]
+name = "rifle"
+shape = "box"
+size = [0.008, 0.11, 0.008]
+color = "rifle"
+move = [0.034, 0.13, 0]
+rotate = [0, 0, -15]

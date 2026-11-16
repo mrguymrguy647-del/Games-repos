@@ -1,0 +1,228 @@
+# LUCKY WORLD: war. docs/WAR.md explains every number (its section in [ ]).
+
+[army]                         # [2]
+division_size = 10000          # soldiers in a full division
+armour_tanks = 200             # tanks an armoured division is meant to have
+armour_share = 0.3             # at most this share of divisions are armoured (if the tanks are there)
+recruit_training = 0.2         # a new recruit's training
+recruit_per_day = 0.01         # recruits a day, as a share of the soldiers still wanted
+training_base = 0.35           # training cap = base + hdi_weight x HDI + the Army Strength wheel's bonus
+training_hdi = 0.5
+training_gain = 0.002          # a day of peacetime drill closes this share of the gap to the cap
+experience_gain = 0.015        # experience a day in battle (up to 1)
+max_share = 0.15               # never more soldiers than this share of the people
+entrench_gain = 0.1            # a day holding still digs in this much (up to 1)
+
+[training]                     # the Army Strength wheel's bonus to training
+none = -0.15
+token = -0.1
+weak = -0.05
+modest = 0.0
+capable = 0.05
+strong = 0.08
+major = 0.12
+strongest = 0.15
+
+[generals]                     # [2]
+skill_sd = 0.18                # skill = mean + sd x Normal, kept within 0.6..1.4
+leader_genius = 0.15
+leader_warlord = 0.05
+leader_coward = -0.1
+aggressive_ratio = 1.15        # the strength ratio each style attacks at
+balanced_ratio = 1.4
+cautious_ratio = 1.8
+initiative = 0.6               # the side that started the war attacks at this x its ratio (it has a plan)
+
+[combat]                       # [3]
+frontage_base = 12000          # engaged soldiers a side = min(soldiers, base x sqrt(hexes) x terrain frontage)
+rounds_per_hour = 12           # rifle rounds an engaged soldier fires an hour
+shells_per_soldier_hour = 0.015
+shells_per_tank_hour = 3.0
+rounds_per_ammo = 1000         # one unit of ammo: 1,000 rounds...
+shells_per_ammo = 40           # ...or 40 shells
+p_round = 0.00007              # hits per round, per shell...
+p_shell = 0.010
+p_tank_vs_men = 0.006
+p_tank_vs_tank = 0.01          # ...and tank kills per tank shell, and per engaged soldier an hour
+p_at = 0.00002
+defend_stance = 0.8            # a defender fires this share of an attacker's rounds
+no_ammo_fire = 0.05
+no_rifle_fire = 0.1
+luck_sd = 0.25                 # the dice: hits x exp(luck_sd x Normal) a side an hour
+river_penalty = 0.75
+city_defence = 0.7
+city_tanks = 0.7
+entrench_defence = 0.35
+killed = 0.25                  # a hit is killed, wounded or (when losing) captured
+wounded = 0.65
+captured = 0.1
+jam_per_hour = 0.5             # a faulty rifle jams this often an hour
+breakdown = 0.0008             # a tank's breakdown chance an hour...
+fault_breakdown = 8.0          # ...x (1 + this x its faulty share)...
+no_parts_breakdown = 3.0       # ...x this without spare parts
+repair_days = 2.0
+battle_damage = 0.005          # building levels lost a battle day in the province
+road_damage = 0.1              # road levels lost a battle day
+amphibious = 0.6               # a landing's hits for its first two days
+attack_days = 10.0             # an attack losing a bigger share of its soldiers than the defenders is called off after this many days (any after 3x)
+call_off_morale = 0.4          # ...or when its soldiers' morale falls under this
+occupied_output = 0.4          # an occupied province makes this share of its output for its owner
+
+[morale]                       # [3]
+shock = 4.0                    # morale lost = shock x casualties / soldiers x (2 - general skill)
+shortage = 0.002               # an hour, x (1 - equipped)
+exhaustion = 0.001             # an hour, x war exhaustion
+recover = 0.06                 # a day out of battle, towards the target
+target_base = 0.55
+target_training = 0.3
+target_equipped = 0.15
+win = 0.1
+lose = 0.15
+break_point = 0.25             # retreat (or surrender, with nowhere to go)
+desert_below = 0.4
+desertion = 0.02               # a day at morale 0
+stragglers_min = 0.02          # captured in a retreat, at the break point...
+stragglers_max = 0.06          # ...and at morale 0
+starving_deaths = 0.0005       # a day, with no food
+
+[terrain]                      # [3] defence (x hits taken by a defender), tanks (x their fire), frontage, move (days)
+plains    = { defence = 1.0,  tanks = 1.0, frontage = 1.0, move = 1.0 }
+steppe    = { defence = 1.0,  tanks = 1.0, frontage = 1.0, move = 1.0 }
+desert    = { defence = 1.0,  tanks = 0.9, frontage = 1.0, move = 1.5 }
+tundra    = { defence = 0.85, tanks = 0.8, frontage = 0.9, move = 1.5 }
+forest    = { defence = 0.75, tanks = 0.7, frontage = 0.8, move = 1.5 }
+hills     = { defence = 0.7,  tanks = 0.8, frontage = 0.8, move = 2.0 }
+marsh     = { defence = 0.7,  tanks = 0.4, frontage = 0.6, move = 2.5 }
+jungle    = { defence = 0.65, tanks = 0.5, frontage = 0.6, move = 2.5 }
+glacier   = { defence = 0.6,  tanks = 0.5, frontage = 0.5, move = 3.0 }
+mountains = { defence = 0.5,  tanks = 0.3, frontage = 0.5, move = 3.0 }
+
+[weather]                      # [3] chance a day (per province), and its effect
+rain = 0.18
+rain_wet = 0.35                # in jungle and marsh
+storm = 0.03
+snow_winter = 0.5              # in winter, in the cold north and the mountains
+rain_fire = 0.85
+snow_fire = 0.75
+storm_fire = 0.6
+rain_air = 0.7
+snow_air = 0.5
+storm_air = 0.2
+storm_sea = 0.5
+
+[supply]                       # [5]
+hop_base = 0.97                # what survives a province on the way: base + roads x (road + rail), at most max
+hop_roads = 0.004
+hop_max = 0.995
+capacity = 4000                # tonnes a day a supply line carries, x (1 + capacity_roads x the weakest road + rail)
+capacity_roads = 0.5
+interdiction = 0.5             # the enemy's air superiority cuts supply by this x it
+ammo_days = 3.0                # a division carries this many battle days of ammo...
+food_days = 20.0               # ...days of food...
+fuel_days = 10.0               # ...and days of fuel for its tanks
+food_per_soldier = 0.002       # food units a soldier eats a day
+fuel_tank_day = 0.6            # fuel a tank burns a day at war (moving, idling)
+fuel_tank_hour = 0.05          # ...and an hour in battle
+parts_tank_day = 0.01          # steel (spare parts) a tank needs a day at war
+request_days = 7               # requests are made this often...
+request_wait = 14              # ...and wait this long for an answer before the general complains
+
+[hospital]                     # [3]
+heal_days = 30
+return = 0.7
+die = 0.1                      # the rest go home
+
+[air]                          # [6]
+pilot_training_days = 120
+pilots_per_jet = 1.5
+airbase_roads = 3.0            # road + rail for an airbase (or the capital)
+air_kill = 0.002               # jets lost a day per unit of enemy air power, x their share of the sky
+fault_grounding = 0.5
+jet_fuel_per_day = 2.0
+support = 0.35                 # superiority's boost to the ground hits of the side that has it...
+support_enemy = 0.25           # ...and cut to the other side's
+bomb_factories = 0.004         # building levels a day x superiority (declared war and above)
+bomb_rail = 0.05               # road and rail levels a day x superiority
+bomb_city_stability = 0.05     # total war: stability a day for the bombed
+aa_loss = 0.001                # of the bombers flying, lost a day (x enemy soldiers / 1M, at most 1)
+
+[sea]                          # [7]
+zone_cells = 120               # about this many sea hexes a zone
+sea_kill = 0.005
+control_ratio = 1.5
+blockade_cut = 0.9
+convoy_loss = 0.05
+ship_fuel_per_day = 2.0
+transport_soldiers = 1000      # a transport carries this many soldiers...
+transport_tanks = 10           # ...or tanks
+
+[levels]                       # [8] mobilisation (x active duty), arms share of GDP (at least)
+mobilisation = [1.0, 1.0, 1.4, 2.0, 3.0]
+arms_share = [0.0, 0.0, 0.0, 0.06, 0.15]
+skirmish_divisions = 2
+total_conversion = 0.4
+total_stability = -0.15        # a day
+total_happiness = -0.1
+total_output = 0.1
+match_days = 14
+
+[escalation]                   # [8] how hard it is for an ideology to escalate
+military_rule = 0.5
+imperialism = 0.7
+authoritarianism = 0.7
+monarchy = 1.0
+theocracy = 1.0
+tribalism = 1.0
+communism = 1.0
+colony = 1.2
+democracy = 1.6
+democracy_support = 40.0       # a democracy at war under this stability...
+democracy_drain = 0.3          # ...loses this much more a day...
+democracy_days = 90            # ...and its government falls if it hasn't made peace by then
+
+[other]                        # [8]
+proxy_share = 0.05             # of a stockpile, sent a month in a proxy war
+civil_war_stability = 20.0
+civil_war_days = 45
+civil_war_chance = 0.01
+rebel_share = 0.4              # of the army that joins a rebellion, at most
+
+[exhaustion]                   # [9]
+losses = 20.0
+level = 0.002
+occupied = 0.004
+blockaded = 0.003
+recover = 0.01
+stability = 0.5
+output = 0.1
+prisoner_release_days = 720
+
+[peace]                        # [10]
+white = 15.0
+reparations = 40.0
+provinces = 70.0
+reparations_share = 0.02
+reparations_years = 10
+accept = 0.6
+max_war_years = 6
+offer_exhaustion = 0.5
+min_days = 120                 # no peace offers before this (unless a side is exhausted)
+
+[ai]                           # [11]
+war_threshold = 0.9
+gang_up_threshold = 0.6
+cooldown_years = 5
+truce_years = 8
+base_aggression = 0.3
+leader = { warlord = 0.4, coward = -0.3, genius = 0.0, builder = -0.1, diplomat = -0.2 }
+ideology = { military_rule = 0.3, imperialism = 0.25, authoritarianism = 0.15, democracy = -0.25, colony = -0.2 }
+weakness = 0.4
+grudge = 0.5
+gang_up = 0.6
+exhaustion_cost = 0.8
+debt_cost = 0.3
+busy_cost = 0.5
+escalate_score = -20.0
+match_ratio = 0.7
+declare_aggression = 1.0       # a brain this aggressive declares war outright...
+operation_aggression = 0.6     # ...this aggressive starts a military operation (else a border skirmish)

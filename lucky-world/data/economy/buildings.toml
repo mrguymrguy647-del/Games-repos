@@ -232,6 +232,21 @@ build_days = 120
 upkeep = 4
 
 [[building]]
+id = "rifle_works"
+name = "Rifle Works"
+sector = "industry"
+tier = 4
+output = "rifles"
+amount = 60
+inputs = { steel = 0.01, timber = 0.004 }
+skill = 0.3
+defect = 0.04
+cost = 30000
+build_goods = { steel = 4 }
+build_days = 120
+upkeep = 4
+
+[[building]]
 id = "ammo_factory"
 name = "Ammo Factory"
 sector = "industry"
@@ -275,3 +290,37 @@ cost = 90000
 build_goods = { steel = 10, aluminium = 10 }
 build_days = 300
 upkeep = 10
+
+# Shipyards stand only in coastal provinces (docs/WAR.md, section 1): a
+# landlocked nation can't build a navy.
+[[building]]
+id = "naval_shipyard"
+name = "Naval Shipyard"
+sector = "industry"
+tier = 4
+output = "warships"
+amount = 0.00012
+inputs = { steel = 2000, fuel = 300, electricity = 1500 }
+skill = 0.45
+defect = 0.05
+cost = 120000
+build_goods = { steel = 20 }
+build_days = 360
+upkeep = 12
+coastal = true
+
+[[building]]
+id = "cargo_shipyard"
+name = "Cargo Shipyard"
+sector = "industry"
+tier = 4
+output = "transports"
+amount = 0.001
+inputs = { steel = 300, fuel = 40, electricity = 200 }
+skill = 0.3
+defect = 0.04
+cost = 60000
+build_goods = { steel = 10 }
+build_days = 240
+upkeep = 6
+coastal = true

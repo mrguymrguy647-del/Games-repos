@@ -5,7 +5,7 @@
 # weight    how much transport capacity one unit takes (0: moves on the grid)
 # spoil     the share of the stock that goes bad each day
 # trade     false: can't be traded between nations (electricity)
-# military  goes to the national stockpile for the war phase
+# military  goes to the national stockpile for war (docs/WAR.md, section 1)
 
 [[good]]
 id = "grain"
@@ -116,6 +116,15 @@ weight = 0.3
 color = "#ed6aa6"
 
 [[good]]
+id = "rifles"
+name = "Rifles"
+tier = "final"
+price = 400
+weight = 0.004
+military = true
+color = "#8a7a5a"
+
+[[good]]
 id = "ammo"
 name = "Ammo"
 tier = "final"
@@ -141,3 +150,21 @@ price = 60000000
 weight = 3.0
 military = true
 color = "#87a8c8"
+
+[[good]]
+id = "warships"
+name = "Warships"
+tier = "final"
+price = 350000000
+weight = 0.0
+military = true
+color = "#5a6a7a"
+
+[[good]]
+id = "transports"
+name = "Transport Ships"
+tier = "final"
+price = 40000000
+weight = 0.0
+military = true
+color = "#7a8a6a"

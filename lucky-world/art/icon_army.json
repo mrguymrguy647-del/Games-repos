@@ -1,0 +1,68 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Army icon: a soldier's helmet",
+ "seed": 1,
+ "palette": {
+  "ink": "#1A1030",
+  "gold": "#F5C542",
+  "gold_dark": "#A8740E",
+  "gold_hi": "#FFF1B8",
+  "white": "#FFFFFF",
+  "steel": "#C8D0DA",
+  "steel_dark": "#7A8696",
+  "red": "#F06A6A",
+  "brown": "#6B4A2E",
+  "paper": "#EFE3C4",
+  "paper_dark": "#D8C79C",
+  "ink_brown": "#4A3420"
+ },
+ "commands": [
+  {
+   "cmd": "canvas",
+   "width": 24,
+   "height": 24
+  },
+  {
+   "cmd": "layer",
+   "name": "Art"
+  },
+  {
+   "cmd": "ellipse",
+   "center": [
+    12,
+    12
+   ],
+   "radius": 11,
+   "fill": "ink",
+   "outline": "gold",
+   "outline_size": 1.5
+  },
+  {
+   "cmd": "ellipse",
+   "center": [
+    12,
+    13
+   ],
+   "radius": 7,
+   "fill": "#6B7A4A"
+  },
+  {
+   "cmd": "rect",
+   "x": 4,
+   "y": 13,
+   "width": 16,
+   "height": 3,
+   "radius": 1,
+   "fill": "#55613A"
+  },
+  {
+   "cmd": "rect",
+   "x": 5,
+   "y": 16,
+   "width": 14,
+   "height": 3,
+   "fill": "ink"
+  }
+ ]
+}

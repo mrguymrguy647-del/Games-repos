@@ -1,0 +1,364 @@
+{
+ "frames": 2400,
+ "events": [
+  {
+   "frame": 10,
+   "press": "S"
+  },
+  {
+   "frame": 12,
+   "release": "S"
+  },
+  {
+   "frame": 300,
+   "press": "Space"
+  },
+  {
+   "frame": 302,
+   "release": "Space"
+  },
+  {
+   "frame": 760,
+   "press": "Space"
+  },
+  {
+   "frame": 762,
+   "release": "Space"
+  },
+  {
+   "frame": 790,
+   "press": "Space"
+  },
+  {
+   "frame": 792,
+   "release": "Space"
+  },
+  {
+   "frame": 800,
+   "mouse": [
+    700,
+    470
+   ]
+  },
+  {
+   "frame": 801,
+   "mouse_press": "Left"
+  },
+  {
+   "frame": 803,
+   "mouse_release": "Left"
+  },
+  {
+   "frame": 830,
+   "press": "K"
+  },
+  {
+   "frame": 832,
+   "release": "K"
+  },
+  {
+   "frame": 850,
+   "press": "L"
+  },
+  {
+   "frame": 852,
+   "release": "L"
+  },
+  {
+   "frame": 870,
+   "press": "D"
+  },
+  {
+   "frame": 872,
+   "release": "D"
+  },
+  {
+   "frame": 890,
+   "press": "Tab"
+  },
+  {
+   "frame": 892,
+   "release": "Tab"
+  },
+  {
+   "frame": 910,
+   "press": "A"
+  },
+  {
+   "frame": 912,
+   "release": "A"
+  },
+  {
+   "frame": 918,
+   "press": "Down"
+  },
+  {
+   "frame": 920,
+   "release": "Down"
+  },
+  {
+   "frame": 926,
+   "press": "A"
+  },
+  {
+   "frame": 928,
+   "release": "A"
+  },
+  {
+   "frame": 934,
+   "press": "Down"
+  },
+  {
+   "frame": 936,
+   "release": "Down"
+  },
+  {
+   "frame": 942,
+   "press": "A"
+  },
+  {
+   "frame": 944,
+   "release": "A"
+  },
+  {
+   "frame": 950,
+   "press": "Down"
+  },
+  {
+   "frame": 952,
+   "release": "Down"
+  },
+  {
+   "frame": 958,
+   "press": "A"
+  },
+  {
+   "frame": 960,
+   "release": "A"
+  },
+  {
+   "frame": 966,
+   "press": "Down"
+  },
+  {
+   "frame": 968,
+   "release": "Down"
+  },
+  {
+   "frame": 974,
+   "press": "A"
+  },
+  {
+   "frame": 976,
+   "release": "A"
+  },
+  {
+   "frame": 982,
+   "press": "Down"
+  },
+  {
+   "frame": 984,
+   "release": "Down"
+  },
+  {
+   "frame": 1000,
+   "press": "Tab"
+  },
+  {
+   "frame": 1002,
+   "release": "Tab"
+  },
+  {
+   "frame": 1015,
+   "press": "Right"
+  },
+  {
+   "frame": 1017,
+   "release": "Right"
+  },
+  {
+   "frame": 1030,
+   "press": "T"
+  },
+  {
+   "frame": 1032,
+   "release": "T"
+  },
+  {
+   "frame": 1050,
+   "press": "K"
+  },
+  {
+   "frame": 1052,
+   "release": "K"
+  },
+  {
+   "frame": 1060,
+   "press": "Space"
+  },
+  {
+   "frame": 1062,
+   "release": "Space"
+  },
+  {
+   "frame": 1062,
+   "press": "Digit3"
+  },
+  {
+   "frame": 1064,
+   "release": "Digit3"
+  },
+  {
+   "frame": 1200,
+   "press": "J"
+  },
+  {
+   "frame": 1202,
+   "release": "J"
+  },
+  {
+   "frame": 1500,
+   "press": "K"
+  },
+  {
+   "frame": 1502,
+   "release": "K"
+  },
+  {
+   "frame": 1520,
+   "press": "Tab"
+  },
+  {
+   "frame": 1522,
+   "release": "Tab"
+  },
+  {
+   "frame": 1540,
+   "press": "Tab"
+  },
+  {
+   "frame": 1542,
+   "release": "Tab"
+  },
+  {
+   "frame": 1560,
+   "press": "Down"
+  },
+  {
+   "frame": 1562,
+   "release": "Down"
+  },
+  {
+   "frame": 1570,
+   "press": "Down"
+  },
+  {
+   "frame": 1572,
+   "release": "Down"
+  },
+  {
+   "frame": 1580,
+   "press": "Down"
+  },
+  {
+   "frame": 1582,
+   "release": "Down"
+  },
+  {
+   "frame": 1590,
+   "press": "Down"
+  },
+  {
+   "frame": 1592,
+   "release": "Down"
+  },
+  {
+   "frame": 1600,
+   "press": "Down"
+  },
+  {
+   "frame": 1602,
+   "release": "Down"
+  },
+  {
+   "frame": 1620,
+   "press": "Y"
+  },
+  {
+   "frame": 1622,
+   "release": "Y"
+  },
+  {
+   "frame": 1650,
+   "press": "Tab"
+  },
+  {
+   "frame": 1652,
+   "release": "Tab"
+  },
+  {
+   "frame": 1680,
+   "press": "Enter"
+  },
+  {
+   "frame": 1682,
+   "release": "Enter"
+  },
+  {
+   "frame": 1740,
+   "press": "Enter"
+  },
+  {
+   "frame": 1742,
+   "release": "Enter"
+  },
+  {
+   "frame": 1760,
+   "press": "Tab"
+  },
+  {
+   "frame": 1762,
+   "release": "Tab"
+  },
+  {
+   "frame": 1790,
+   "press": "P"
+  },
+  {
+   "frame": 1792,
+   "release": "P"
+  },
+  {
+   "frame": 1820,
+   "press": "K"
+  },
+  {
+   "frame": 1822,
+   "release": "K"
+  },
+  {
+   "frame": 1840,
+   "press": "Digit5"
+  },
+  {
+   "frame": 1842,
+   "release": "Digit5"
+  },
+  {
+   "frame": 2300,
+   "press": "K"
+  },
+  {
+   "frame": 2302,
+   "release": "K"
+  },
+  {
+   "frame": 2330,
+   "press": "Escape"
+  },
+  {
+   "frame": 2332,
+   "release": "Escape"
+  }
+ ]
+}

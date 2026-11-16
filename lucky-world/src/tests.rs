@@ -286,12 +286,67 @@ fn the_economy_playthrough_runs_the_clock_and_every_screen() {
         assert!(seen(&played, "econ_tab", tab), "the {tab} page never opened");
     }
     assert_eq!(played.text("econ_tab"), "none");
-    // Both overlays were shown, then turned off.
-    assert!(seen(&played, "overlay", "Resources") && seen(&played, "overlay", "Industry"));
+    // The three overlays were shown, then turned off.
+    assert!(seen(&played, "overlay", "Resources") && seen(&played, "overlay", "Industry") && seen(&played, "overlay", "War"));
     assert_eq!(played.text("overlay"), "Off");
     // Raising income tax and ordering a building both cost a coin sound.
     assert_eq!(played.sound_frames("coin").len(), 2);
     assert!(!played.sound_frames("month").is_empty(), "no month chimes");
+    assert!(played.failed_checks().is_empty(), "{:?}", played.failed_checks());
+}
+
+/// The highest number a report reached during the run.
+fn most(played: &Simulation<crate::game::Lucky>, name: &str) -> f64 {
+    played.history(name).iter().filter_map(|(_, v)| if let duckforge::prelude::ReportValue::Number(x) = v { Some(*x) } else { None }).fold(f64::MIN, f64::max)
+}
+
+/// `--spectate-war`: a world of brains opens with a declared war, watched
+/// from the first shot to the peace, with every war screen opened on the way.
+#[test]
+fn the_war_playthrough_watches_a_whole_war_from_first_shot_to_peace() {
+    let mut g = game();
+    g.spectate_at_start = true;
+    g.start_war = true;
+    let played = PlayTest::new(crate::config(), g).inputs("playthroughs/war.json").run();
+    assert_eq!(played.text("screen"), "Map");
+    assert!(played.flag("spectating"));
+    // The war was declared on day one, fought and ended in a peace.
+    assert!(most(&played, "war_level_max") >= 3.0, "it never became a declared war");
+    assert!(most(&played, "battle_reports") >= 10.0, "only {} battles", most(&played, "battle_reports"));
+    assert!(most(&played, "dead_total") > 1000.0);
+    let ended = played.history("last_war_ended");
+    assert!(!ended.is_empty(), "no war ended");
+    // A battle was watched up close, and every page of the war room was opened.
+    assert!(most(&played, "watching_battle") >= 0.0, "no battle was watched");
+    for page in ["WARS", "ARMY", "SUPPLY", "REPORTS"] {
+        assert!(seen(&played, "war_room", page), "the {page} page never opened");
+    }
+    assert_eq!(played.text("war_room"), "closed");
+    assert!(played.history("report_open").iter().any(|(_, v)| matches!(v, duckforge::prelude::ReportValue::Bool(true))), "no report was read");
+    assert!(seen(&played, "overlay", "War"));
+    // Gunfire when battles start, explosions when they end, drums while it lasts.
+    assert!(!played.sound_frames("gunfire").is_empty());
+    assert!(!played.sound_frames("explosion").is_empty());
+    assert!(played.failed_checks().is_empty(), "{:?}", played.failed_checks());
+}
+
+/// The player declares war on a neighbour, gives orders, runs the supply
+/// screen (Auto off, a request approved), reads a battle report and offers peace.
+#[test]
+fn the_player_war_playthrough_declares_orders_supplies_and_reads_reports() {
+    let played = PlayTest::new(crate::config(), game()).inputs("playthroughs/war_player.json").run();
+    assert_eq!(played.text("screen"), "Map");
+    assert!(!played.flag("spectating"));
+    assert_eq!(most(&played, "player_war_level"), 3.0, "the player declared war");
+    assert!(most(&played, "divisions_order_not_auto") > 0.0, "no order was given");
+    assert!(played.history("supply_auto").iter().any(|(_, v)| matches!(v, duckforge::prelude::ReportValue::Bool(false))), "Auto was never turned off");
+    assert_eq!(most(&played, "priority_0"), 3.0);
+    assert!(played.history("report_open").iter().any(|(_, v)| matches!(v, duckforge::prelude::ReportValue::Bool(true))), "no report was read");
+    assert!(played.history("report_card").iter().any(|(_, v)| matches!(v, duckforge::prelude::ReportValue::Bool(true))), "no battle report card after a battle");
+    let g = played.game();
+    let w = g.wars.as_ref().unwrap();
+    assert!(w.forces[0].requests.iter().any(|r| r.answered == Some(true)), "no request was approved");
+    assert!(w.wars.iter().any(|x| x.sides[0].contains(&0) && x.cause == "the player's choice"));
     assert!(played.failed_checks().is_empty(), "{:?}", played.failed_checks());
 }
 

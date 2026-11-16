@@ -5,10 +5,12 @@
 mod brain_panel;
 mod econ_screen;
 mod map_screen;
+mod war_screen;
 
 use duckforge::prelude::*;
 
 use crate::ai::{AiData, Brains};
+use crate::war::{WarData, Wars};
 use crate::country::{self, Country};
 use crate::econ::{EconData, Economy};
 use crate::data::Data;
@@ -95,14 +97,19 @@ pub struct Lucky {
     /// the player doesn't run (all of them in spectator mode).
     pub ai_data: AiData,
     pub brains: Option<Brains>,
+    /// The war's rules (data/war/war.toml), and every army, war and battle.
+    pub war_data: WarData,
+    pub wars: Option<Wars>,
     /// Spectator mode: nobody is the player; click a nation to read its mind.
     pub spectating: bool,
     /// `--spectate`: go straight to spectator mode on the first frame.
     pub spectate_at_start: bool,
+    /// `--spectate-war`: and open with a declared war between the strongest neighbours.
+    pub start_war: bool,
 }
 
 impl Lucky {
-    pub fn new(data: Data, atlas: Atlas, assets: Assets, models: Models, econ_data: EconData, ai_data: AiData) -> Lucky {
+    pub fn new(data: Data, atlas: Atlas, assets: Assets, models: Models, econ_data: EconData, ai_data: AiData, war_data: WarData) -> Lucky {
         let mut game = Lucky {
             data,
             assets,
@@ -139,8 +146,11 @@ impl Lucky {
             clock: Clock::default(),
             ai_data,
             brains: None,
+            war_data,
+            wars: None,
             spectating: false,
             spectate_at_start: false,
+            start_war: false,
         };
         game.make_title_wheel();
         game
@@ -167,6 +177,7 @@ impl Lucky {
         self.map_view = None;
         self.economy = None;
         self.brains = None;
+        self.wars = None;
         self.spectating = false;
         self.clock = Clock::default();
         self.map_ui = MapUi::default();
@@ -213,9 +224,22 @@ impl Lucky {
         self.player = Some(first);
         self.spectating = true;
         self.build_world(ctx);
+        if self.start_war {
+            self.open_war();
+        }
         self.clock.speed = SPECTATOR_SPEED;
         ctx.play_with(&self.assets.whoosh, 0.9, 0.0);
         self.enter_map(ctx);
+    }
+
+    /// `--spectate-war`: the two strongest neighbours go to war on day one.
+    fn open_war(&mut self) {
+        let (Some(w), Some(e)) = (self.wars.as_mut(), self.economy.as_mut()) else { return };
+        let Some((a, b)) = crate::war::report::rivals(w) else { return };
+        let mine = w.held(a);
+        let border: Vec<usize> = w.held(b).into_iter().filter(|&q| w.geo.neighbours[q].iter().any(|r| mine.contains(r)) && !w.capital.contains(&q)).take(3).collect();
+        let goal = if border.is_empty() { crate::war::Goal::Reparations } else { crate::war::Goal::Provinces(border) };
+        crate::war::escalation::declare(w, e, &self.econ_data, a, b, 3, goal, "the spectator's war".to_string());
     }
 
     fn finish(&mut self, ctx: &mut Context) {
@@ -406,6 +430,12 @@ impl Lucky {
         // Every nation but the player's thinks for itself (all of them when watching).
         let all = self.spectating;
         self.brains = Some(Brains::new(self.ai_data.clone(), &self.data, &self.atlas, &world, &mut economy, seed, |i| all || i != 0));
+        // Armies, navies and air forces from the wheels; the NPCs' generals and war brains.
+        let mut wars = Wars::new(self.war_data.clone(), &self.data, &self.atlas, &world, &mut economy, &self.econ_data, seed);
+        wars.set_intel(&self.ai_data);
+        wars.player = if all { None } else { Some(0) };
+        self.wars = Some(wars);
+        self.map_ui.war = Default::default();
         self.economy = Some(economy);
         self.clock = Clock::default();
         self.world = Some(world);
@@ -517,6 +547,9 @@ impl Game for Lucky {
         }
         if ctx.input.was_pressed(Key::F5) {
             if let Some(id) = self.map_ui.ambient.take() {
+                ctx.stop_loop(id);
+            }
+            if let Some(id) = self.map_ui.war.drums.take() {
                 ctx.stop_loop(id);
             }
             self.restart();

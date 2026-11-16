@@ -13,7 +13,10 @@ currencies and world trade for every nation, on a game clock. And
 **the NPC brains** (phase 4): every nation you don't run thinks for itself,
 with the same levers you have, the same fog of war, and a personality from
 its wheels. You can watch a world of brains only and read any one's mind.
-War and diplomacy come later. It is built with Duck Forge (engine), Duck Quill
+And **war** (phase 5): divisions of soldiers and real equipment, fought
+hour by hour with Lanchester's laws and dice, every shell from a real
+factory (duds included), supply lines, air and sea, an escalation ladder
+from border skirmish to total war, and peace deals. Diplomacy comes next. It is built with Duck Forge (engine), Duck Quill
 (art), Duck Echo (sound) and Duck Mold (3D models).
 
 <p>
@@ -30,6 +33,11 @@ War and diplomacy come later. It is built with Duck Forge (engine), Duck Quill
 <img src="docs/econ_stockpile.png" width="32%" alt="The economy window: the weapons stockpile">
 <img src="docs/map_resources.png" width="32%" alt="The resources overlay">
 <img src="docs/map_industry.png" width="32%" alt="The industry overlay">
+<img src="docs/war_battle_live.png" width="98%" alt="A battle on the 3D map: soldier and tank figures in each nation's colour, red front lines, orange attack arrows, crossed swords on each battle, and the live battle panel with rounds, misfires, jams, shells, duds, killed, wounded and captured">
+<img src="docs/war_room.png" width="32%" alt="The war room: wars, the escalation ladder, war score and losses">
+<img src="docs/war_supply.png" width="32%" alt="The supply page: front priorities, how much arrives, the stockpile">
+<img src="docs/war_report.png" width="32%" alt="A battle report on paper">
+<img src="docs/war_player.png" width="98%" alt="The player's war: occupied land dotted in the occupier's colour, front lines, attack arrows, battle markers and a battle report card">
 <img src="docs/spectator.png" width="98%" alt="Spectator mode: a world of NPC brains, and the brain panel of the Commonwealth of Valia: its goal, its needs, its three best options with scores and reasons, what it did, its biggest threat and what it remembers">
 </p>
 
@@ -74,6 +82,8 @@ sets the picture quality. A running game re-reads it when you save it:
 | The clock (map) | **Space** pause, **1-5** speed (1, 3, 7, 15 or 30 days a second); watching, **6** (90) | |
 | Economy window (map) | **O** open / close, **Tab** next page, Up / Down choose a row; Budget: Left / Right lower / raise (taxes, welfare, tariff, rate, research, arms, public works), **A** back to autopilot; Chains: **B** build, **X** close, **R** a road where goods are stuck, **P** a port; Market: **T** trade policy; Trade: **X** embargo | click the ECONOMY button, the pages, rows, −/+ and the buttons |
 | Watching (map) | click a nation's name or a province, or **Tab**: its brain panel; Esc closes it | |
+| War (map) | **K** the war room, **J** jump to the biggest battle, **V** (third press) the war overlay, Enter: the last battle's full report, Esc closes a battle panel | click the crossed swords on a battle to watch it, the WAR ROOM button |
+| War room | **Tab** next page, Up / Down choose; Wars: **E** escalate, **M** match, **B** back down, **P** offer peace, **Y** / **N** answer their offer, **D** declare on the selected nation, **L** the level; Army: **A** attack, **H** hold, **G** dig in, **R** retreat, **F** reinforce the selected province, **U** back to the general; Supply: Left / Right a front's priority, **Y** / **N** a request, **T** Auto; Reports: **Enter** the full report | click the pages |
 | Anywhere | **F5** start over (for trying it out), **Esc** quit, F12 screenshot, F10 record | |
 
 ### What happens
@@ -197,7 +207,8 @@ Every nation you don't run has a brain (the full design, with the math, is
   tariffs, the rate, research, arms, public works, building and closing, roads, ports,
   export bans, embargoes) gets a score for how much it helps its goal now.
   It takes the best, or holds still if nothing beats that.
-- **Battles**: a hook for the war phase; no orders yet.
+- **War** (phase 5): whether to start one, how far to escalate, when to
+  match or back down and when to make peace (below).
 
 **Fair play.** A brain uses only the player's own buttons, with the same
 costs and limits. It sees its own country fully, but other nations only
@@ -262,6 +273,77 @@ cargo run --release --no-default-features -- --economy-world isles 5 600
 (see [docs/ECONOMY.md](docs/ECONOMY.md), section 14, for the rules and the
 before and after of the balance pass).
 
+### War
+
+Every army is made of **divisions** of 10,000 soldiers (armoured ones
+with 200 tanks), raised from the active-duty wheel and the population,
+each with training, experience, morale, a general (skill and style) and
+an **equipped %** (rifles, ammo, food, and for tanks fuel). The full design
+and the math are in [docs/WAR.md](docs/WAR.md).
+
+- **Combat, every hour**: shots fired × accuracy × training × terrain ×
+  weather × general × air × supply × morale × dice = hits; each hit is
+  killed, wounded or captured. Frontage limits who can fight, so cover
+  turns Lanchester's square law towards the linear one. Mountains, rivers,
+  forests, marshes and cities matter a lot.
+- **Every round counts**: weapons come from the economy's factories with a
+  **defect rate** set by factory quality, so rifles jam, shells are duds
+  and tanks break down. Every round and shell fired comes out of the
+  stockpile. Morale falls with losses, shortages, bad generals, defeats
+  and war exhaustion; past the breaking point divisions retreat,
+  surrender or desert. Tanks without fuel are abandoned and captured.
+- **Supply** runs from the capital along roads, rail and sea lanes; distance
+  and enemy air cut what arrives. Generals ask for what they need in words
+  ("Western front needs 200 tanks and 3 weeks of fuel"); you approve or
+  deny (or leave it on Auto) and set each front's priority. Commanding the
+  armies yourself is optional: the generals fight on their own.
+- **Air and sea**: jets fight for air superiority (support, interdiction,
+  bombing factories and rail); warships fight for sea zones, blockade,
+  and carry invasions. Warships and transports are new goods built in
+  coastal shipyards. Landlocked nations can't have a navy.
+- **The escalation ladder**: cold war, border skirmish, military
+  operation, declared war, total war, plus proxy wars, civil wars and
+  blockades. Either side can escalate; the other matches or backs down.
+  Military rule escalates easily; a democracy needs its people behind it.
+- **Peace** by war score: white peace, reparations, provinces, a vassal or
+  a new government; prisoners go home. The dead leave the population,
+  ruined factories and rail must be rebuilt.
+- **The brains go to war** with the same rules and the same fog: warlords
+  and military rule are aggressive, cowards and democracies avoid war, and
+  everyone gangs up on whoever gets too strong, you included.
+
+Over 50 years on all three maps and six seeds (18 worlds, 450 nations):
+
+| | Grand Continent | Thousand Isles | Five Shores | All 18 worlds |
+|---|---|---|---|---|
+| Wars (cold wars not counted) | 195 | 118 | 162 | **475** (0.21 a nation per decade) |
+| Battles | 1,854 | 495 | 1,483 | **3,832** |
+| Soldiers killed | 987,675 | 231,730 | 911,183 | **2.13 million** |
+
+- **How far they went**: 239 stayed border skirmishes, 45 military
+  operations, 162 declared wars, 29 total wars; also 18 cold wars and 24
+  wars with proxy suppliers.
+- **How they ended**: all 475 in peace. 207 skirmishes went quiet, 101
+  surrenders, 83 white peaces, 53 peace deals, 27 operations reached their
+  goal, 4 ended with one side backing down from an escalation.
+- **The world doesn't burn down**: a nation spends 0.4 of 50 years at war
+  on average, and at worst 16% of a world's nations were at declared or
+  total war at once.
+- **Weak spots, honestly**: 136 of the 475 wars (29%) never had a battle:
+  79 skirmishes that stayed a stand-off, and most of the rest wars across
+  the sea that neither side had the ships to fight. There were no civil
+  wars in these 18 worlds (stability rarely stays under 20 for 45 days);
+  the civil-war code is covered by its tests and showed up in other runs.
+
+```sh
+cargo run --release --no-default-features -- --war-report 50 1 2 3 4 5 6 --battles   # every war, and the bloodiest battle of each world
+cargo run --release --no-default-features -- --war-battle grand 1                    # one battle, hour by hour (add "sea" for an invasion)
+cargo run --release --no-default-features -- --war-world isles 2 20                  # one world's wars
+cargo run --release --no-default-features -- --spectate-war grand                    # watch a war from the first shot to the peace
+```
+
+The full 50-year report is [docs/war_report_50y.txt](docs/war_report_50y.txt).
+
 ## Tune the wheels
 
 Everything about the wheels is in plain text files. Edit them and run the
@@ -309,9 +391,9 @@ cargo test --release odds_report -- --ignored --nocapture
 
 | Source | Tool | Becomes |
 |---|---|---|
-| `art/*.json` | Duck Quill scripts | `assets/art/*.png` (pointer, hub, glow, sparkle, cards, buttons, logo, backdrop, RARE! badge; map: top bar, province panel, minimap frame, small cards, flag cloth and pole, capital, town, landmark and river icons; economy: the window and its six page icons) |
-| `sound/*.toml` | Duck Echo recipes | `assets/sound/*.wav` (two ticks, land chime, whoosh, rare sting, card swoosh, fanfare; map: a seamless sea-and-wind ambience loop, click, select, open-map swell, zoom tick; economy: coin, month chime, news sting) |
-| `models/*.toml` | Duck Mold recipes | `assets/models/*.glb` (the wheel's stand; capital, town, tree, pine, palm, cactus, peak, hill, reeds; landmarks: lighthouse, pyramid, great tower, temple, arch, colossus) |
+| `art/*.json` | Duck Quill scripts | `assets/art/*.png` (pointer, hub, glow, sparkle, cards, buttons, logo, backdrop, RARE! badge; map: top bar, province panel, minimap frame, small cards, flag cloth and pole, capital, town, landmark and river icons; economy: the window and its six page icons; war: crossed swords, plane and army icons, the battle report's paper) |
+| `sound/*.toml` | Duck Echo recipes | `assets/sound/*.wav` (two ticks, land chime, whoosh, rare sting, card swoosh, fanfare; map: a seamless sea-and-wind ambience loop, click, select, open-map swell, zoom tick; economy: coin, month chime, news sting; war: gunfire, an explosion, a 12-second war-drum loop) |
+| `models/*.toml` | Duck Mold recipes | `assets/models/*.glb` (the wheel's stand; capital, town, tree, pine, palm, cactus, peak, hill, reeds; landmarks: lighthouse, pyramid, great tower, temple, arch, colossus; war: soldier, tank, jet, warship and transport, each with one part in the nation's colour) |
 
 The wheel itself is built in code from triangles, because its slices change
 with every spin. Its labels are text painted onto textures.
@@ -330,6 +412,8 @@ cargo test --release --no-default-features
 cargo run --release --no-default-features -- --headless --inputs playthroughs/lucky_world.json --sheet-events --out out/look
 cargo run --release --no-default-features -- --headless --inputs playthroughs/economy.json --sheet-events --out out/economy
 cargo run --release --no-default-features -- --headless --inputs playthroughs/spectator.json --sheet-events --out out/spectator
+cargo run --release --no-default-features -- --headless --inputs playthroughs/war.json --sheet-events --out out/war --spectate-war
+cargo run --release --no-default-features -- --headless --inputs playthroughs/war_player.json --sheet-events --out out/war_player
 cargo run --release --no-default-features -- --fuzz 40
 cargo run --release --no-default-features -- --economy-report 50
 ```
@@ -340,9 +424,16 @@ a country card, pans, zooms, tilts and switches views. The fuzz runs reach
 the map too. The economy playthrough runs the clock at full speed, opens
 every page of the economy window, raises a tax, builds, and shows both
 overlays. The spectator playthrough watches a world of brains for seven
-years at top speed and opens five nations' brain panels. For the map's, the
+years at top speed and opens five nations' brain panels. The war
+playthrough watches a declared war from the first shot to the peace: it
+zooms into the biggest battle, opens every page of the war room, reads a
+battle report and shows the war overlay. The player's war playthrough
+clicks a neighbour, declares war, orders every front to attack, turns
+supply Auto off, approves a general's request, reads a report and offers
+peace. For the map's, the
 economy's and spectator mode's own keys:
-`-- --fuzz 40 --fuzz-keys S,Space,Enter,Left,Right,Up,Down,Tab,M,H,C,Q,E,R,F,T,G,W,A,D,O,V,B,X,P,Digit1,Digit5,Digit6,Escape`.
+`-- --fuzz 40 --fuzz-keys S,Space,Enter,Left,Right,Up,Down,Tab,M,H,C,Q,E,R,F,T,G,W,A,D,O,V,B,X,P,Digit1,Digit5,Digit6,Escape`; with the war's keys too:
+`--fuzz-keys S,Space,Enter,Left,Right,Up,Down,Tab,M,H,C,O,V,K,J,E,B,P,Y,N,D,L,A,G,U,T,R,F,X,Digit5,Digit6,Escape`.
 `out/look/sheet.png` shows the run, and `audio.wav` has every tick.
 
 ## Files
@@ -357,7 +448,11 @@ economy's and spectator mode's own keys:
 | `src/game/map_screen.rs` | The world map screen: camera keys and mouse, picking, names and flags, province panel, minimap |
 | `src/game/econ_screen.rs` | The clock, the economy window (budget, chains, market, trade, stockpile, charts), the map overlays |
 | `src/game/brain_panel.rs` | Spectator mode's brain panel |
-| `src/ai/` | The NPC brains, which never draw: `data.rs` (reading `data/ai/`), `mod.rs` (personality, brains, the daily loop), `strategy.rs` (intel, power, threats, hegemon, opportunities, the goal), `planning.rs` (needs, actions, scores, acting through the player's levers), `memory.rs` (relations), `battle.rs` (the war phase's hook), `report.rs` (compare, tune, trace), `tests.rs` |
+| `src/game/war_screen.rs` | War on the map: armies, fronts, arrows, battle markers and the live battle panel, the war room (wars, army, supply, reports), battle report cards, war sounds |
+| `src/war/` | The war, which never draws: `data.rs` (reading `data/war/war.toml`), `mod.rs` (divisions, generals, wars, the daily loop), `land.rs` (hourly combat, moving, occupying, the generals), `supply.rs` (supply lines, requests, recruits, hospitals, desertion), `air.rs`, `sea.rs` (zones, fleets, blockades, invasions), `escalation.rs` (the ladder, exhaustion, civil, proxy and cold wars, the brains' war decisions), `peace.rs` (war score, terms, the `PeaceTable` hook), `player.rs` (the war room's commands), `report.rs` (battle reports, `--war-report`), `tests.rs` |
+| `data/war/war.toml` | Every number of the war, each explained in docs/WAR.md |
+| `docs/WAR.md` | The war's design, with the math, and the 50-year results |
+| `src/ai/` | The NPC brains, which never draw: `data.rs` (reading `data/ai/`), `mod.rs` (personality, brains, the daily loop), `strategy.rs` (intel, power, threats, hegemon, opportunities, the goal), `planning.rs` (needs, actions, scores, acting through the player's levers), `memory.rs` (relations, war memories), `battle.rs` (an old hook; the war's generals are in `src/war/land.rs`), `report.rs` (compare, tune, trace), `tests.rs` |
 | `docs/AI.md` | The brains' design, with the math, and the before and after |
 | `src/econ/` | The economy, which never draws: `data.rs` (reading `data/economy/`), `init.rs` (day 1), `tick.rs` (one day), `market.rs` (world trade), `policy.rs` (events and the autopilot), `player.rs` (the player's levers), `report.rs` (the report), `tests.rs` (its promises) |
 | `docs/ECONOMY.md` | The economy's design, with the math |

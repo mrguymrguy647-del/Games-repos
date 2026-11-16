@@ -77,6 +77,8 @@ struct BuildingEntry {
     build_goods: BTreeMap<String, f64>,
     build_days: u32,
     upkeep: f64,
+    #[serde(default)]
+    coastal: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -304,6 +306,11 @@ struct SettingsFile {
     save_base: f64,
     save_rate_slope: f64,
     skill_pay: f64,
+    military_split: BTreeMap<String, f64>,
+    latent_defects: f64,
+    import_defect: f64,
+    rush_defect: f64,
+    conversion_yield: f64,
     basket: Basket,
     prices: Prices,
     money: Money,
@@ -363,6 +370,8 @@ pub struct BuildingDef {
     pub build_goods: Vec<(usize, f64)>,
     pub build_days: u32,
     pub upkeep: f64,
+    /// Only in a coastal province (shipyards).
+    pub coastal: bool,
 }
 
 /// Every modifier a wheel result or an event can carry.
@@ -516,6 +525,19 @@ pub struct EconData {
     pub ammo: usize,
     pub tanks: usize,
     pub jets: usize,
+    pub rifles: usize,
+    pub warships: usize,
+    pub transports: usize,
+    /// How the arms budget is split between weapons: (good, share).
+    pub military_split: Vec<(usize, f64)>,
+    /// The share of a weapons factory's defects that pass quality control
+    /// (into the stockpile, to fail in battle), and imports' faulty share.
+    pub latent_defects: f64,
+    pub import_defect: f64,
+    /// Total war: converted factories' defects ×, and the weapons' worth
+    /// they make for a unit of consumer goods' worth.
+    pub rush_defect: f64,
+    pub conversion_yield: f64,
     pub steel: usize,
     pub timber: usize,
 }
@@ -659,6 +681,7 @@ impl EconData {
                 build_goods,
                 build_days: b.build_days.max(1),
                 upkeep: b.upkeep,
+                coastal: b.coastal,
             });
         }
         // Every good can be made, and inputs are made by an earlier tier.
@@ -796,6 +819,14 @@ impl EconData {
                 return err(format!("data/economy/settings.toml: procurement names \"{id}\", which isn't an Army Strength option"));
             }
         }
+        let mut military_split = Vec::new();
+        for (id, share) in &settings.military_split {
+            let g = good(id, "data/economy/settings.toml, military_split")?;
+            if !goods[g].military {
+                return err(format!("data/economy/settings.toml: military_split names \"{id}\", which isn't a military good"));
+            }
+            military_split.push((g, *share));
+        }
         let mut ratings = settings.rating;
         ratings.sort_by(|a, b| b.score.total_cmp(&a.score));
 
@@ -808,6 +839,14 @@ impl EconData {
             ammo: named("ammo")?,
             tanks: named("tanks")?,
             jets: named("jets")?,
+            rifles: named("rifles")?,
+            warships: named("warships")?,
+            transports: named("transports")?,
+            military_split,
+            latent_defects: settings.latent_defects,
+            import_defect: settings.import_defect,
+            rush_defect: settings.rush_defect,
+            conversion_yield: settings.conversion_yield,
             steel: named("steel")?,
             timber: named("timber")?,
             goods,

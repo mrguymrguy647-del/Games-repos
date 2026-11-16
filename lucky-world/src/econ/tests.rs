@@ -38,7 +38,7 @@ fn fingerprint(e: &Economy) -> Vec<u64> {
 fn the_economy_data_loads() {
     let data = crate::data::Data::load().unwrap();
     let ed = EconData::load(&data).unwrap_or_else(|e| panic!("{e}"));
-    assert_eq!(ed.goods.len(), 16);
+    assert_eq!(ed.goods.len(), 19);
     assert!(ed.buildings.len() >= 17);
 }
 

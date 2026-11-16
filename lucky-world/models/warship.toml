@@ -1,0 +1,84 @@
+# A warship for the war map: one model stands for a few warships. The "flag" is recoloured per nation.
+version = 0
+name = "warship"
+description = "Warship, about 0.36 long and 0.08 wide, bow to the front (+z), two gun turrets and a mast."
+
+[palette]
+hull = "#5A6470"
+deck = "#8A929A"
+bridge = "#B4BAC0"
+gun = "#3A4048"
+flag = "#C4502F"
+
+[[parts]]
+name = "hull"
+shape = "box"
+size = [0.08, 0.04, 0.3]
+color = "hull"
+move = [0, 0.02, 0]
+
+[[parts]]
+name = "bow"
+shape = "pyramid"
+size = [0.08, 0.04, 0.08]
+color = "hull"
+move = [0, 0.02, 0.17]
+rotate = [90, 0, 0]
+
+[[parts]]
+name = "deck"
+shape = "box"
+size = [0.07, 0.006, 0.28]
+color = "deck"
+move = [0, 0.043, 0]
+
+[[parts]]
+name = "bridge"
+shape = "box"
+size = [0.05, 0.05, 0.06]
+color = "bridge"
+move = [0, 0.07, -0.02]
+
+[[parts]]
+name = "turret_front"
+shape = "cylinder"
+radius = 0.02
+height = 0.018
+segments = 8
+color = "gun"
+move = [0, 0.055, 0.08]
+
+[[parts]]
+name = "barrel_front"
+shape = "cylinder"
+radius = 0.004
+height = 0.05
+segments = 6
+color = "gun"
+move = [0, 0.058, 0.11]
+rotate = [90, 0, 0]
+
+[[parts]]
+name = "turret_back"
+shape = "cylinder"
+radius = 0.02
+height = 0.018
+segments = 8
+color = "gun"
+move = [0, 0.055, -0.1]
+
+[[parts]]
+name = "mast"
+shape = "cylinder"
+radius = 0.004
+height = 0.08
+segments = 6
+color = "gun"
+move = [0, 0.13, -0.02]
+
+[[parts]]
+name = "flag"
+shape = "box"
+size = [0.002, 0.02, 0.03]
+color = "flag"
+move = [0, 0.16, -0.035]

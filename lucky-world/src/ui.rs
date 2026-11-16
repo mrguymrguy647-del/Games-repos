@@ -55,6 +55,10 @@ pub struct Assets {
     pub icon_ship: Sprite,
     pub icon_crate: Sprite,
     pub icon_chart: Sprite,
+    pub icon_swords: Sprite,
+    pub icon_plane: Sprite,
+    pub icon_army: Sprite,
+    pub report_paper: Sprite,
     pub stand: Mesh,
     pub tick: Wav,
     pub tick_low: Wav,
@@ -71,6 +75,9 @@ pub struct Assets {
     pub coin: Wav,
     pub month: Wav,
     pub news: Wav,
+    pub gunfire: Wav,
+    pub explosion: Wav,
+    pub war_drums: Wav,
 }
 
 impl Assets {
@@ -116,6 +123,10 @@ impl Assets {
             icon_ship: art("icon_ship")?,
             icon_crate: art("icon_crate")?,
             icon_chart: art("icon_chart")?,
+            icon_swords: art("icon_swords")?,
+            icon_plane: art("icon_plane")?,
+            icon_army: art("icon_army")?,
+            report_paper: art("report_paper")?,
             stand: Mesh::load_glb("assets/models/wheel_stand.glb")?,
             tick: sound("tick")?,
             tick_low: sound("tick_low")?,
@@ -132,6 +143,9 @@ impl Assets {
             coin: sound("coin")?,
             month: sound("month")?,
             news: sound("news")?,
+            gunfire: sound("gunfire")?,
+            explosion: sound("explosion")?,
+            war_drums: sound("war_drums")?,
         })
     }
 }

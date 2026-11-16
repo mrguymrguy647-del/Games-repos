@@ -1,0 +1,37 @@
+# A shell landing: a sharp crack, a deep falling boom and a rumble of earth
+# settling. Plays when a battle ends and when the player's bombers strike.
+version = 0
+name = "explosion"
+description = "A heavy shell explosion: crack, boom and rumble."
+tags = ["war", "explosion", "battle"]
+
+[master]
+normalize_lufs = -19
+trim_silence = true
+
+[[layers]]
+name = "crack"
+source = "noise"
+volume = 0.7
+envelope = { attack = 0.001, decay = 0.05 }
+filter = { kind = "highpass", cutoff = 900 }
+
+[[layers]]
+name = "boom"
+source = "sine"
+volume = 1.0
+envelope = { attack = 0.002, hold = 0.04, decay = 0.7 }
+pitch = { start = 90, end = 32 }
+
+[[layers]]
+name = "rumble"
+source = "noise"
+volume = 0.8
+envelope = { attack = 0.01, hold = 0.1, decay = 1.2 }
+filter = { kind = "lowpass", cutoff = 400, cutoff_end = 120, curve = "ease_out", sweep_time = 1.0 }
+
+[[effects]]
+type = "reverb"
+size = 0.7
+decay = 1.2
+mix = 0.25

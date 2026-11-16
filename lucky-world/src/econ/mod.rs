@@ -80,6 +80,10 @@ pub struct ProvinceEcon {
     /// What its buildings moved yesterday (weight units) and today's factor.
     pub tonnage: f64,
     pub transport: f64,
+    /// Held by an enemy at war (docs/WAR.md, section 3), and the share of
+    /// its output its owner still gets.
+    pub occupied_by: Option<usize>,
+    pub output_share: f64,
 }
 
 /// An event happening to a nation now.
@@ -424,6 +428,22 @@ pub struct NationEcon {
     /// A public works scheme set by hand: its most, as a share of the
     /// workforce (else the autopilot's, in a slump only).
     pub works: Option<f64>,
+
+    // War (docs/WAR.md): set by `src/war`, left alone without it.
+    /// The share of each good's stock, and of the stockpile, that is faulty
+    /// (weapons remember their factory's defects).
+    pub stock_faulty: Vec<f64>,
+    pub stockpile_faulty: Vec<f64>,
+    /// Soldiers in the army (divisions and hospitals), when war is simulated;
+    /// else the Active Duty wheel's share of the people.
+    pub soldiers: Option<f64>,
+    /// War's pull on stability (added to its target) and on output (×).
+    pub war_stability: f64,
+    pub war_output: f64,
+    /// The share of its sea trade cut by enemy navies.
+    pub blockade: f64,
+    /// Total war: the share of consumer goods factories making weapons.
+    pub conversion: f64,
 }
 
 /// The whole world's economy.
@@ -492,6 +512,26 @@ pub fn defect_rate(n: &NationEcon, bd: &data::BuildingDef) -> f64 {
 /// itself (from the wheels, events and the land).
 pub fn output_mod(_data: &EconData, n: &NationEcon, g: usize) -> f64 {
     n.mod_out[g]
+}
+
+/// How a nation's arms budget is shared between weapons: the data's split,
+/// without jets under an HDI of 0.6 or ships without a coast, rescaled.
+pub fn military_shares(ed: &EconData, n: &NationEcon) -> Vec<(usize, f64)> {
+    let mut out: Vec<(usize, f64)> = ed
+        .military_split
+        .iter()
+        .copied()
+        .filter(|&(g, _)| !(g == ed.jets && n.hdi < 0.6) && !((g == ed.warships || g == ed.transports) && n.landlocked))
+        .collect();
+    let total: f64 = out.iter().map(|x| x.1).sum::<f64>().max(1e-9);
+    out.iter_mut().for_each(|x| x.1 /= total);
+    out
+}
+
+/// Mixes a faulty share into a stock: (share, amount) + (share, amount).
+pub fn mix_faulty(share: f64, amount: f64, in_share: f64, added: f64) -> f64 {
+    let total = amount.max(0.0) + added.max(0.0);
+    if total <= 1e-12 { in_share } else { ((share * amount.max(0.0) + in_share * added.max(0.0)) / total).clamp(0.0, 1.0) }
 }
 
 /// The share of its stock above home cover a nation offers abroad each day.

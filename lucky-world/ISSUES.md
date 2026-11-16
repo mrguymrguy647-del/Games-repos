@@ -478,3 +478,74 @@ Worth keeping as they are:
   further raised junk ratings (a structural problem the balance pass
   found too).
 
+
+# Phase 5 (war)
+
+Found while building the war, against the same commits. Numbering carries
+on. Nothing blocked the work, and Duck Forge is unchanged. Mold, Echo and
+Quill made every new asset on the first or second try: five models
+(soldier, tank, jet, warship, transport, each with a part recoloured per
+nation), three sounds (gunfire, explosion, a 12 s war-drum loop that joins
+cleanly) and four pictures (swords, plane and army icons, the report
+paper). Their reports ("rests on the ground, nothing floating", "loop
+joins cleanly", "no clipping") caught a floating transport mast before
+the game ever loaded it.
+
+## Duck Forge (engine)
+
+32. **No instancing: hundreds of small models mean one big rebuilt mesh.**
+    The war map shows up to 16 soldier figures, 6 tanks, jets and ships per
+    province and nation, recoloured per nation. The only way is to clone
+    each model, recolour its triangles and `merge` it into one mesh, and
+    rebuild that mesh whenever an army moves. The game throttles the
+    rebuild to five times a second.
+    - Fix: `canvas.draw_instances(&mesh, &[(Transform, tint)])`, or a
+      per-instance colour override for one named part.
+33. **Lines are one pixel.** Front lines and attack arrows had to be
+    built as 3D strips and triangles (`edge_strip`, arrow quads), because
+    `draw_line` has no width. A `draw_thick_line(a, b, width, color)` (and
+    the same in 3D on the ground) would cover most strategy-map needs.
+34. **A loop can't be stopped without a `Context`.** F5 (start over)
+    resets the game's state in a function that has no `ctx`, so a war-drum
+    loop started earlier keeps its `LoopId` in state that is about to be
+    replaced. The game now takes the ids out before the reset. A
+    `ctx.stop_all_loops()`, or loops that stop when their `LoopId` is
+    dropped, would make this hard to get wrong.
+35. **Overlapping one-shots trip the limiter warning.** Gunfire, an
+    explosion and a news chime in the same frame push the mix 0.2-0.9 dB
+    over full scale. The limiter handles it, but the warning appears on most
+    war runs. Sound groups with their own volume (effects, UI, music)
+    would let a game duck effects under news instead of turning every
+    sound down.
+36. **A screenshot at a given frame needs a second run.** `--snapshot-every
+    N` saves many frames; to get one battle picture the game was run again
+    with `--frames 80` and `last.png` used. `--shot-at 80,210` would save
+    just those.
+37. **`PlayTest` can't pass the game's own words.** `--spectate-war` is a
+    game flag; the test sets the game's fields (`spectate_at_start`,
+    `start_war`) by hand before `PlayTest::new`. Fine, but a
+    `.game_args(["--spectate-war"])` would test the real command line.
+38. (Same as 31, again.) Every war run still warns about flags off screen.
+
+Worth keeping as they are:
+- `ctx.report` + `--sheet-events` made the war screens testable without
+  pixels: the war playthrough's summary lists every war that ended and
+  how ("surrender: Grimfjord, Kaldmoor, Brannstad handed over").
+- The "text goes off the edge of the screen" warning found the battle
+  panel listing all 258 generals of one attack. Lists are now cut short
+  ("Gen. Ines Halvik and 257 more").
+- `GlbModel::part(name).range()` was all that per-nation colours needed.
+
+## The war's known weak spots (game, not tools)
+
+- **Generals pile in.** An AI general sends every idle division at the
+  best target, so one battle can have 250 divisions on one side. Frontage
+  caps who fights (12,000 × √hexes a side), so it isn't a slaughter, but
+  real generals would spread out across the front.
+- **Small neighbours fall in days.** A 14-province nation at declared war
+  can overrun a 6-province one in two weeks. The defender's generals
+  don't yet fall back to a line, and reserves aren't held back.
+- **Short declared wars.** Exhaustion from mobilising millions can end a
+  declared war in a few months with a white peace.
+- **The player's orders are per front**, not per division; dragging a
+  single division on the map is for a later pass.

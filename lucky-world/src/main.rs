@@ -16,6 +16,7 @@ mod map_view;
 mod mapdata;
 mod ui;
 mod wheel;
+mod war;
 mod world;
 #[cfg(test)]
 mod tests;
@@ -45,7 +46,8 @@ pub fn new_game() -> Result<game::Lucky, Box<dyn std::error::Error>> {
     let models = map_view::Models::load()?;
     let econ_data = econ::EconData::load(&data)?;
     let ai_data = ai::AiData::load()?;
-    Ok(game::Lucky::new(data, atlas, assets, models, econ_data, ai_data))
+    let war_data = war::WarData::load()?;
+    Ok(game::Lucky::new(data, atlas, assets, models, econ_data, ai_data, war_data))
 }
 
 /// Everything a world is made of: its data, maps, economy rules, owners and economy.
@@ -190,6 +192,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(at) = args.iter().position(|a| a == "--economy-health") {
         return economy_health(&args[at + 1..]);
     }
+    if let Some(at) = args.iter().position(|a| a == "--war-world") {
+        return war::report::war_world(&args[at + 1..]).map_err(|e| e.to_string().into());
+    }
+    if let Some(at) = args.iter().position(|a| a == "--war-report") {
+        return war::report::war_report(&args[at + 1..]).map_err(|e| e.to_string().into());
+    }
+    if let Some(at) = args.iter().position(|a| a == "--war-army") {
+        return war::report::army_trace(&args[at + 1..]).map_err(|e| e.to_string().into());
+    }
+    if let Some(at) = args.iter().position(|a| a == "--war-battle") {
+        return war::report::battle_demo(&args[at + 1..]).map_err(|e| e.to_string().into());
+    }
     if let Some(at) = args.iter().position(|a| a == "--ai-compare") {
         return ai::report::compare(&args[at + 1..]).map_err(|e| e.to_string().into());
     }
@@ -203,9 +217,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return economy_report(&args[at + 1..]);
     }
     // --spectate [MAP]: straight into a world of NPC brains (the engine's
-    // --seed picks the world).
+    // --seed picks the world). --spectate-war [MAP]: the same, opening with a
+    // declared war between the two strongest neighbours (to watch one whole war).
     let mut game = new_game()?;
-    if let Some(at) = args.iter().position(|a| a == "--spectate") {
+    if let Some(at) = args.iter().position(|a| a == "--spectate" || a == "--spectate-war") {
+        game.start_war = args[at] == "--spectate-war";
         if let Some(id) = args.get(at + 1).filter(|a| !a.starts_with("--")) {
             game.map = game.data.maps.iter().position(|m| &m.id == id).ok_or(format!("there's no map \"{id}\" (try grand, isles or five_shores)"))?;
         }

@@ -8,6 +8,7 @@
 //! | Select | click a province; click a name or flag for that nation's card |
 //! | Keys | Tab: next nation · H: home · M: terrain / political · V: economy overlays · C: card · Esc: back |
 //! | Economy | Space: pause · 1-5: speed · O: the economy window (see `econ_screen`) |
+//! | War | K: the war room · J: the biggest battle · click crossed swords to watch a battle (see `war_screen`) |
 
 use duckforge::prelude::*;
 
@@ -44,16 +45,18 @@ pub struct MapUi {
     next_nation: usize,
     /// Names and flags as laid out this frame: (nation, name rect, name size, flag foot).
     labels: Vec<Label>,
-    camera: Option<Camera3D>,
+    pub(super) camera: Option<Camera3D>,
     last_tick: f32,
     /// The economy window and overlays.
     pub econ: EconUi,
+    /// The war room, battle markers and reports.
+    pub war: super::war_screen::WarUi,
 }
 
 impl MapUi {
     /// Esc has something to close here (so it doesn't quit the game).
     pub fn wants_escape(&self) -> bool {
-        self.card.is_some() || self.selected.is_some() || self.econ.open.is_some() || self.brain.is_some()
+        self.card.is_some() || self.selected.is_some() || self.econ.open.is_some() || self.brain.is_some() || self.war.wants_escape()
     }
 }
 
@@ -129,6 +132,43 @@ impl Lucky {
             self.report_map(ctx);
             return;
         }
+        // A battle report opened in full: only closing it.
+        if self.map_ui.war.full.is_some() {
+            if ctx.input.was_pressed(Key::Escape) || ctx.input.was_pressed(Key::Enter) || ctx.input.was_mouse_pressed(MouseButton::Left) {
+                self.map_ui.war.full = None;
+                ctx.play_with(&self.assets.click, 0.7, 0.0);
+            }
+            self.report_map(ctx);
+            return;
+        }
+        if self.map_ui.war.open.is_some() {
+            self.update_war_room(ctx);
+            self.report_map(ctx);
+            return;
+        }
+        // The last battle's card fades; Enter opens it.
+        if let Some((k, left)) = self.map_ui.war.card {
+            let left = left - dt;
+            self.map_ui.war.card = if left > 0.0 { Some((k, left)) } else { None };
+            if ctx.input.was_pressed(Key::Enter) {
+                self.map_ui.war.full = Some(k);
+                self.map_ui.war.card = None;
+                ctx.play_with(&self.assets.card_sound, 0.7, 0.0);
+            }
+        }
+        let war_click = ctx.input.was_mouse_pressed(MouseButton::Left) && mouse.is_some_and(|m| super::war_screen::WAR_BUTTON.contains(m));
+        if self.wars.is_some() && (ctx.input.was_pressed(Key::K) || war_click) {
+            self.map_ui.war.open = Some(super::war_screen::Page::Wars);
+            self.map_ui.war.row = 0;
+            ctx.play_with(&self.assets.card_sound, 0.8, 0.0);
+            self.report_map(ctx);
+            return;
+        }
+        if ctx.input.was_pressed(Key::J) {
+            if let Some(b) = self.biggest_battle() {
+                self.watch_battle(ctx, b);
+            }
+        }
         let econ_click = ctx.input.was_mouse_pressed(MouseButton::Left) && mouse.is_some_and(|m| ECON_BUTTON.contains(m));
         if self.economy.is_some() && (ctx.input.was_pressed(Key::O) || econ_click) {
             self.map_ui.econ.open = Some(super::econ_screen::Tab::Budget);
@@ -146,6 +186,7 @@ impl Lucky {
         if ctx.input.was_pressed(Key::Escape) {
             self.select_province(ctx, None);
             self.map_ui.brain = None;
+            self.map_ui.war.watching = None;
         }
         if ctx.input.was_pressed(Key::M) {
             if let Some(view) = self.map_view.as_mut() {
@@ -255,7 +296,13 @@ impl Lucky {
             });
         self.map_ui.camera = Some(camera);
         self.layout_labels();
+        self.layout_battles();
 
+        // A battle marker: watch that battle.
+        if let Some(b) = clicked.and_then(|at| self.battle_at(at)) {
+            self.watch_battle(ctx, b);
+            clicked = None;
+        }
         if let Some(at) = clicked {
             let on_label = self
                 .map_ui
@@ -265,7 +312,9 @@ impl Lucky {
                     rect.contains(at) || flag.is_some_and(|(foot, k)| Rect::new(foot.x - 2.0, foot.y - 46.0 * k, 44.0 * k, 32.0 * k).contains(at))
                 })
                 .map(|(n, ..)| *n);
-            let on_panel = self.map_ui.selected.is_some() && !(self.spectating && self.map_ui.brain.is_some()) && Rect::new(PANEL_AT.x, PANEL_AT.y, 360.0, 350.0).contains(at)
+            let on_battle_panel = self.map_ui.war.watching.is_some() && Rect::new(900.0, 70.0, 366.0, 446.0).contains(at);
+            let on_panel = on_battle_panel
+                || self.map_ui.selected.is_some() && !(self.spectating && self.map_ui.brain.is_some()) && Rect::new(PANEL_AT.x, PANEL_AT.y, 360.0, 350.0).contains(at)
                 || self.map_ui.brain.is_some() && super::brain_panel::BRAIN_PANEL.contains(at);
             if let Some(n) = on_label {
                 // Watching, a name opens its brain; playing, its card.
@@ -332,6 +381,7 @@ impl Lucky {
         ctx.report("selected", selected);
         ctx.report("card", self.map_ui.card.map_or("none".to_string(), |n| self.world.as_ref().map_or(String::new(), |w| w.nations[n].name.clone())));
         ctx.report("spectating", self.spectating);
+        self.report_war(ctx);
         if let (Some(n), Some(b)) = (self.map_ui.brain, self.brains.as_ref()) {
             if let Some(brain) = b.brain(n) {
                 ctx.report("brain_nation", n);
@@ -371,6 +421,9 @@ impl Lucky {
             canvas.draw_font_text(&a.serif, &world.nations[n].name, vec2(rect.center().x, rect.y), &style);
             canvas.label(&format!("nation {}", world.nations[n].name), rect);
         }
+
+        // Battles going on, and the one being watched.
+        self.draw_war_map(canvas);
 
         // The province under the mouse.
         if let (Some(p), Some(m)) = (self.map_ui.hover, self.mouse) {
@@ -444,11 +497,11 @@ impl Lucky {
         self.draw_overlay_legend(canvas);
 
         let hint = if self.spectating {
-            "Click a nation: its brain · Tab: next nation · Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · M: terrain · V: overlays · Space: pause · 1-6: speed · O: economy · Esc: close"
+            "Click a nation: its brain · Tab: next nation · Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · M: terrain · V: overlays · Space: pause · 1-6: speed · O: economy · K: war · J: battle · Esc: close"
         } else {
             match view.mode {
-                Mode::Political => "Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · T/G: tilt · Click: province · Name or flag: card · Tab: next nation · H: home · M: terrain · V: overlays · Space: pause · 1-5: speed · O: economy",
-                Mode::Terrain => "Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · T/G: tilt · Click: province · Name or flag: card · Tab: next nation · H: home · M: nations · V: overlays · Space: pause · 1-5: speed · O: economy",
+                Mode::Political => "Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · T/G: tilt · Click: province · Name or flag: card · Tab: next nation · H: home · M: terrain · V: overlays · Space: pause · 1-5: speed · O: economy · K: war · J: battle",
+                Mode::Terrain => "Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · T/G: tilt · Click: province · Name or flag: card · Tab: next nation · H: home · M: nations · V: overlays · Space: pause · 1-5: speed · O: economy · K: war · J: battle",
             }
         };
         ui::plain(
@@ -462,6 +515,8 @@ impl Lucky {
         );
 
         self.draw_econ_window(canvas);
+        self.draw_war_room(canvas);
+        self.draw_battle_reports(canvas);
         if let Some(n) = self.map_ui.card {
             ui::dim(canvas, 0.75);
             self.draw_country_card(canvas, &world.nations[n], usize::MAX, n == 0);

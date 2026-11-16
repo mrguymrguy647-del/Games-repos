@@ -1,0 +1,52 @@
+# A jet for the war map, flying over its airbase. The "wings" are recoloured per nation.
+version = 0
+name = "jet"
+description = "Jet fighter, about 0.22 long and 0.18 wide, nose to the front (+z)."
+
+[palette]
+body = "#9AA4AE"
+wings = "#6B7A4A"
+canopy = "#2C3E58"
+tail = "#7C8690"
+
+[[parts]]
+name = "body"
+shape = "cylinder"
+radius = 0.016
+height = 0.2
+segments = 8
+color = "body"
+move = [0, 0.03, 0]
+rotate = [90, 0, 0]
+
+[[parts]]
+name = "nose"
+shape = "cone"
+radius = 0.016
+height = 0.04
+segments = 8
+color = "body"
+move = [0, 0.03, 0.12]
+rotate = [90, 0, 0]
+
+[[parts]]
+name = "wings"
+shape = "wedge"
+size = [0.18, 0.008, 0.08]
+color = "wings"
+move = [0, 0.028, -0.01]
+
+[[parts]]
+name = "tail"
+shape = "wedge"
+size = [0.008, 0.05, 0.04]
+color = "tail"
+move = [0, 0.055, -0.08]
+
+[[parts]]
+name = "canopy"
+shape = "sphere"
+radius = 0.013
+segments = 6
+color = "canopy"
+move = [0, 0.045, 0.05]
