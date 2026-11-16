@@ -7,6 +7,7 @@
 
 mod country;
 mod data;
+mod diplo;
 mod ai;
 mod econ;
 mod fate;
@@ -47,7 +48,8 @@ pub fn new_game() -> Result<game::Lucky, Box<dyn std::error::Error>> {
     let econ_data = econ::EconData::load(&data)?;
     let ai_data = ai::AiData::load()?;
     let war_data = war::WarData::load()?;
-    Ok(game::Lucky::new(data, atlas, assets, models, econ_data, ai_data, war_data))
+    let diplo_data = diplo::DiploData::load()?;
+    Ok(game::Lucky::new(data, atlas, assets, models, econ_data, ai_data, war_data, diplo_data))
 }
 
 /// Everything a world is made of: its data, maps, economy rules, owners and economy.
@@ -194,6 +196,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     if let Some(at) = args.iter().position(|a| a == "--war-world") {
         return war::report::war_world(&args[at + 1..]).map_err(|e| e.to_string().into());
+    }
+    if let Some(at) = args.iter().position(|a| a == "--diplomacy-report") {
+        return diplo::report::diplomacy_report(&args[at + 1..]).map_err(|e| e.to_string().into());
     }
     if let Some(at) = args.iter().position(|a| a == "--war-report") {
         return war::report::war_report(&args[at + 1..]).map_err(|e| e.to_string().into());

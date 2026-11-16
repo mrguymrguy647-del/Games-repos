@@ -1,0 +1,95 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "A treaty: a scroll with a seal",
+ "seed": 1,
+ "palette": {
+  "ink": "#1A1030",
+  "gold": "#F5C542",
+  "red": "#F06A6A",
+  "paper": "#EFE3C4",
+  "paper_dark": "#D8C79C",
+  "ink_brown": "#4A3420"
+ },
+ "commands": [
+  {
+   "cmd": "canvas",
+   "width": 24,
+   "height": 24
+  },
+  {
+   "cmd": "layer",
+   "name": "Art"
+  },
+  {
+   "cmd": "ellipse",
+   "center": [
+    12,
+    12
+   ],
+   "radius": 11,
+   "fill": "ink",
+   "outline": "gold",
+   "outline_size": 1.5
+  },
+  {
+   "cmd": "rect",
+   "x": 6,
+   "y": 5,
+   "width": 12,
+   "height": 14,
+   "radius": 1,
+   "fill": "paper",
+   "outline": "paper_dark",
+   "outline_size": 1
+  },
+  {
+   "cmd": "line",
+   "from": [
+    8,
+    8
+   ],
+   "to": [
+    16,
+    8
+   ],
+   "color": "ink_brown",
+   "size": 1
+  },
+  {
+   "cmd": "line",
+   "from": [
+    8,
+    11
+   ],
+   "to": [
+    16,
+    11
+   ],
+   "color": "ink_brown",
+   "size": 1
+  },
+  {
+   "cmd": "line",
+   "from": [
+    8,
+    14
+   ],
+   "to": [
+    13,
+    14
+   ],
+   "color": "ink_brown",
+   "size": 1
+  },
+  {
+   "cmd": "ellipse",
+   "center": [
+    15,
+    16
+   ],
+   "radius": 2.5,
+   "fill": "red"
+  }
+ ]
+}

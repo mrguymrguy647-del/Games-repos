@@ -103,6 +103,10 @@ pub enum Overlay {
     /// Who holds each province (occupied land in the holder's colour,
     /// battles in red), with every army shown.
     War,
+    /// Each bloc of alliances and defensive pacts in its own colour.
+    Alliances,
+    /// Relations with the player (watching: the chosen nation), green to red.
+    Relations,
 }
 
 /// What the economy screens remember between frames.
@@ -229,6 +233,10 @@ impl Lucky {
                 // Then the war: battles hour by hour, supply, air, sea, the ladder.
                 if let Some(w) = self.wars.as_mut() {
                     w.day(e, ed, self.brains.as_mut());
+                    // Then diplomacy: treaties, calls to arms, talks, spies.
+                    if let Some(d) = self.diplo.as_mut() {
+                        d.day(e, ed, w, self.brains.as_mut());
+                    }
                 }
             }
         }
@@ -259,6 +267,7 @@ impl Lucky {
             ctx.play_with(&self.assets.news, 0.6, 0.0);
         }
         self.after_war_days(ctx);
+        self.after_diplo_days(ctx);
         self.refresh_overlay();
         self.refresh_war_scene();
     }
@@ -268,7 +277,7 @@ impl Lucky {
         let (Some(e), Some(view), Some(world)) = (self.economy.as_ref(), self.map_view.as_mut(), self.world.as_ref()) else { return };
         let ui = &mut self.map_ui.econ;
         // The war overlay follows the war day by day; the others monthly.
-        let month = if ui.overlay == Overlay::War { e.day } else { e.day / 30 };
+        let month = if matches!(ui.overlay, Overlay::War | Overlay::Alliances | Overlay::Relations) { e.day } else { e.day / 30 };
         if ui.overlay_month == month {
             return;
         }
@@ -325,6 +334,35 @@ impl Lucky {
                     })
                     .collect()
             }),
+            Overlay::Alliances => self.diplo.as_ref().map(|d| {
+                let bloc = alliance_blocs(d);
+                world
+                    .owner
+                    .iter()
+                    .map(|o| {
+                        let o = (*o)?;
+                        let lead = bloc[o];
+                        let alone = (0..d.n).filter(|&j| bloc[j] == lead).count() == 1;
+                        Some(if alone { Color::rgb(70, 70, 80) } else { world.color[lead].lerp(Color::WHITE, 0.15) })
+                    })
+                    .collect()
+            }),
+            Overlay::Relations => self.diplo.as_ref().map(|d| {
+                let v = if self.spectating { self.map_ui.brain.unwrap_or(0) } else { 0 };
+                world
+                    .owner
+                    .iter()
+                    .map(|o| {
+                        let o = (*o)?;
+                        if o == v {
+                            return Some(Color::rgb(245, 197, 66));
+                        }
+                        let r = (d.relations[v][o] / 100.0).clamp(-1.0, 1.0) as f32;
+                        let mid = Color::rgb(200, 200, 190);
+                        Some(if r >= 0.0 { mid.lerp(Color::rgb(60, 190, 90), r) } else { mid.lerp(Color::rgb(220, 50, 50), -r) })
+                    })
+                    .collect()
+            }),
         };
         view.set_overlay(&self.atlas, world, colors.as_deref());
     }
@@ -336,7 +374,9 @@ impl Lucky {
             Overlay::Off => Overlay::Resources,
             Overlay::Resources => Overlay::Industry,
             Overlay::Industry if self.wars.is_some() => Overlay::War,
-            Overlay::Industry | Overlay::War => Overlay::Off,
+            Overlay::War if self.diplo.is_some() => Overlay::Alliances,
+            Overlay::Alliances => Overlay::Relations,
+            Overlay::Industry | Overlay::War | Overlay::Relations => Overlay::Off,
         };
         ui.overlay_month = u32::MAX;
         self.map_ui.war.all_armies = ui.overlay == Overlay::War;
@@ -489,6 +529,7 @@ impl Lucky {
         ctx.report("gdp", (n.gdp / 1e9 * 10.0).round() / 10.0);
         ctx.report("income_tax", (n.income_tax * 1000.0).round() / 1000.0);
         ctx.report("construction", n.construction.len());
+        ctx.report("toast", self.toast.as_ref().map_or(String::new(), |t| t.0.clone()));
         ctx.check("the player's economy has sane numbers", n.gdp.is_finite() && n.gdp > 0.0 && n.stock.iter().all(|s| *s >= -1e-6));
     }
 
@@ -576,6 +617,27 @@ impl Lucky {
                 plain(canvas, &a.font, "A battle", vec2(r.x + 36.0, r.y + 94.0), 13.0, Color::WHITE);
                 plain(canvas, &a.font, "Every army is shown", vec2(r.x + 12.0, r.y + 118.0), 13.0, SOFT);
                 plain(canvas, &a.font, "(1 figure = 1,000 soldiers)", vec2(r.x + 12.0, r.y + 138.0), 13.0, SOFT);
+            }
+            Overlay::Alliances => {
+                plain(canvas, &a.font, "ALLIANCES (V)", vec2(r.x + 12.0, r.y + 8.0), 12.0, GOLD);
+                plain(canvas, &a.font, "Each bloc of alliances and", vec2(r.x + 12.0, r.y + 30.0), 13.0, Color::WHITE);
+                plain(canvas, &a.font, "defensive pacts in the colour", vec2(r.x + 12.0, r.y + 47.0), 13.0, Color::WHITE);
+                plain(canvas, &a.font, "of its strongest member", vec2(r.x + 12.0, r.y + 64.0), 13.0, Color::WHITE);
+                canvas.fill_rect(Rect::new(r.x + 12.0, r.y + 92.0, 16.0, 14.0), Color::rgb(70, 70, 80));
+                plain(canvas, &a.font, "No allies", vec2(r.x + 36.0, r.y + 90.0), 13.0, SOFT);
+            }
+            Overlay::Relations => {
+                plain(canvas, &a.font, "RELATIONS (V)", vec2(r.x + 12.0, r.y + 8.0), 12.0, GOLD);
+                plain(canvas, &a.font, if self.spectating { "With the chosen nation" } else { "With you" }, vec2(r.x + 12.0, r.y + 30.0), 13.0, Color::WHITE);
+                for k in 0..20 {
+                    let t = k as f32 / 19.0 * 2.0 - 1.0;
+                    let mid = Color::rgb(200, 200, 190);
+                    let c = if t >= 0.0 { mid.lerp(Color::rgb(60, 190, 90), t) } else { mid.lerp(Color::rgb(220, 50, 50), -t) };
+                    canvas.fill_rect(Rect::new(r.x + 12.0 + k as f32 * 10.0, r.y + 60.0, 10.0, 18.0), c);
+                }
+                plain(canvas, &a.font, "-100", vec2(r.x + 12.0, r.y + 84.0), 13.0, SOFT);
+                right(canvas, &a.font, "+100", vec2(r.x + 212.0, r.y + 84.0), 13.0, SOFT);
+                plain(canvas, &a.font, "Gold: the nation itself", vec2(r.x + 12.0, r.y + 112.0), 13.0, SOFT);
             }
             Overlay::Off => {}
         }
@@ -1121,4 +1183,26 @@ fn partners(e: &Economy) -> Vec<usize> {
         vb.total_cmp(&va).then(a.cmp(&b))
     });
     list
+}
+
+/// Each nation's alliance bloc, named by its strongest member (by GDP order
+/// of index: the lowest index wins ties): nations joined by alliances or
+/// defensive pacts, directly or through others.
+fn alliance_blocs(d: &crate::diplo::Diplomacy) -> Vec<usize> {
+    let mut bloc: Vec<usize> = (0..d.n).collect();
+    fn root(b: &mut [usize], i: usize) -> usize {
+        let mut x = i;
+        while b[x] != x {
+            b[x] = b[b[x]];
+            x = b[x];
+        }
+        x
+    }
+    for t in d.live().filter(|t| matches!(t.kind, crate::diplo::Kind::Alliance | crate::diplo::Kind::Defensive)) {
+        let (ra, rb) = (root(&mut bloc, t.a), root(&mut bloc, t.b));
+        if ra != rb {
+            bloc[ra.max(rb)] = ra.min(rb);
+        }
+    }
+    (0..d.n).map(|i| root(&mut bloc, i)).collect()
 }

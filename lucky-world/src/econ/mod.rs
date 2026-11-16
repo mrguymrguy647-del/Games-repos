@@ -456,6 +456,11 @@ pub struct Economy {
     pub base_world_price: Vec<f64>,
     /// World events: (good, multiplier, days left).
     pub world_shocks: Vec<(usize, f64, u32)>,
+    /// Trade agreements (diplomacy): no tariffs between the two, and each
+    /// prefers the other's goods. Empty without diplomacy.
+    pub trade_pact: Vec<Vec<bool>>,
+    /// How much more a buyer weighs a trade partner's offers.
+    pub trade_pref: f64,
     pub news: Vec<News>,
     pub world_history: Vec<Vec<f32>>,
     pub rng: Rng,

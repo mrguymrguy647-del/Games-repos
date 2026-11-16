@@ -560,3 +560,42 @@ by a quarter, because a division that retreats mid-hour into another
 battle's province used to join that battle the same hour. A probe that
 compared both lists every hour on all three maps found it; the fix keeps
 the results identical to the full look.
+
+# Phase 6 (diplomacy and spies)
+
+Found while building diplomacy, against the same commits. Numbering
+carries on from Phase 5. Nothing blocked the work; Duck Forge is unchanged.
+
+## Duck Quill (art)
+
+39. **A shared palette gives a warning per unused colour.** The three new
+    icons (handshake, spy, treaty) first shared one palette; `quill render`
+    then printed "palette colour X is never used" five to eight times each.
+    The fix was trimming each script's palette by hand.
+    - Fix: a palette file the scripts include (`"palette": "art/ui.palette"`),
+      whose unused colours aren't warned about.
+
+## Duck Forge (engine)
+
+40. **A sprite can't be drawn into a rectangle.** Tab icons are 24 px and
+    the swords icon is 32 px; `Blit` only takes a scale, so each call works
+    out `24 / width`. A `canvas.blit_sprite_in(sprite, rect)` (fit, keeping
+    the aspect) would cover it.
+41. **Text that's too long can only be shrunk by hand.** The windows'
+    lines (treaty terms, a peace offer, a mission's result) can be long; the
+    game measures and scales each one (`fit`). A `TextStyle { max_width,
+    overflow: Shrink | Ellipsis }` would do it in one place, and the
+    "goes off the edge" warning (useful) would never fire for it.
+42. **A playthrough can't wait for the game.** The diplomacy playthrough
+    needs a proposal in the inbox before it presses Y; events are pinned to
+    frames, so it runs the clock for 15 seconds first and hopes. A
+    `{"until": "inbox > 0", "then": ...}` event (on a reported value) would
+    make such scripts exact.
+43. (Same as 31 and 38.) The flag-label warnings still appear on every run.
+
+Worth keeping as they are:
+- `ctx.report` made the new windows testable: the playthrough test checks
+  every page, every answer's reason, the trained agent and the mission
+  from the log alone.
+- Duck Quill's `check` gave a clean answer at once once the palettes were
+  trimmed.

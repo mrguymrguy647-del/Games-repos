@@ -16,7 +16,11 @@ its wheels. You can watch a world of brains only and read any one's mind.
 And **war** (phase 5): divisions of soldiers and real equipment, fought
 hour by hour with Lanchester's laws and dice, every shell from a real
 factory (duds included), supply lines, air and sea, an escalation ladder
-from border skirmish to total war, and peace deals. Diplomacy comes next. It is built with Duck Forge (engine), Duck Quill
+from border skirmish to total war, and peace deals. And **diplomacy and
+spies** (phase 6): relations you can read the reasons for, treaties with
+terms that can be broken, a reputation everyone sees, allies called to war,
+negotiated peace, loyal or restless vassals, and secret services whose
+missions succeed or fail by real odds. It is built with Duck Forge (engine), Duck Quill
 (art), Duck Echo (sound) and Duck Mold (3D models).
 
 <p>
@@ -33,6 +37,8 @@ from border skirmish to total war, and peace deals. Diplomacy comes next. It is 
 <img src="docs/econ_stockpile.png" width="32%" alt="The economy window: the weapons stockpile">
 <img src="docs/map_resources.png" width="32%" alt="The resources overlay">
 <img src="docs/map_industry.png" width="32%" alt="The industry overlay">
+<img src="docs/diplomacy.png" width="49%" alt="The diplomacy window: every nation's relations with you, and the reasons for the chosen one">
+<img src="docs/spies.png" width="49%" alt="The spy window: missions against a nation, with the success and caught chances as your service estimates them">
 <img src="docs/war_battle_live.png" width="98%" alt="A battle on the 3D map: soldier and tank figures in each nation's colour, red front lines, orange attack arrows, crossed swords on each battle, and the live battle panel with rounds, misfires, jams, shells, duds, killed, wounded and captured">
 <img src="docs/war_room.png" width="32%" alt="The war room: wars, the escalation ladder, war score and losses">
 <img src="docs/war_supply.png" width="32%" alt="The supply page: front priorities, how much arrives, the stockpile">
@@ -83,6 +89,8 @@ sets the picture quality. A running game re-reads it when you save it:
 | Economy window (map) | **O** open / close, **Tab** next page, Up / Down choose a row; Budget: Left / Right lower / raise (taxes, welfare, tariff, rate, research, arms, public works), **A** back to autopilot; Chains: **B** build, **X** close, **R** a road where goods are stuck, **P** a port; Market: **T** trade policy; Trade: **X** embargo | click the ECONOMY button, the pages, rows, −/+ and the buttons |
 | Watching (map) | click a nation's name or a province, or **Tab**: its brain panel; Esc closes it | |
 | War (map) | **K** the war room, **J** jump to the biggest battle, **V** (third press) the war overlay, Enter: the last battle's full report, Esc closes a battle panel | click the crossed swords on a battle to watch it, the WAR ROOM button |
+| Diplomacy (map) | **P** open / close, **Tab** next page, Up / Down choose; Nations: **Enter** propose to the chosen nation; Treaties: **B** break ours; Propose: Up / Down the nation, Left / Right the treaty, **Enter** propose; Inbox: **Y** / **N**; Talks: Left / Right our demand, **Enter** send it | click the pages |
+| Spies (map) | **I** open / close, **Tab** next page; Agents: **T** train one, Left / Right the share on counter-intelligence; Missions: Left / Right the target, Up / Down the mission, **Enter** send | click the pages |
 | War room | **Tab** next page, Up / Down choose; Wars: **E** escalate, **M** match, **B** back down, **P** offer peace, **Y** / **N** answer their offer, **D** declare on the selected nation, **L** the level; Army: **A** attack, **H** hold, **G** dig in, **R** retreat, **F** reinforce the selected province, **U** back to the general; Supply: Left / Right a front's priority, **Y** / **N** a request, **T** Auto; Reports: **Enter** the full report | click the pages |
 | Anywhere | **F5** start over (for trying it out), **Esc** quit, F12 screenshot, F10 record | |
 
@@ -352,6 +360,75 @@ cargo run --release --no-default-features -- --spectate-war grand               
 
 The full 50-year report is [docs/war_report_50y.txt](docs/war_report_50y.txt).
 
+### Diplomacy and spies
+
+The full design, with the math, is [docs/DIPLOMACY.md](docs/DIPLOMACY.md).
+
+- **Relations** between every pair are rebuilt each month from their
+  reasons, and the game shows them: "+12 trade partners · −30 they invaded
+  us in Year 14". Ideology, borders, trade, treaties, reputation, threats,
+  and a memory of wars, broken words, calls answered or refused, spies
+  caught, embargoes, arms sold and loans.
+- **Treaties**: trade agreements (no tariffs, partners' goods preferred in
+  the market), non-aggression pacts, defensive pacts, alliances, military
+  access, guarantees of independence, arms deals, loans with interest, and
+  sanctions. Each has terms and a duration, and can be broken: attacking a
+  partner, refusing a call to arms, defaulting on a loan.
+- **Reputation**: breaking a deal costs it with everyone, and every answer
+  weighs it, so liars get fewer deals. Every answer says why: "No: you
+  broke a pact with our ally".
+- **Alliances in war**: allies are called and decide by their honour,
+  relations and the odds; coalitions against the strongest become formal
+  alliances. **Peace talks**: offers and counteroffers, week by week, each
+  side judging the war score through its own spies; allies take their share.
+- **Vassals** have a loyalty that protection raises and neglect ruins;
+  under 25, an independence movement grows.
+- **Spies**: the Secret service wheel sets each service; agents train,
+  cost money and can be caught. Nine missions (intel, sabotage, stealing
+  research, unrest, revolts, funding rebels, meddling in a democracy,
+  killing or bribing a general), each at odds of agent skill against the
+  target's counter-intelligence plus luck. A caught spy is a diplomatic
+  incident. Spies never show more than their intel buys: the chances you
+  see are your own service's estimate.
+- **The brains** use all of it with their personality: diplomats love
+  treaties, warlords break them, cowards seek protection, communists and
+  theocrats prefer their own.
+
+Over 50 years on all three maps and six seeds (18 worlds, 450 nations), the
+full game with diplomacy and spies against the same worlds without them:
+
+| | Without diplomacy | With diplomacy |
+|---|---|---|
+| World GDP growth a year | 2.47% (worlds 1.17% to 3.44%) | **2.55%** (1.61% to 3.31%) |
+| Wars (a nation per decade) | 848 (0.38) | **631** (0.28) |
+| Soldiers killed | 60.3M | **27.6M** |
+| Total wars (average length) | 48 (3.09 years) | **20 (2.55 years)** |
+| Declared wars (average length) | 330 (1.24 years) | 253 (1.18 years) |
+| Civil wars | 63 | 74 |
+| Wars held back by treaties or deterrence (pair-years) | | 2,111 |
+| Wars ended by negotiation | | 315 |
+
+- **Treaties**: 22,182 signed (5,224 non-aggression, 5,022 trade, 4,828
+  military access, 2,152 guarantees, 1,911 defensive pacts, 1,635
+  alliances, 800 loans, 548 arms deals, 62 sanctions) and 111 broken (29
+  non-aggression pacts by attacks, 26 alliances and 22 guarantees by
+  refused calls, 29 loans by defaults). 153 alliances came out of
+  coalitions against a hegemon.
+- **Calls to arms**: 869 honoured, 18 refused (an alliance's offensive
+  call declined 7 more times).
+- **Peace talks**: 317 opened, 374 rounds, 315 deals; allies took their
+  share of reparations 301 times.
+- **Spies**: 34,396 missions (13,745 to steal research, 9,111 for intel,
+  8,563 sabotage, 2,035 meddling, 870 funding rebels or a proxy, 72
+  revolts), 26,347 succeeded; 4,557 agents caught in 4,097 diplomatic
+  incidents; 38 revolts started.
+- **Vassals**: 69 independence movements.
+- **Money and arms**: $417B lent (658 loans repaid), $1.14T of arms sold.
+
+```sh
+cargo run --release --no-default-features -- --diplomacy-report 50 1 2 3 4 5 6 --compare
+```
+
 ## Tune the wheels
 
 Everything about the wheels is in plain text files. Edit them and run the
@@ -399,7 +476,7 @@ cargo test --release odds_report -- --ignored --nocapture
 
 | Source | Tool | Becomes |
 |---|---|---|
-| `art/*.json` | Duck Quill scripts | `assets/art/*.png` (pointer, hub, glow, sparkle, cards, buttons, logo, backdrop, RARE! badge; map: top bar, province panel, minimap frame, small cards, flag cloth and pole, capital, town, landmark and river icons; economy: the window and its six page icons; war: crossed swords, plane and army icons, the battle report's paper) |
+| `art/*.json` | Duck Quill scripts | `assets/art/*.png` (pointer, hub, glow, sparkle, cards, buttons, logo, backdrop, RARE! badge; map: top bar, province panel, minimap frame, small cards, flag cloth and pole, capital, town, landmark and river icons; economy: the window and its six page icons; war: crossed swords, plane and army icons, the battle report's paper; diplomacy: handshake, spy and treaty icons) |
 | `sound/*.toml` | Duck Echo recipes | `assets/sound/*.wav` (two ticks, land chime, whoosh, rare sting, card swoosh, fanfare; map: a seamless sea-and-wind ambience loop, click, select, open-map swell, zoom tick; economy: coin, month chime, news sting; war: gunfire, an explosion, a 12-second war-drum loop) |
 | `models/*.toml` | Duck Mold recipes | `assets/models/*.glb` (the wheel's stand; capital, town, tree, pine, palm, cactus, peak, hill, reeds; landmarks: lighthouse, pyramid, great tower, temple, arch, colossus; war: soldier, tank, jet, warship and transport, each with one part in the nation's colour) |
 
@@ -422,6 +499,7 @@ cargo run --release --no-default-features -- --headless --inputs playthroughs/ec
 cargo run --release --no-default-features -- --headless --inputs playthroughs/spectator.json --sheet-events --out out/spectator
 cargo run --release --no-default-features -- --headless --inputs playthroughs/war.json --sheet-events --out out/war --spectate-war
 cargo run --release --no-default-features -- --headless --inputs playthroughs/war_player.json --sheet-events --out out/war_player
+cargo run --release --no-default-features -- --headless --inputs playthroughs/diplomacy.json --sheet-events --out out/diplomacy
 cargo run --release --no-default-features -- --fuzz 40
 cargo run --release --no-default-features -- --economy-report 50
 ```
@@ -438,10 +516,13 @@ zooms into the biggest battle, opens every page of the war room, reads a
 battle report and shows the war overlay. The player's war playthrough
 clicks a neighbour, declares war, orders every front to attack, turns
 supply Auto off, approves a general's request, reads a report and offers
-peace. For the map's, the
+peace. The diplomacy playthrough opens every page of the diplomacy and spy
+windows, gets two answers with their reasons, signs a pact from the inbox,
+trains an agent, sends a mission, and shows the alliance and relations
+overlays. For the map's, the
 economy's and spectator mode's own keys:
 `-- --fuzz 40 --fuzz-keys S,Space,Enter,Left,Right,Up,Down,Tab,M,H,C,Q,E,R,F,T,G,W,A,D,O,V,B,X,P,Digit1,Digit5,Digit6,Escape`; with the war's keys too:
-`--fuzz-keys S,Space,Enter,Left,Right,Up,Down,Tab,M,H,C,O,V,K,J,E,B,P,Y,N,D,L,A,G,U,T,R,F,X,Digit5,Digit6,Escape`.
+`--fuzz-keys S,Space,Enter,Left,Right,Up,Down,Tab,M,H,C,O,V,K,J,E,B,P,I,Y,N,D,L,A,G,U,T,R,F,X,Digit5,Digit6,Escape` (P and I open diplomacy and spies).
 `out/look/sheet.png` shows the run, and `audio.wav` has every tick.
 
 ## Files
@@ -459,6 +540,10 @@ economy's and spectator mode's own keys:
 | `src/game/war_screen.rs` | War on the map: armies, fronts, arrows, battle markers and the live battle panel, the war room (wars, army, supply, reports), battle report cards, war sounds |
 | `src/war/` | The war, which never draws: `data.rs` (reading `data/war/war.toml`), `mod.rs` (divisions, generals, wars, the daily loop), `land.rs` (hourly combat, moving, occupying, the generals), `supply.rs` (supply lines, requests, recruits, hospitals, desertion), `air.rs`, `sea.rs` (zones, fleets, blockades, invasions), `escalation.rs` (the ladder, exhaustion, civil, proxy and cold wars, the brains' war decisions), `peace.rs` (war score, terms, the `PeaceTable` hook), `player.rs` (the war room's commands), `report.rs` (battle reports, `--war-report`), `tests.rs` |
 | `data/war/war.toml` | Every number of the war, each explained in docs/WAR.md |
+| `src/diplo/` | Diplomacy and spies, which never draw: `data.rs` (reading `data/diplomacy/diplomacy.toml`), `mod.rs` (treaties, memory, relations and their reasons, reputation, the daily loop), `treaties.rs` (what a deal is worth and why, signing, breaking, loans, arms deals, sanctions, the brains' deals), `alliances.rs` (calls to arms, coalitions, vassals, the war's hooks), `talks.rs` (peace talks), `spies.rs` (services, missions, odds, incidents), `report.rs` (`--diplomacy-report`), `tests.rs` |
+| `src/game/diplo_screen.rs` | The diplomacy window (nations, treaties, propose, inbox, talks) and the spy window (agents, missions, reports) |
+| `data/diplomacy/diplomacy.toml` | Every number of diplomacy and spies, each explained in docs/DIPLOMACY.md |
+| `docs/DIPLOMACY.md` | Diplomacy's design, with the math, and the 50-year results |
 | `docs/WAR.md` | The war's design, with the math, and the 50-year results |
 | `src/ai/` | The NPC brains, which never draw: `data.rs` (reading `data/ai/`), `mod.rs` (personality, brains, the daily loop), `strategy.rs` (intel, power, threats, hegemon, opportunities, the goal), `planning.rs` (needs, actions, scores, acting through the player's levers), `memory.rs` (relations, war memories), `battle.rs` (an old hook; the war's generals are in `src/war/land.rs`), `report.rs` (compare, tune, trace), `tests.rs` |
 | `docs/AI.md` | The brains' design, with the math, and the before and after |

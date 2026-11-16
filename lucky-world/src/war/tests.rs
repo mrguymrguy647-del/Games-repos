@@ -291,7 +291,8 @@ fn a_whole_war_from_first_shot_to_peace() {
 /// every other nation free to join, must leave the frame time to spare.
 #[test]
 fn the_war_is_fast_enough_for_25_nations_at_top_speed() {
-    let mut ww = WarWorld::new(0, 1, true).unwrap();
+    // The full game: economy, brains, war, diplomacy and spies.
+    let mut ww = WarWorld::new(0, 1, true).unwrap().with_diplomacy(1).unwrap();
     assert!(ww.e.nations.len() >= 25, "a full world");
     let (a, b) = rivals(&ww.wars).expect("two neighbours");
     let goal = Goal::Provinces(ww.wars.held(b).into_iter().filter(|q| !ww.wars.capital.contains(q)).take(3).collect());
@@ -318,6 +319,9 @@ fn the_war_is_fast_enough_for_25_nations_at_top_speed() {
         let t = std::time::Instant::now();
         ww.wars.day(&mut ww.e, &ww.ed, ww.brains.as_mut());
         war += t.elapsed();
+        if let Some(d) = ww.diplo.as_mut() {
+            d.day(&mut ww.e, &ww.ed, &mut ww.wars, ww.brains.as_mut());
+        }
         hours += ww.wars.battles.iter().filter(|x| !x.over).count();
     }
     let wall = wall_start.elapsed().as_secs_f64();
@@ -326,11 +330,11 @@ fn the_war_is_fast_enough_for_25_nations_at_top_speed() {
         _ => wall,
     };
     let per_year = cpu_year * war.as_secs_f64() / wall;
-    println!("a year of war took {per_year:.3} s of CPU; the whole year (economy, brains and war) {cpu_year:.3} s ({hours} battle-days)");
+    println!("a year of war took {per_year:.3} s of CPU; the whole year (economy, brains, war, diplomacy) {cpu_year:.3} s ({hours} battle-days)");
     assert!(hours > 0, "there was fighting");
     // Top speed is a game year in 4 seconds: the whole simulation must
     // leave at least a fifth of that for drawing, in the heaviest war.
     let limit = if cfg!(debug_assertions) { 60.0 } else { 3.2 };
-    assert!(cpu_year < limit, "a year of economy, brains and war for 25 nations took {cpu_year:.2} s");
+    assert!(cpu_year < limit, "a year of economy, brains, war and diplomacy for 25 nations took {cpu_year:.2} s");
 
 }

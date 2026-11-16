@@ -182,8 +182,24 @@
    "press": "Space"
   },
   {
+   "frame": 2200,
+   "press": "V"
+  },
+  {
    "frame": 2202,
    "release": "Space"
+  },
+  {
+   "frame": 2202,
+   "release": "V"
+  },
+  {
+   "frame": 2220,
+   "press": "V"
+  },
+  {
+   "frame": 2222,
+   "release": "V"
   }
  ]
 }

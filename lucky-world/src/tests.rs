@@ -286,11 +286,15 @@ fn the_economy_playthrough_runs_the_clock_and_every_screen() {
         assert!(seen(&played, "econ_tab", tab), "the {tab} page never opened");
     }
     assert_eq!(played.text("econ_tab"), "none");
-    // The three overlays were shown, then turned off.
+    // The overlays were shown, then turned off.
     assert!(seen(&played, "overlay", "Resources") && seen(&played, "overlay", "Industry") && seen(&played, "overlay", "War"));
     assert_eq!(played.text("overlay"), "Off");
-    // Raising income tax and ordering a building both cost a coin sound.
-    assert_eq!(played.sound_frames("coin").len(), 2);
+    // Raising income tax costs a coin; ordering a building is answered:
+    // built (a coin) or why not (the world decides: a store may be short).
+    assert!(!played.sound_frames("coin").is_empty());
+    let toasts: Vec<String> = played.history("toast").iter().filter_map(|(_, v)| if let duckforge::prelude::ReportValue::Text(t) = v { Some(t.clone()) } else { None }).collect();
+    assert!(toasts.iter().any(|t| t.starts_with("Income tax")), "{toasts:?}");
+    assert!(toasts.iter().any(|t| t.starts_with("Building") || t.contains("in store to build") || t.contains("has room")), "the build was answered: {toasts:?}");
     assert!(!played.sound_frames("month").is_empty(), "no month chimes");
     assert!(played.failed_checks().is_empty(), "{:?}", played.failed_checks());
 }
@@ -348,6 +352,31 @@ fn the_player_war_playthrough_declares_orders_supplies_and_reads_reports() {
     let w = g.wars.as_ref().unwrap();
     assert!(w.forces[0].requests.iter().any(|r| r.answered == Some(true)), "no request was approved");
     assert!(w.wars.iter().any(|x| x.sides[0].contains(&0) && x.cause == "the player's choice"));
+    assert!(played.failed_checks().is_empty(), "{:?}", played.failed_checks());
+}
+
+/// The diplomacy and spy screens: relations and reasons, a proposal and its
+/// answer, the inbox, the talks, a spy trained and sent, both new overlays.
+#[test]
+fn the_diplomacy_playthrough_proposes_signs_and_spies() {
+    let played = PlayTest::new(crate::config(), game()).inputs("playthroughs/diplomacy.json").run();
+    assert_eq!(played.text("screen"), "Map");
+    for page in ["NATIONS", "TREATIES", "PROPOSE", "INBOX", "TALKS"] {
+        assert!(seen(&played, "diplo_page", page), "the {page} page never opened");
+    }
+    for page in ["AGENTS", "MISSIONS", "REPORTS"] {
+        assert!(seen(&played, "spy_page", page), "the {page} spy page never opened");
+    }
+    assert_eq!(played.text("diplo_page"), "closed");
+    assert_eq!(played.text("spy_page"), "closed");
+    // Every proposal was answered with a reason.
+    let answers: Vec<String> = played.history("diplo_message").iter().filter_map(|(_, v)| if let duckforge::prelude::ReportValue::Text(t) = v { Some(t.clone()) } else { None }).collect();
+    assert!(answers.iter().any(|a| a.contains(": No: ") || a.contains(": Yes: ")), "{answers:?}");
+    assert!(answers.iter().any(|a| a.starts_with("Signed")), "a deal from the inbox was signed: {answers:?}");
+    assert!(answers.iter().any(|a| a.contains("in training")), "an agent was trained");
+    assert!(answers.iter().any(|a| a.contains("agents sent") || a.contains("agent sent")), "a mission was sent");
+    assert!(most(&played, "treaties_ours") >= 1.0);
+    assert!(seen(&played, "overlay", "Alliances") && seen(&played, "overlay", "Relations"));
     assert!(played.failed_checks().is_empty(), "{:?}", played.failed_checks());
 }
 

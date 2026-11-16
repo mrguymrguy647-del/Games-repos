@@ -72,6 +72,8 @@ impl Economy {
             world_price: base_world_price.clone(),
             base_world_price,
             world_shocks: Vec::new(),
+            trade_pact: Vec::new(),
+            trade_pref: 1.0,
             news: Vec::new(),
             world_history: vec![Vec::new(); goods],
             rng: Rng::new(seed ^ 0xec0),

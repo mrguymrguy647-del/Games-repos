@@ -30,7 +30,7 @@ pub fn observe(brain: &mut Brain, e: &Economy, ed: &EconData, j: usize) -> Estim
     };
     let mut x = truth;
     if j != brain.nation {
-        let err = brain.intel_error;
+        let err = brain.intel_error * brain.intel_factor.get(j).copied().unwrap_or(1.0);
         x.gdp *= (err * normal(brain)).exp();
         x.soldiers *= (err * normal(brain)).exp();
         x.stockpile *= (err * normal(brain)).exp();

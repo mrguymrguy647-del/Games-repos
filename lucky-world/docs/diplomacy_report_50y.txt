@@ -1,0 +1,394 @@
+== The Grand Continent (seed 1), 50 years ==
+  world GDP growth 2.53% a year; 46 wars, 5,000,642 killed
+  in force at the end: 5 alliance, 2 defensive pact, 5 guarantee of independence, 3 loan, 7 military access, 20 non-aggression pact, 26 trade agreement
+  treaties broken: 5
+    Year 9: Grand Duchy of Tulalan broke its non-aggression pact (attacked Crown of Qasir)
+    Year 9: Grand Duchy of Tulalan broke its alliance (attacked Crown of Qasir)
+    Year 11: Aurarine Directorate broke its loan (defaulted on the loan)
+    Year 6: Colony of Khar broke its guarantee of independence (attacked Crown of Qasir)
+    Year 20: Monine Directorate broke its loan (defaulted on the loan)
+  reputation: best Grand Duchy of Tulalan (65), worst Monine Directorate (31)
+  spy missions finished: 797 (557 succeeded, 139 with agents caught)
+    talks, Year 2: Dominion of Freyaby → Lorence Caliphate: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 2: Commonwealth of Freyeheim → Military State of Keshet: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 4: Colony of Khar → Imperial Tamada: reparations of 2% of GDP a year for 10 years (accepted)
+    news, Year 50: Unified Sargol catches 1 agent of Tribal Lands of Baiet: a diplomatic incident
+    news, Year 50: Grand Duchy of Urar catches 1 agent of Clans of Ozmukhand: a diplomatic incident
+    news, Year 50: Loan: Colony of Khar lends Grand Duchy of Tulalan $460M at 6.7%
+    news, Year 50: Military access: Grand Duchy of Tulalan and Crown of Qasir
+
+== The Thousand Isles (seed 1), 50 years ==
+  world GDP growth 2.05% a year; 30 wars, 1,089,876 killed
+  in force at the end: 67 alliance, 31 defensive pact, 58 guarantee of independence, 10 loan, 68 military access, 67 non-aggression pact, 1 sanctions, 69 trade agreement
+  treaties broken: 4
+    Year 13: Military State of Amamaria broke its loan (defaulted on the loan)
+    Year 22: Yucando Protectorate broke its guarantee of independence (attacked Dominion of Monora)
+    Year 28: Military State of Mirar broke its loan (defaulted on the loan)
+    Year 47: Tribal Lands of Torland broke its defensive pact (refused the call to arms against Commonwealth of Tulando)
+  reputation: best Sulabad Federation (57), worst Tribal Lands of Torland (27)
+  spy missions finished: 754 (629 succeeded, 62 with agents caught)
+    talks, Year 2: Yucando Protectorate → Military State of Amamaria: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 2: Military State of Amamaria → Commonwealth of Tulando: reparations of 2% of GDP a year for 10 years (countered with reparations of 2% of GDP a year for 10 years, and it was accepted)
+    talks, Year 14: Pananma Junta → Military State of Amamaria: reparations of 2% of GDP a year for 10 years (countered with reparations of 2% of GDP a year for 10 years, and it was accepted)
+    news, Year 50: Workers' State of Vintström catches 1 agent of Tribal Lands of Torland: a diplomatic incident
+    news, Year 50: Defensive pact: Commonwealth of Doria and Sulabad Federation
+    news, Year 50: Guarantee of independence: Selaria Caliphate guarantees Commonwealth of Doria's independence
+    news, Year 50: Non-aggression pact: Republic of Sahiya and Commonwealth of Tulando
+
+== Five Shores (seed 1), 50 years ==
+  world GDP growth 2.41% a year; 50 wars, 1,325,934 killed
+  in force at the end: 26 alliance, 1 defensive pact, 21 guarantee of independence, 26 military access, 41 non-aggression pact, 31 trade agreement
+  treaties broken: 1
+    Year 20: People's Republic of Khada broke its loan (defaulted on the loan)
+  reputation: best Lorence Caliphate (72), worst Dominion of Svalvik (29)
+  spy missions finished: 737 (648 succeeded, 47 with agents caught)
+    talks, Year 1: Torström Protectorate → Grand Duchy of Zhanar: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 2: Vintmark Confederacy → Dominion of Freyaby: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 2: Dominion of Svalvik → Freymarvik Socialist Union: white peace (accepted)
+    news, Year 50: Trade agreement: Dominion of Freyaby and Grand Duchy of Zhanar
+    news, Year 50: Military access: Dominion of Skarheim and Grand Duchy of Zaniya
+    news, Year 50: Military access: Dominion of Skarheim and Crown of Kaldvik
+    news, Year 50: Lorence Caliphate catches 1 agent of Dominion of Freyaby: a diplomatic incident
+
+== The Grand Continent (seed 2), 50 years ==
+  world GDP growth 2.77% a year; 46 wars, 692,890 killed
+  in force at the end: 17 alliance, 1 defensive pact, 20 guarantee of independence, 4 loan, 19 military access, 52 non-aggression pact, 52 trade agreement
+  treaties broken: 7
+    Year 18: State of Iskmark broke its non-aggression pact (attacked Commonwealth of Khormugol)
+    Year 18: State of Iskmark broke its guarantee of independence (attacked Commonwealth of Khormugol)
+    Year 18: State of Iskmark broke its alliance (attacked Commonwealth of Khormugol)
+    Year 28: Veresse Socialist Union broke its loan (defaulted on the loan)
+    Year 35: Colony of Coania broke its non-aggression pact (attacked Commonwealth of Khormugol)
+    Year 35: Colony of Coania broke its alliance (attacked Commonwealth of Khormugol)
+    Year 35: Colony of Coania broke its guarantee of independence (attacked Commonwealth of Khormugol)
+  reputation: best Military State of Valor (70), worst Colony of Coania (20)
+  spy missions finished: 709 (530 succeeded, 82 with agents caught)
+    talks, Year 3: Zaniar Junta → Ororia Directorate: white peace (accepted)
+    talks, Year 5: Dominion of Verava → Altenor Junta: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 8: Veresse Socialist Union → Military State of Ozgakhand: reparations of 2% of GDP a year for 10 years (accepted)
+    news, Year 51: Non-aggression pact: Sular Caliphate and Loror Directorate
+    news, Year 50: Alliance: Skarvikgard Directorate and Commonwealth of Khormugol
+    news, Year 50: Defensive pact: Commonwealth of Khormugol and Skarvikgard Directorate
+    news, Year 50: Military State of Valor catches 2 agents of People's Republic of Rasada: a diplomatic incident
+
+== The Thousand Isles (seed 2), 50 years ==
+  world GDP growth 1.92% a year; 18 wars, 2,009,723 killed
+  in force at the end: 19 alliance, 4 defensive pact, 11 guarantee of independence, 12 loan, 20 military access, 38 non-aggression pact, 1 sanctions, 37 trade agreement
+  treaties broken: 11
+    Year 12: Amariria Directorate broke its alliance (attacked Imperial Tamaun)
+    Year 12: Amariria Directorate broke its non-aggression pact (attacked Imperial Tamaun)
+    Year 12: Amariria Directorate broke its guarantee of independence (attacked Imperial Tamaun)
+    Year 24: Kaldström Directorate broke its alliance (attacked Imperial Tamaun)
+    Year 24: Kaldström Directorate broke its non-aggression pact (attacked Imperial Tamaun)
+    Year 33: Miraiya Socialist Union broke its loan (defaulted on the loan)
+    Year 36: Unified Orococa broke its non-aggression pact (attacked Imperial Tamaun)
+    Year 36: Unified Orococa broke its guarantee of independence (attacked Imperial Tamaun)
+  reputation: best Qashaun Directorate (56), worst People's Republic of Tulalan (7)
+  spy missions finished: 640 (527 succeeded, 60 with agents caught)
+    talks, Year 15: Imperial Tamaun → Amariria Directorate: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 26: Kaldström Directorate → Imperial Tamaun: reparations of 2% of GDP a year for 10 years (countered with reparations of 2% of GDP a year for 10 years, and it was accepted)
+    talks, Year 27: Unified Freygard → Military State of Mararilan: white peace (accepted)
+    news, Year 50: Alliance: Imperial Tamaun and Dominion of Daraiya
+    news, Year 50: Non-aggression pact: Republic of Selaria and Imperial Tamaun
+    news, Year 50: Non-aggression pact: Clans of Doror and Republic of Belenesse
+    news, Year 50: Crown of Freyvikström catches 1 agent of Republic of Brannheim: a diplomatic incident
+
+== Five Shores (seed 2), 50 years ==
+  world GDP growth 3.08% a year; 44 wars, 967,191 killed
+  in force at the end: 16 alliance, 1 defensive pact, 22 guarantee of independence, 9 loan, 16 military access, 49 non-aggression pact, 51 trade agreement
+  treaties broken: 6
+    Year 26: Colony of Coania broke its alliance (attacked Military State of Valor)
+    Year 22: Clans of Zanar broke its defensive pact (refused the call to arms against Sahah Junta)
+    Year 26: Colony of Coania broke its non-aggression pact (attacked Military State of Valor)
+    Year 26: Colony of Coania broke its guarantee of independence (attacked Military State of Valor)
+    Year 26: Verava Directorate broke its loan (defaulted on the loan)
+    Year 26: Unified Tamir broke its loan (defaulted on the loan)
+  reputation: best Skarvikgard Directorate (72), worst Colony of Coania (35)
+  spy missions finished: 770 (664 succeeded, 50 with agents caught)
+    talks, Year 1: Clans of Miriya → Military State of Rasah: reparations of 2% of GDP a year for 10 years (countered with reparations of 2% of GDP a year for 10 years, and it was accepted)
+    talks, Year 2: Sahah Junta → Workers' State of Ashir: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 3: Verava Directorate → Unified Vintvikland: reparations of 2% of GDP a year for 10 years (accepted)
+    news, Year 50: Guarantee of independence: State of Iskmark guarantees Selando Directorate's independence
+    news, Year 50: Trade agreement: Commonwealth of Norvikland and Workers' State of Ashir
+    news, Year 50: Non-aggression pact: Colony of Coania and Selenora Federation
+    news, Year 50: Qashah Directorate catches 1 agent of Sahah Junta: a diplomatic incident
+
+== The Grand Continent (seed 3), 50 years ==
+  world GDP growth 3.18% a year; 45 wars, 680,371 killed
+  in force at the end: 20 alliance, 2 defensive pact, 19 guarantee of independence, 12 loan, 21 military access, 50 non-aggression pact, 41 trade agreement
+  treaties broken: 6
+    Year 3: Tribal Lands of Kaldfjell broke its non-aggression pact (attacked Commonwealth of Aurine)
+    Year 5: State of Casor broke its non-aggression pact (attacked Loria Territory)
+    Year 3: Tribal Lands of Kaldfjell broke its guarantee of independence (attacked Commonwealth of Aurine)
+    Year 15: Tribal Lands of Rashaiya broke its loan (defaulted on the loan)
+    Year 20: Workers' State of Amalan broke its loan (defaulted on the loan)
+    Year 38: Kingdom of Coanma broke its loan (defaulted on the loan)
+  reputation: best State of Casor (86), worst Clans of Iskmarfjell (32)
+  spy missions finished: 665 (558 succeeded, 44 with agents caught)
+    talks, Year 1: Commonwealth of Belmont → Military State of Ashada: reparations of 2% of GDP a year for 10 years; the loser becomes a vassal (accepted)
+    talks, Year 1: Tribal Lands of Rashaiya → Dominion of Selia: reparations of 2% of GDP a year for 10 years; the loser changes its government (accepted)
+    talks, Year 1: Commonwealth of Belmont → Kingdom of Coanma: reparations of 2% of GDP a year for 10 years (accepted)
+    news, Year 50: Trade agreement: Kingdom of Valesse and Commonwealth of Aurine
+    news, Year 50: Military access: Kingdom of Sahar and State of Casor
+    news, Year 50: Non-aggression pact: Tribal Lands of Kaldfjell and Commonwealth of Aurine
+    news, Year 50: Military access: Commonwealth of Belmont and Commonwealth of Aurine
+
+== The Thousand Isles (seed 3), 50 years ==
+  world GDP growth 1.83% a year; 27 wars, 194,709 killed
+  in force at the end: 16 alliance, 2 defensive pact, 12 guarantee of independence, 16 military access, 39 non-aggression pact, 33 trade agreement
+  treaties broken: 11
+    Year 1: Colony of Verenine broke its non-aggression pact (attacked Republic of Yucaria)
+    Year 11: Skareheim Federation broke its guarantee of independence (attacked Republic of Yucaria)
+    Year 11: Skareheim Federation broke its alliance (attacked Republic of Yucaria)
+    Year 11: Skareheim Federation broke its non-aggression pact (attacked Republic of Yucaria)
+    Year 26: Republic of Veresse broke its alliance (attacked Republic of Yucaria)
+    Year 26: Republic of Veresse broke its non-aggression pact (attacked Republic of Yucaria)
+    Year 26: Republic of Veresse broke its guarantee of independence (attacked Republic of Yucaria)
+    Year 27: Mararia Territory broke its loan (defaulted on the loan)
+  reputation: best Crown of Ashada (81), worst Casaria Territory (24)
+  spy missions finished: 769 (630 succeeded, 53 with agents caught)
+    talks, Year 1: Republic of Yucaria → Colony of Verenine: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 2: Republic of Yucaria → Colony of Panaria: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 8: Defense Republic of Monenor → Commonwealth of Casava: reparations of 2% of GDP a year for 10 years (countered with reparations of 2% of GDP a year for 10 years, and it was accepted)
+    news, Year 50: Non-aggression pact: Republic of Zanah and Commonwealth of Freymark
+    news, Year 50: Non-aggression pact: Colony of Verenine and Republic of Yucaria
+    news, Year 50: Military access: Republic of Veresse and Tribal Lands of Vintvikheim
+    news, Year 50: Trade agreement: Tribal Lands of Dorirmont and Tribal Lands of Vintvikheim
+
+== Five Shores (seed 3), 50 years ==
+  world GDP growth 2.28% a year; 42 wars, 505,649 killed
+  in force at the end: 39 alliance, 1 defensive pact, 44 guarantee of independence, 44 military access, 65 non-aggression pact, 62 trade agreement
+  treaties broken: 4
+    Year 3: Sahaiya Territory broke its non-aggression pact (attacked Iskström Socialist Union)
+    Year 1: Sahaiya Territory broke its loan (defaulted on the loan)
+    Year 3: Sahaiya Territory broke its alliance (attacked Iskström Socialist Union)
+    Year 3: Sahaiya Territory broke its guarantee of independence (attacked Iskström Socialist Union)
+  reputation: best Republic of Loror (79), worst Ozan Junta (32)
+  spy missions finished: 741 (601 succeeded, 82 with agents caught)
+    talks, Year 2: Sahaiya Territory → Clans of Qasun: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 4: Iskström Socialist Union → Sahaiya Territory: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 4: Clans of Skarevik → Commonwealth of Freygard: reparations of 2% of GDP a year for 10 years (accepted)
+    news, Year 50: Non-aggression pact: Commonwealth of Vintfjell and Unified Monarine
+    news, Year 50: Trade agreement: Ozan Junta and Unified Monarine
+    news, Year 50: Non-aggression pact: Ozan Junta and Military State of Svaland
+    news, Year 50: Alliance: Tribal Lands of Orocolan and Military State of Svaland
+
+== The Grand Continent (seed 4), 50 years ==
+  world GDP growth 2.42% a year; 26 wars, 88,001 killed
+  in force at the end: 17 alliance, 10 defensive pact, 17 guarantee of independence, 3 loan, 22 military access, 38 non-aggression pact, 47 trade agreement
+  treaties broken: 0
+  reputation: best Imperial Skarström (68), worst Monesse Federation (32)
+  spy missions finished: 653 (562 succeeded, 41 with agents caught)
+    talks, Year 4: Normarfjell Confederacy → Military State of Targaul: reparations of 2% of GDP a year for 10 years; the loser becomes a vassal (accepted)
+    talks, Year 10: Normarfjell Confederacy → Iskland Caliphate: reparations of 2% of GDP a year for 10 years; the loser becomes a vassal (accepted)
+    talks, Year 18: Normarfjell Confederacy → Iskland Caliphate: white peace (accepted)
+    news, Year 50: Military access: Dominion of Doresse and Crown of Ozan
+    news, Year 50: Grand Duchy of Monava catches 2 agents of Monesse Federation: a diplomatic incident
+    news, Year 50: Guarantee of independence: Imperial Skarström guarantees Republic of Skarmarmark's independence
+    news, Year 50: Guarantee of independence: Imperial Skarström guarantees Freyström Directorate's independence
+
+== The Thousand Isles (seed 4), 50 years ==
+  world GDP growth 2.92% a year; 33 wars, 468,237 killed
+  in force at the end: 20 alliance, 2 defensive pact, 19 guarantee of independence, 21 military access, 45 non-aggression pact, 36 trade agreement
+  treaties broken: 5
+    Year 3: Republic of Suliar broke its non-aggression pact (attacked Commonwealth of Verlania)
+    Year 3: Republic of Suliar broke its alliance (attacked Commonwealth of Verlania)
+    Year 3: Republic of Suliar broke its guarantee of independence (attacked Commonwealth of Verlania)
+    Year 15: Dominion of Iskvik broke its non-aggression pact (attacked People's Republic of Branneland)
+    Year 19: Monanence Federation broke its loan (defaulted on the loan)
+  reputation: best Republic of Suliar (74), worst Crown of Mirada (39)
+  spy missions finished: 677 (542 succeeded, 61 with agents caught)
+    talks, Year 2: Holy Altora → Casoia Federation: reparations of 2% of GDP a year for 10 years (countered with reparations of 2% of GDP a year for 10 years, and it was accepted)
+    talks, Year 3: People's Republic of Branneland → Holy Mirir: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 4: Republic of Suliar → Commonwealth of Verlania: reparations of 2% of GDP a year for 10 years (accepted)
+    news, Year 50: Defensive pact: Clans of Kaldström and Commonwealth of Tulatepec
+    news, Year 50: Non-aggression pact: Commonwealth of Verlania and Casoia Federation
+    news, Year 50: Dominion of Iskvik catches 1 agent of Defense Republic of Vintgard: a diplomatic incident
+    news, Year 50: Non-aggression pact: Holy Mirir and Commonwealth of Verlania
+
+== Five Shores (seed 4), 50 years ==
+  world GDP growth 3.31% a year; 31 wars, 3,724,327 killed
+  in force at the end: 33 alliance, 12 defensive pact, 34 guarantee of independence, 10 loan, 42 military access, 48 non-aggression pact, 51 trade agreement
+  treaties broken: 8
+    Year 3: Zaniya Junta broke its defensive pact (attacked Grand Duchy of Halmark)
+    Year 3: Zaniya Junta broke its guarantee of independence (attacked Grand Duchy of Halmark)
+    Year 3: Zaniya Junta broke its non-aggression pact (attacked Grand Duchy of Halmark)
+    Year 4: Brannvikmark Caliphate broke its loan (defaulted on the loan)
+    Year 4: Commonwealth of Panamatepec broke its loan (defaulted on the loan)
+    Year 16: Miresh Socialist Union broke its alliance (refused the call to arms against People's Republic of Qasabad)
+    Year 16: Sarnan Federation broke its alliance (refused the call to arms against People's Republic of Qasabad)
+    Year 16: Commonwealth of Brannvikström broke its alliance (refused the call to arms against People's Republic of Qasabad)
+  reputation: best Dominion of Doresse (75), worst Dominion of Casesse (21)
+  spy missions finished: 764 (623 succeeded, 83 with agents caught)
+    talks, Year 1: Lorence Territory → Grand Duchy of Halmark: white peace (accepted)
+    talks, Year 2: People's Republic of Qasabad → Ashiya Junta: reparations of 2% of GDP a year for 10 years (countered with white peace, and it was accepted)
+    talks, Year 4: Grand Duchy of Halmark → Zaniya Junta: reparations of 2% of GDP a year for 10 years (accepted)
+    news, Year 51: Defensive pact: Khada Federation and Kingdom of Temgol
+    news, Year 50: Crown of Zaniya catches 1 agent of Dominion of Casesse: a diplomatic incident
+    news, Year 50: Military access: Lorence Territory and Dominion of Doresse
+    news, Year 50: Crown of Zaniya catches 1 agent of Dominion of Kaldström: a diplomatic incident
+
+== The Grand Continent (seed 5), 50 years ==
+  world GDP growth 2.55% a year; 27 wars, 826,426 killed
+  in force at the end: 37 alliance, 5 defensive pact, 27 guarantee of independence, 15 loan, 43 military access, 59 non-aggression pact, 70 trade agreement
+  treaties broken: 7
+    Year 6: Colony of Sulabad broke its non-aggression pact (attacked Republic of Altmont)
+    Year 6: Colony of Sulabad broke its guarantee of independence (attacked Republic of Altmont)
+    Year 19: Commonwealth of Zhanbakhand broke its non-aggression pact (attacked Selania Caliphate)
+    Year 19: Commonwealth of Zhanbakhand broke its guarantee of independence (attacked Selania Caliphate)
+    Year 32: Kingdom of Temnkhand broke its alliance (attacked Selania Caliphate)
+    Year 19: Commonwealth of Zhanbakhand broke its defensive pact (attacked Selania Caliphate)
+    Year 32: Kingdom of Temnkhand broke its guarantee of independence (attacked Selania Caliphate)
+  reputation: best Freymargard Empire (65), worst Kingdom of Temnkhand (35)
+  spy missions finished: 629 (518 succeeded, 47 with agents caught)
+    talks, Year 2: Defense Republic of Verava → Monesse Confederacy: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 4: Tamabad Empire → Sulesh Directorate: reparations of 2% of GDP a year for 10 years; the loser becomes a vassal (accepted)
+    talks, Year 6: Republic of Altmont → Colony of Sulabad: reparations of 2% of GDP a year for 10 years (countered with reparations of 2% of GDP a year for 10 years, and it was accepted)
+    news, Year 51: Trade agreement: Seliror Socialist Union and Republic of Altmont
+    news, Year 50: Alliance: Crown of Uraet and Crown of Normark
+    news, Year 50: Military access: Imperial Sahah and Republic of Zanada
+    news, Year 50: Military access: Crown of Uraet and Crown of Normark
+
+== The Thousand Isles (seed 5), 50 years ==
+  world GDP growth 2.61% a year; 29 wars, 1,941,775 killed
+  in force at the end: 37 alliance, 7 defensive pact, 36 guarantee of independence, 10 loan, 40 military access, 60 non-aggression pact, 61 trade agreement
+  treaties broken: 7
+    Year 3: State of Zanada broke its defensive pact (attacked People's Republic of Dorora)
+    Year 3: State of Zanada broke its non-aggression pact (attacked People's Republic of Dorora)
+    Year 7: Tribal Lands of Selama broke its loan (defaulted on the loan)
+    Year 25: Valava Federation broke its non-aggression pact (attacked State of Brannavik)
+    Year 37: People's Republic of Dorora broke its non-aggression pact (attacked State of Brannavik)
+    Year 37: People's Republic of Dorora broke its alliance (attacked State of Brannavik)
+    Year 41: Military State of Zanir broke its loan (defaulted on the loan)
+  reputation: best Commonwealth of Qasir (68), worst People's Republic of Dorora (31)
+  spy missions finished: 779 (649 succeeded, 62 with agents caught)
+    talks, Year 1: Crown of Orolan → Imperial Ixiguay: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 2: Holy Ixica → Selacolan Empire: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 3: People's Republic of Dorora → Colony of Oronia: reparations of 2% of GDP a year for 10 years (accepted)
+    news, Year 50: Guarantee of independence: Commonwealth of Qasir guarantees Grand Duchy of Mirabad's independence
+    news, Year 50: Military access: Selacolan Empire and Sacred Realm of Kaldfjell
+    news, Year 50: Guarantee of independence: State of Brannavik guarantees Sacred Realm of Kaldfjell's independence
+    news, Year 50: Trade agreement: Grand Duchy of Mirabad and Commonwealth of Qasir
+
+== Five Shores (seed 5), 50 years ==
+  world GDP growth 2.65% a year; 37 wars, 2,379,858 killed
+  in force at the end: 30 alliance, 7 defensive pact, 30 guarantee of independence, 1 loan, 35 military access, 46 non-aggression pact, 50 trade agreement
+  treaties broken: 8
+    Year 21: Kingdom of Sulalah broke its non-aggression pact (attacked Sarul Caliphate)
+    Year 21: Kingdom of Sulalah broke its guarantee of independence (attacked Sarul Caliphate)
+    Year 21: Kingdom of Sulalah broke its alliance (attacked Sarul Caliphate)
+    Year 34: Iskeström Socialist Union broke its alliance (attacked Sarul Caliphate)
+    Year 34: Iskeström Socialist Union broke its non-aggression pact (attacked Sarul Caliphate)
+    Year 44: Brannby Protectorate broke its alliance (attacked Republic of Altmont)
+    Year 34: Iskeström Socialist Union broke its guarantee of independence (attacked Sarul Caliphate)
+    Year 44: Brannby Protectorate broke its non-aggression pact (attacked Republic of Altmont)
+  reputation: best Sarul Caliphate (84), worst Brannby Protectorate (17)
+  spy missions finished: 795 (676 succeeded, 63 with agents caught)
+    talks, Year 2: Brannby Protectorate → Kingdom of Norvikström: white peace (accepted)
+    talks, Year 4: Sulesh Directorate → Vintland Caliphate: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 11: Sulesh Directorate → Commonwealth of Mirar: white peace (accepted)
+    news, Year 50: Trade agreement: Casia Junta and Imperial Tamiya
+    news, Year 50: Military access: Holy Monenora and Republic of Altmont
+    news, Year 50: Non-aggression pact: Vintland Caliphate and Sarul Caliphate
+    news, Year 50: Non-aggression pact: Defense Republic of Tamesh and Republic of Coama
+
+== The Grand Continent (seed 6), 50 years ==
+  world GDP growth 2.89% a year; 36 wars, 3,745,407 killed
+  in force at the end: 16 alliance, 5 defensive pact, 8 guarantee of independence, 6 loan, 14 military access, 30 non-aggression pact, 1 sanctions, 25 trade agreement
+  treaties broken: 14
+    Year 2: Colony of Torheim broke its non-aggression pact (attacked Beline Socialist Union)
+    Year 2: Colony of Torheim broke its guarantee of independence (attacked Beline Socialist Union)
+    Year 4: State of Belanesse broke its loan (defaulted on the loan)
+    Year 16: Tribal Lands of Iskmark broke its loan (defaulted on the loan)
+    Year 29: Workers' State of Normark broke its alliance (attacked Beline Socialist Union)
+    Year 29: Workers' State of Normark broke its non-aggression pact (attacked Beline Socialist Union)
+    Year 30: Workers' State of Tamah broke its loan (defaulted on the loan)
+    Year 29: Workers' State of Normark broke its guarantee of independence (attacked Beline Socialist Union)
+  reputation: best Dominion of Khaun (59), worst Workers' State of Normark (32)
+  spy missions finished: 705 (599 succeeded, 42 with agents caught)
+    talks, Year 2: Colony of Torheim → Workers' State of Normark: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 2: Workers' State of Normark → Dominion of Iskland: reparations of 2% of GDP a year for 10 years (countered with reparations of 2% of GDP a year for 10 years, and it was accepted)
+    talks, Year 2: Colony of Torheim → Beline Socialist Union: reparations of 2% of GDP a year for 10 years (accepted)
+    news, Year 50: Alliance: Kingdom of Selando and Dominion of Khaun
+    news, Year 50: Beline Socialist Union catches 1 agent of Dominion of Selava: a diplomatic incident
+    news, Year 50: Military access: Dominion of Khaun and Kingdom of Selando
+    news, Year 50: Defensive pact: Kingdom of Selando and Dominion of Khaun
+
+== The Thousand Isles (seed 6), 50 years ==
+  world GDP growth 1.61% a year; 38 wars, 1,757,866 killed
+  in force at the end: 2 alliance, 3 defensive pact, 4 guarantee of independence, 10 loan, 4 military access, 35 non-aggression pact, 2 sanctions, 19 trade agreement
+  treaties broken: 7
+    Year 11: Dominion of Sahraun broke its alliance (refused the call to arms against Sacred Realm of Iskmark)
+    Year 11: Kingdom of Panalan broke its alliance (refused the call to arms against Sacred Realm of Iskmark)
+    Year 34: Unified Ixindo broke its loan (defaulted on the loan)
+    Year 45: Valava Territory broke its loan (defaulted on the loan)
+    Year 43: Sacred Realm of Iskmark broke its non-aggression pact (attacked Freyby Territory)
+    Year 49: Commonwealth of Panalan broke its loan (defaulted on the loan)
+    Year 50: Rasrabad Directorate broke its loan (defaulted on the loan)
+  reputation: best Freyby Territory (67), worst Rasrabad Directorate (31)
+  spy missions finished: 612 (494 succeeded, 48 with agents caught)
+    talks, Year 1: Aurora Empire → Freyby Territory: reparations of 2% of GDP a year for 10 years (accepted)
+    talks, Year 10: Colony of Khaesh → Aurora Empire: white peace (accepted)
+    talks, Year 11: Dominion of Sahraun → Aurora Empire: reparations of 2% of GDP a year for 10 years (countered with white peace, and it was accepted)
+    news, Year 50: Kaldby Directorate catches 1 agent of Crown of Valava: a diplomatic incident
+    news, Year 50: Sanctions: Dominion of Sahraun, Kaldby Directorate against Rasrabad Directorate
+    news, Year 50: Rasrabad Directorate breaks its loan with Kaldby Directorate (defaulted on the loan)
+    news, Year 50: Loan: Kaldby Directorate lends State of Tularia $252M at 8.4%
+
+== Five Shores (seed 6), 50 years ==
+  world GDP growth 2.85% a year; 26 wars, 196,773 killed
+  in force at the end: 39 alliance, 3 defensive pact, 44 guarantee of independence, 8 loan, 43 military access, 74 non-aggression pact, 74 trade agreement
+  treaties broken: 0
+  reputation: best Republic of Brannby (76), worst Grand Duchy of Monarence (35)
+  spy missions finished: 799 (649 succeeded, 71 with agents caught)
+    talks, Year 2: Grand Duchy of Coamama → Verava Protectorate: reparations of 2% of GDP a year for 10 years (countered with reparations of 2% of GDP a year for 10 years, and it was accepted)
+    talks, Year 30: Workers' State of Normark → Republic of Svaland: white peace (countered with reparations of 2% of GDP a year for 10 years, and it was accepted)
+    talks, Year 31: Coania Confederacy → Workers' State of Normark: white peace (accepted)
+    news, Year 50: Military access: Grand Duchy of Coamama and Brannovik Empire
+    news, Year 50: Guarantee of independence: Republic of Svaland guarantees Unified Panaca's independence
+    news, Year 50: Military access: Grand Duchy of Coamama and Commonwealth of Yucatepec
+    news, Year 50: Non-aggression pact: Unified Panaca and Republic of Svaland
+
+SUMMARY, with diplomacy: 18 worlds x 50 years
+  world GDP growth: 2.55% a year on average (worlds from 1.61% to 3.31%)
+  wars: 631 (0.28 a nation per decade), 27.6M soldiers killed
+  Civil war: 74, 1.08 years on average
+  Border skirmish: 166, 0.11 years on average
+  Military operation: 118, 0.65 years on average
+  Declared war: 253, 1.18 years on average
+  Total war: 20, 2.55 years on average
+  treaties signed: 22,182 (4,828 access, 1,635 alliance, 548 arms, 1,911 defensive, 2,152 guarantee, 800 loan, 5,224 non_aggression, 62 sanctions, 5,022 trade)
+  treaties broken: 111 (26 alliance, 5 defensive, 22 guarantee, 29 loan, 29 non_aggression)
+  proposed: 143,909 (5,368 access, 21,805 alliance, 563 arms, 49,361 defensive, 2,229 guarantee, 5,286 loan, 30,113 non_aggression, 584 sanctions, 28,600 trade)
+  spy missions sent: 34,396 (870 fund, 9,111 intel, 2,035 meddle, 72 revolt, 8,563 sabotage, 13,745 steal)
+  missions succeeded: 26,347 (783 fund, 6,264 intel, 1,724 meddle, 65 revolt, 7,291 sabotage, 10,220 steal)
+  missions failed: 7,848 (87 fund, 2,813 intel, 298 meddle, 7 revolt, 1,225 sabotage, 3,418 steal)
+  negotiated peace: 315 (21 border skirmish, 208 declared war, 71 military operation, 15 total war)
+  agents caught: 4,557
+  agents trained: 5,830
+  arms sold (W$ bn): 1140.3
+  calls to arms honoured: 869
+  calls to arms refused: 18
+  coalition alliances: 153
+  independence movements: 69
+  lent (W$ bn): 417.0
+  loans repaid: 658
+  offensive calls declined: 7
+  peace talk rounds: 374
+  peace talks opened: 317
+  provinces to allies: 3
+  reparations to allies: 301
+  revolts started by spies: 38
+  spy incidents: 4,097
+  wars: 557
+  wars prevented by diplomacy: 2,111
+
+THE SAME WORLDS WITHOUT DIPLOMACY:
+  world GDP growth: 2.47% a year on average (worlds from 1.17% to 3.44%)
+  wars: 848 (0.38 a nation per decade), 60.3M soldiers killed
+  Civil war: 63, 1.51 years on average
+  Border skirmish: 260, 0.11 years on average
+  Military operation: 147, 0.63 years on average
+  Declared war: 330, 1.24 years on average
+  Total war: 48, 3.09 years on average
+(368 s)

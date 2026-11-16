@@ -83,6 +83,10 @@ impl Economy {
 
         // Clear each good: bids are shared over the offers each buyer may take.
         let blocked = |a: usize, b: usize, nations: &[super::NationEcon]| nations[a].embargo[b] || nations[b].embargo[a];
+        // A trade agreement: the buyer weighs its partner's offers more.
+        let pacts = &self.trade_pact;
+        let pref = self.trade_pref;
+        let weight = |i: usize, j: usize| if pacts.is_empty() || !pacts[i][j] { 1.0 } else { pref };
         let mut flows = vec![0.0; count * count];
         for g in 0..goods {
             if !ed.goods[g].trade {
@@ -98,14 +102,14 @@ impl Economy {
                     if bids[i][g] <= EPS {
                         continue;
                     }
-                    let e: f64 = (0..count).filter(|&j| j != i && !blocked(i, j, &self.nations)).map(|j| offers[j][g]).sum();
+                    let e: f64 = (0..count).filter(|&j| j != i && !blocked(i, j, &self.nations)).map(|j| offers[j][g] * weight(i, j)).sum();
                     eligible[i] = e;
                     if e <= EPS {
                         continue;
                     }
                     for j in 0..count {
                         if j != i && offers[j][g] > EPS && !blocked(i, j, &self.nations) {
-                            asked[j] += bids[i][g] * offers[j][g] / e;
+                            asked[j] += bids[i][g] * offers[j][g] * weight(i, j) / e;
                         }
                     }
                 }
@@ -118,7 +122,7 @@ impl Economy {
                             continue;
                         }
                         let scale = if asked[j] > offers[j][g] { offers[j][g] / asked[j] } else { 1.0 };
-                        flows[i * count + j] = bids[i][g] * offers[j][g] / eligible[i] * scale;
+                        flows[i * count + j] = bids[i][g] * offers[j][g] * weight(i, j) / eligible[i] * scale;
                     }
                 }
                 // Settle every flow: importer i buys from exporter j.
@@ -155,7 +159,8 @@ impl Economy {
                             im.stock_faulty[g] = super::mix_faulty(im.stock_faulty[g], im.stock[g], ed.import_defect, f);
                             im.stock[g] += f;
                             im.ledger.imported[g] += f;
-                            let tariff = value * im.tariff / im.exchange;
+                            let partner = !self.trade_pact.is_empty() && self.trade_pact[i][j];
+                            let tariff = if partner { 0.0 } else { value * im.tariff / im.exchange };
                             let landed = value * (1.0 + c) / im.exchange + tariff;
                             im.budget_today.tariffs += tariff;
                             im.trade_margin += f * im.price[g] - landed;

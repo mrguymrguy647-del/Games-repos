@@ -51,12 +51,14 @@ pub struct MapUi {
     pub econ: EconUi,
     /// The war room, battle markers and reports.
     pub war: super::war_screen::WarUi,
+    /// The diplomacy and spy windows.
+    pub diplo: super::diplo_screen::DiploUi,
 }
 
 impl MapUi {
     /// Esc has something to close here (so it doesn't quit the game).
     pub fn wants_escape(&self) -> bool {
-        self.card.is_some() || self.selected.is_some() || self.econ.open.is_some() || self.brain.is_some() || self.war.wants_escape()
+        self.card.is_some() || self.selected.is_some() || self.econ.open.is_some() || self.brain.is_some() || self.war.wants_escape() || self.diplo.wants_escape()
     }
 }
 
@@ -143,6 +145,22 @@ impl Lucky {
         }
         if self.map_ui.war.open.is_some() {
             self.update_war_room(ctx);
+            self.report_map(ctx);
+            return;
+        }
+        if self.map_ui.diplo.open.is_some() {
+            self.update_diplo(ctx);
+            self.report_map(ctx);
+            return;
+        }
+        if self.map_ui.diplo.spies.is_some() {
+            self.update_spies(ctx);
+            self.report_map(ctx);
+            return;
+        }
+        if self.diplo.is_some() && (ctx.input.was_pressed(Key::P) || ctx.input.was_pressed(Key::I)) {
+            let spies = ctx.input.was_pressed(Key::I);
+            self.open_diplo(ctx, spies);
             self.report_map(ctx);
             return;
         }
@@ -382,6 +400,7 @@ impl Lucky {
         ctx.report("card", self.map_ui.card.map_or("none".to_string(), |n| self.world.as_ref().map_or(String::new(), |w| w.nations[n].name.clone())));
         ctx.report("spectating", self.spectating);
         self.report_war(ctx);
+        self.report_diplo(ctx);
         if let (Some(n), Some(b)) = (self.map_ui.brain, self.brains.as_ref()) {
             if let Some(brain) = b.brain(n) {
                 ctx.report("brain_nation", n);
@@ -497,11 +516,11 @@ impl Lucky {
         self.draw_overlay_legend(canvas);
 
         let hint = if self.spectating {
-            "Click a nation: its brain · Tab: next nation · Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · M: terrain · V: overlays · Space: pause · 1-6: speed · O: economy · K: war · J: battle · Esc: close"
+            "Click a nation: its brain · Tab: next nation · Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · M: terrain · V: overlays · Space: pause · 1-6: speed · O: economy · K: war · J: battle · P: diplomacy · I: spies · Esc: close"
         } else {
             match view.mode {
-                Mode::Political => "Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · T/G: tilt · Click: province · Name or flag: card · Tab: next nation · H: home · M: terrain · V: overlays · Space: pause · 1-5: speed · O: economy · K: war · J: battle",
-                Mode::Terrain => "Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · T/G: tilt · Click: province · Name or flag: card · Tab: next nation · H: home · M: nations · V: overlays · Space: pause · 1-5: speed · O: economy · K: war · J: battle",
+                Mode::Political => "Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · T/G: tilt · Click: province · Name or flag: card · Tab: next nation · H: home · M: terrain · V: overlays · Space: pause · 1-5: speed · O: economy · K: war · J: battle · P: diplomacy · I: spies",
+                Mode::Terrain => "Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · T/G: tilt · Click: province · Name or flag: card · Tab: next nation · H: home · M: nations · V: overlays · Space: pause · 1-5: speed · O: economy · K: war · J: battle · P: diplomacy · I: spies",
             }
         };
         ui::plain(
@@ -516,6 +535,8 @@ impl Lucky {
 
         self.draw_econ_window(canvas);
         self.draw_war_room(canvas);
+        self.draw_diplo(canvas);
+        self.draw_spies(canvas);
         self.draw_battle_reports(canvas);
         if let Some(n) = self.map_ui.card {
             ui::dim(canvas, 0.75);

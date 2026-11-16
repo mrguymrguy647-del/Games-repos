@@ -98,6 +98,8 @@ pub struct WarWorld {
     pub e: crate::econ::Economy,
     pub brains: Option<crate::ai::Brains>,
     pub wars: Wars,
+    /// Diplomacy and spies (phase 6), when switched on.
+    pub diplo: Option<crate::diplo::Diplomacy>,
 }
 
 impl WarWorld {
@@ -107,7 +109,14 @@ impl WarWorld {
         let brains = if brains { Some(crate::ai::Brains::new(ai.clone(), &data, &atlas, &world, &mut e, seed, |_| true)) } else { None };
         let mut wars = Wars::new(super::WarData::load()?, &data, &atlas, &world, &mut e, &ed, seed);
         wars.set_intel(&ai);
-        Ok(WarWorld { data, atlas, ed, world, e, brains, wars })
+        Ok(WarWorld { data, atlas, ed, world, e, brains, wars, diplo: None })
+    }
+
+    /// The same world with diplomacy and spies (the full game).
+    pub fn with_diplomacy(mut self, seed: u32) -> Res<WarWorld> {
+        let ai = crate::ai::AiData::load()?;
+        self.diplo = Some(crate::diplo::Diplomacy::new(crate::diplo::DiploData::load()?, &self.wars, &self.e, &ai, seed));
+        Ok(self)
     }
 
     pub fn day(&mut self) {
@@ -116,6 +125,9 @@ impl WarWorld {
             b.day(&mut self.e, &self.ed);
         }
         self.wars.day(&mut self.e, &self.ed, self.brains.as_mut());
+        if let Some(d) = self.diplo.as_mut() {
+            d.day(&mut self.e, &self.ed, &mut self.wars, self.brains.as_mut());
+        }
     }
 }
 
@@ -299,6 +311,9 @@ pub struct WorldWars {
     /// Nations whose stability ever fell under 20.
     pub unstable: usize,
     pub stats: std::collections::BTreeMap<String, f64>,
+    /// The world's GDP at the start and the end (W$ a year).
+    pub gdp_start: f64,
+    pub gdp_end: f64,
 }
 
 /// A war's cause, in a few words (for the report's tally).
@@ -312,7 +327,7 @@ pub fn cause_kind(cause: &str) -> String {
 pub fn run_wars(map: usize, seed: u32, years: f64, battles: bool) -> Res<WorldWars> {
     let mut ww = WarWorld::new(map, seed, true)?;
     let days = (years * ww.ed.days_per_year as f64) as u32;
-    let mut out = WorldWars { nations: ww.wars.nations, ..WorldWars::default() };
+    let mut out = WorldWars { nations: ww.wars.nations, gdp_start: ww.e.nations.iter().map(|n| n.gdp).sum(), ..WorldWars::default() };
     let mut nation_days_at_war = 0.0;
     let mut low: Vec<usize> = Vec::new();
     let mut worst_day = 0;
@@ -344,6 +359,7 @@ pub fn run_wars(map: usize, seed: u32, years: f64, battles: bool) -> Res<WorldWa
         }
     }
     out.unstable = low.len();
+    out.gdp_end = ww.e.nations.iter().map(|n| n.gdp).sum();
     out.vassals_end = overlords.iter().filter(|o| o.is_some()).count();
     let top = |mut i: usize| {
         let mut n = 0;
@@ -487,6 +503,8 @@ pub fn war_report(args: &[String]) -> Res<()> {
         t.vassals_end += r.vassals_end;
         t.biggest_bloc = t.biggest_bloc.max(r.biggest_bloc);
         t.unstable += r.unstable;
+        t.gdp_start += r.gdp_start;
+        t.gdp_end += r.gdp_end;
         for (k, v) in &r.stats {
             *t.stats.entry(k.clone()).or_insert(0.0) += v;
         }
@@ -516,6 +534,10 @@ pub fn war_report(args: &[String]) -> Res<()> {
     println!("  causes: {}", causes.iter().map(|(k, v)| format!("{k} {v}")).collect::<Vec<_>>().join(", "));
     println!("  vassals: {} made, {} broke free, {} at the end; the biggest bloc held {:.0}% of a world's land", t.vassalised, t.freed, t.vassals_end, t.biggest_bloc * 100.0);
     println!("  {} nations' stability ever fell under 20", t.unstable);
+    let growth: Vec<f64> = results.iter().filter_map(|(_, r)| r.as_ref().ok()).map(|r| (r.gdp_end / r.gdp_start.max(1.0)).powf(1.0 / years.max(1.0)) - 1.0).collect();
+    let mean = growth.iter().sum::<f64>() / growth.len().max(1) as f64;
+    let (lo, hi) = growth.iter().fold((f64::MAX, f64::MIN), |(a, b), &g| (a.min(g), b.max(g)));
+    println!("  world GDP growth: {:.2}% a year on average (worlds from {:.2}% to {:.2}%)", mean * 100.0, lo * 100.0, hi * 100.0);
     for (k, v) in &t.stats {
         println!("  {k}: {}", big(*v));
     }

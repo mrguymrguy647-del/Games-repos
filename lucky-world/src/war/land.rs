@@ -815,7 +815,9 @@ fn seen_power(w: &mut Wars, f: Faction, r: usize) -> f64 {
     if truth <= 0.0 {
         return 0.0;
     }
-    truth * (w.intel_error[f] * normal(&mut w.rng)).exp()
+    // Spies' intel on the province's holder narrows the error (diplomacy).
+    let seen = w.control[r].map(|c| w.nation_of(c)).and_then(|c| w.intel_seen.get(w.nation_of(f)).and_then(|row| row.get(c)).copied()).unwrap_or(1.0);
+    truth * (w.intel_error[f] * seen * normal(&mut w.rng)).exp()
 }
 
 /// A division's own power, as its general counts it.

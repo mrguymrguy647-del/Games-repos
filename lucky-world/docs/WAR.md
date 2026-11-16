@@ -651,6 +651,11 @@ The losses term of the score counts against the size of both armies:
 = killed + captured), so a tenth of the armies lost one way is the whole
 30 points. A deal never takes the loser's capital or its last province.
 
+**Phase 6.** With diplomacy (docs/DIPLOMACY.md, section 7) the offer rule
+above is replaced by peace talks: offers, counteroffers and concessions,
+each side judging the score through its own spies, allies with their own
+demands. Escalation, surrender and the six-year cap stay.
+
 **The hook for diplomacy (phase 6).** Every offer goes through
 `war::peace::PeaceTable`: who offers, the terms, and the answer. In phase
 5 the brains answer it with the rule above. The player answers offers to

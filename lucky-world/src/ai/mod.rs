@@ -156,6 +156,9 @@ pub struct Brain {
     pub personality: Personality,
     /// How wrong its estimates of others can be (its secret service).
     pub intel_error: f64,
+    /// Spies' intel on each nation: a factor on `intel_error` (1: none;
+    /// diplomacy narrows it after a successful mission).
+    pub intel_factor: Vec<f64>,
     pub secret_service: String,
     /// The goal (index into `GOALS`) and why.
     pub goal: usize,
@@ -290,6 +293,7 @@ impl Brains {
                     nation: i,
                     personality,
                     intel_error,
+                    intel_factor: vec![1.0; count],
                     secret_service,
                     goal: 0,
                     goal_why: "Starting out".to_string(),

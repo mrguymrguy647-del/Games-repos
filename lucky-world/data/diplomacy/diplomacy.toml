@@ -1,0 +1,157 @@
+# LUCKY WORLD: diplomacy and spies. docs/DIPLOMACY.md explains every number (its section in [ ]).
+
+[relations]                    # [1]
+same_ideology = 10.0
+other_ideology = -5.0
+opposed_ideology = -15.0
+friends_bonus = 10.0           # ideological friends (below) add this for the same ideology
+opposed = [["communism", "democracy"], ["communism", "monarchy"], ["theocracy", "democracy"], ["military_rule", "democracy"]]
+ideological_friends = ["communism", "theocracy"]
+border = -5.0
+trade = 40.0                   # x the partner's share of our trade...
+trade_max = 20.0               # ...at most
+threat = -10.0                 # j is our biggest threat
+hegemon = -10.0                # j is the hegemon
+reputation = 0.2               # (reputation - 50) x this
+half_life = 10.0               # years for a remembered event to count half
+treaty = { trade = 8.0, non_aggression = 5.0, access = 5.0, defensive = 15.0, alliance = 25.0, guarantee = 15.0, loan = 5.0, sanctions = -15.0 }
+
+[events]                       # [1] what each remembered event weighs
+invaded_us = -40.0
+fought_us = -20.0
+side_by_side = 25.0
+made_peace = 5.0
+broke_treaty_with_us = -35.0
+broke_treaty_with_ally = -15.0
+refused_call = -30.0
+came_to_aid = 30.0
+caught_spy = -25.0
+embargoed_us = -20.0
+lifted_embargo = 5.0
+armed_enemy = -20.0
+sold_arms = 8.0
+lent_money = 10.0
+defaulted = -25.0
+protected = 20.0
+neglected = -30.0
+
+[reputation]                   # [2]
+start = 50.0
+leader = { diplomat = 15.0, genius = 5.0, builder = 5.0, coward = 0.0, warlord = -10.0 }
+break_cost = { non_aggression = 15.0, defensive = 20.0, alliance = 25.0, guarantee = 20.0, loan = 15.0, trade = 3.0, access = 3.0, sanctions = 5.0 }
+honour_gain = 5.0
+recover = 0.05                 # of the way back to 50, a year
+incident = 2.0                 # a caught spy
+
+[treaties]                     # [3]
+years = { trade = 10.0, non_aggression = 10.0, defensive = 10.0, alliance = 15.0, access = 5.0, guarantee = 10.0, sanctions = 5.0 }
+trade_pref = 1.5               # a buyer weighs a trade partner's offers this much more
+arms_markup = 1.2
+arms_share = 0.15              # a deal moves at most this share of the seller's stockpile of a good
+loan_rate = 0.04               # a year...
+loan_risk = 0.08               # ...+ this x (1 - trust)
+loan_years = 8.0
+loan_size = 0.03               # of the lender's GDP, at most
+default_months = 3
+
+[answers]                      # [4]
+relations_weight = 0.6
+trust_weight = 0.5
+accept_threshold = 0.25
+propose_threshold = 0.45
+trade_gain = 2.0
+planned_cost = 0.2
+designs_cost = 0.8
+shared_threat = 0.5
+friends = 0.3
+dragged = 1.0
+alliance_drag = 1.5
+access_cost = 0.1
+guarantee_gain = 1.5
+arms_enemy_cost = 1.0
+sanction_hate = -30.0
+
+[war]                          # [6] and [11]
+honour_threshold = 0.5
+offensive_threshold = 0.8
+exhaustion_cost = 0.6
+busy_cost = 0.3
+player_days = 14               # the player's call to arms waits this long, then is honoured
+break_desire = 20.0            # a treaty's break cost / this, x honour, is a cost in war desire
+deterrence = 1.5               # x (the target's defenders' power / mine)
+alliance_years = 10.0          # a coalition's alliances
+
+[talks]                        # [7]
+concession = 4.0               # points a week
+give = 30.0                    # x exhaustion / stake
+give_weeks = 10.0              # more a year of talking
+greed = 10.0                   # x (aggression - 0.5)
+ally_reparations = 0.5         # an ally's share, of the lead's
+
+[vassals]                      # [8]
+base = 50.0
+relations = 0.5
+tribute = 300.0
+protected = 20.0
+neglected = -30.0
+speed = 0.05
+movement = 25.0
+movement_stability = 0.5
+
+[spies]                        # [9]
+agents = { none = 0, amateur = 2, competent = 5, feared = 10, legendary = 16 }
+skill = { none = 0.2, amateur = 0.35, competent = 0.5, feared = 0.65, legendary = 0.8 }
+ci_base = { none = 0.1, amateur = 0.25, competent = 0.4, feared = 0.55, legendary = 0.7 }
+max_factor = 2.0
+min_max = 4
+train_days = 180
+train_cost = 0.0001            # of GDP, to train an agent...
+upkeep = 0.00005               # ...and to keep one, a year
+skill_gain = 0.02
+skill_max = 0.95
+ci_log = 0.15
+per_agent = 0.08
+k = 6.0
+ci_share = 0.4
+launch_chance = 0.25           # a brain's service sends a mission in this share of months (+ its spy trait, + 0.2 at war)
+intel_factor = 0.25
+intel_years = 2.0
+intel_floor = 0.03
+sabotage_buildings = 0.08
+sabotage_rail = 0.5
+sabotage_power = 0.15
+steal_share = 0.3
+unrest = 5.0
+revolt_stability = 20.0       # a revolt mission starts a civil war only where stability is under this (as a rising would)
+revolt_fallback = 12.0
+fund_share = 0.05
+meddle = 10.0
+meddle_days = 30
+bribe_skill = 0.6
+bribe_days = 360
+
+[missions]                     # [9] ease, exposure, days
+# With an even match (skill = the target's counter-intel), k = 6:
+#   success: intel 55%, fund 50%, unrest 40%, sabotage 35%, meddle 30%,
+#            steal 25%, bribe 15%, revolt 10%, kill 8%
+#   caught:  intel 15%, fund 20%, steal 25%, unrest 25%, sabotage 30%,
+#            meddle 30%, bribe 35%, revolt 40%, kill 50%
+intel = { ease = 0.03, exposure = -0.29, days = 60 }
+sabotage = { ease = -0.10, exposure = -0.14, days = 90 }
+steal = { ease = -0.18, exposure = -0.18, days = 120 }
+unrest = { ease = -0.07, exposure = -0.18, days = 90 }
+revolt = { ease = -0.37, exposure = -0.07, days = 120 }   # (only against an enemy at war)
+fund = { ease = 0.0, exposure = -0.23, days = 30 }
+meddle = { ease = -0.14, exposure = -0.14, days = 120 }
+kill = { ease = -0.41, exposure = 0.0, days = 90 }
+bribe = { ease = -0.29, exposure = -0.10, days = 90 }
+
+[personality]                  # [10] by wheel option: honour, treaty love, protection, spy use
+default = { honour = 0.6, love = 0.0, protection = 0.0, spies = 0.0 }
+diplomat = { honour = 0.9, love = 0.3 }
+warlord = { honour = 0.3, love = -0.2, spies = 0.2 }
+coward = { honour = 0.7, protection = 0.4 }
+genius = { honour = 0.6, love = 0.1, spies = 0.1 }
+builder = { honour = 0.7, love = 0.1 }
+democracy = { honour = 0.1, love = 0.1, spies = -0.1 }
+military_rule = { honour = -0.1, spies = 0.1 }

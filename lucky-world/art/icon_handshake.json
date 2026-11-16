@@ -1,0 +1,99 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Diplomacy: two hands shaking",
+ "seed": 1,
+ "palette": {
+  "ink": "#1A1030",
+  "gold": "#F5C542",
+  "skin": "#E2B48C",
+  "skin_dark": "#B98B62",
+  "blue": "#4E79C8",
+  "red": "#F06A6A"
+ },
+ "commands": [
+  {
+   "cmd": "canvas",
+   "width": 24,
+   "height": 24
+  },
+  {
+   "cmd": "layer",
+   "name": "Art"
+  },
+  {
+   "cmd": "ellipse",
+   "center": [
+    12,
+    12
+   ],
+   "radius": 11,
+   "fill": "ink",
+   "outline": "gold",
+   "outline_size": 1.5
+  },
+  {
+   "cmd": "line",
+   "from": [
+    3,
+    13
+   ],
+   "to": [
+    8,
+    10
+   ],
+   "color": "blue",
+   "size": 4
+  },
+  {
+   "cmd": "line",
+   "from": [
+    21,
+    13
+   ],
+   "to": [
+    16,
+    10
+   ],
+   "color": "red",
+   "size": 4
+  },
+  {
+   "cmd": "ellipse",
+   "center": [
+    12,
+    12
+   ],
+   "radius": 4.5,
+   "fill": "skin",
+   "outline": "skin_dark",
+   "outline_size": 1
+  },
+  {
+   "cmd": "line",
+   "from": [
+    9,
+    11
+   ],
+   "to": [
+    15,
+    13
+   ],
+   "color": "skin_dark",
+   "size": 1
+  },
+  {
+   "cmd": "line",
+   "from": [
+    10,
+    14
+   ],
+   "to": [
+    14,
+    14
+   ],
+   "color": "skin_dark",
+   "size": 1
+  }
+ ]
+}

@@ -470,6 +470,20 @@ pub struct Wars {
     pub weather: Vec<u8>,
     /// How wrong each faction's scouts and spies are (AI.md, section 2).
     pub intel_error: Vec<f64>,
+    /// Hooks diplomacy (docs/DIPLOMACY.md, section 11) sets; empty without it.
+    /// The cost in war desire of attacking each nation (treaties, deterrence)...
+    pub diplo_cost: Vec<Vec<f64>>,
+    /// ...a vassal's loyalty (0-100)...
+    pub loyalty: Vec<f64>,
+    /// ...military access between nations (their land is friendly)...
+    pub access: Vec<Vec<bool>>,
+    /// ...each nation's intel on each other (a factor on its estimates' error)...
+    pub intel_seen: Vec<Vec<f64>>,
+    /// ...and whether peace is negotiated in diplomacy's talks.
+    pub peace_talks: bool,
+    /// Wars diplomacy held back: (would-be attacker, target, day), counted
+    /// once a year per pair.
+    pub prevented: Vec<(usize, usize, u32)>,
     /// Who holds each sea zone, and which are fought over.
     pub zone_control: Vec<Option<Faction>>,
     pub zone_contested: Vec<bool>,
@@ -582,6 +596,12 @@ impl Wars {
             rel: vec![vec![None; 2 * n]; 2 * n],
             weather: vec![0; map.provinces.len()],
             intel_error: vec![0.15; 2 * n],
+            diplo_cost: Vec::new(),
+            loyalty: Vec::new(),
+            access: Vec::new(),
+            intel_seen: Vec::new(),
+            peace_talks: false,
+            prevented: Vec::new(),
             zone_control: Vec::new(),
             zone_contested: Vec::new(),
             zone_fleets: Vec::new(),
@@ -678,6 +698,17 @@ impl Wars {
             if let Some(s) = w.side_of(f) {
                 for &g in &w.sides[s] {
                     if !out.contains(&g) {
+                        out.push(g);
+                    }
+                }
+            }
+        }
+        // Military access (diplomacy): a partner's land is friendly too,
+        // unless the two are at war.
+        if f < self.nations {
+            if let Some(row) = self.access.get(f) {
+                for (g, &ok) in row.iter().enumerate() {
+                    if ok && g != f && !out.contains(&g) && self.at_war(f, g).is_none() {
                         out.push(g);
                     }
                 }

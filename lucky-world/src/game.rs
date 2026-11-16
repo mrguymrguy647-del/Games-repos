@@ -3,6 +3,7 @@
 //! 3D world map (in `map_screen`).
 
 mod brain_panel;
+mod diplo_screen;
 mod econ_screen;
 mod map_screen;
 mod war_screen;
@@ -100,6 +101,9 @@ pub struct Lucky {
     /// The war's rules (data/war/war.toml), and every army, war and battle.
     pub war_data: WarData,
     pub wars: Option<Wars>,
+    /// Diplomacy and spies (data/diplomacy/diplomacy.toml), once on the map.
+    pub diplo_data: crate::diplo::DiploData,
+    pub diplo: Option<crate::diplo::Diplomacy>,
     /// Spectator mode: nobody is the player; click a nation to read its mind.
     pub spectating: bool,
     /// `--spectate`: go straight to spectator mode on the first frame.
@@ -109,7 +113,8 @@ pub struct Lucky {
 }
 
 impl Lucky {
-    pub fn new(data: Data, atlas: Atlas, assets: Assets, models: Models, econ_data: EconData, ai_data: AiData, war_data: WarData) -> Lucky {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(data: Data, atlas: Atlas, assets: Assets, models: Models, econ_data: EconData, ai_data: AiData, war_data: WarData, diplo_data: crate::diplo::DiploData) -> Lucky {
         let mut game = Lucky {
             data,
             assets,
@@ -148,6 +153,8 @@ impl Lucky {
             brains: None,
             war_data,
             wars: None,
+            diplo_data,
+            diplo: None,
             spectating: false,
             spectate_at_start: false,
             start_war: false,
@@ -178,6 +185,7 @@ impl Lucky {
         self.economy = None;
         self.brains = None;
         self.wars = None;
+        self.diplo = None;
         self.spectating = false;
         self.clock = Clock::default();
         self.map_ui = MapUi::default();
@@ -434,6 +442,8 @@ impl Lucky {
         let mut wars = Wars::new(self.war_data.clone(), &self.data, &self.atlas, &world, &mut economy, &self.econ_data, seed);
         wars.set_intel(&self.ai_data);
         wars.player = if all { None } else { Some(0) };
+        // Diplomacy and spies: every nation's relations, treaties, secret service.
+        self.diplo = Some(crate::diplo::Diplomacy::new(self.diplo_data.clone(), &wars, &economy, &self.ai_data, seed));
         self.wars = Some(wars);
         self.map_ui.war = Default::default();
         self.economy = Some(economy);

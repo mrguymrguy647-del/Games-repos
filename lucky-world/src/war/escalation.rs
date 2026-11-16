@@ -313,6 +313,17 @@ fn decide(w: &mut Wars, e: &mut Economy, ed: &EconData, k: usize, mut brains: Op
         let my = if s == 0 { score } else { -score };
         let ex = w.forces[lead].exhaustion;
         let limit = p.offer_exhaustion * p.stake[wr.level.min(4)] * (1.0 + risk(lead, brains.as_deref()));
+        // With diplomacy, peace is negotiated in its talks (docs/DIPLOMACY.md, section 7).
+        if w.peace_talks && !wr.civil {
+            let cost = w.data.escalation.cost(&w.ideology[lead]) * (1.0 - risk(lead, brains.as_deref()));
+            let stake = if s == 1 { 1.3 } else { 1.0 };
+            let needed = if wr.level >= 3 { w.data.ai.total_war_score } else { w.data.ai.escalate_score };
+            if my < needed && wr.level < 4 && cost < stake && ex < limit * 0.8 && (w.rng.next_f32() as f64) < w.data.ai.escalate_chance {
+                escalate(w, k, s);
+                return;
+            }
+            continue;
+        }
         let old_enough = (day - wr.start) as f64 >= p.min_days;
         // A side sues for peace when worn out, when the war is hopeless for
         // it (deeper wars are fought on longer), or when it has won and
@@ -437,9 +448,15 @@ fn start_wars(w: &mut Wars, e: &mut Economy, ed: &EconData, b: &mut Brains) {
             // A world already at war makes a new one riskier (who would
             // come to whose aid?): the more nations at war, the less desire.
             let costs = a.exhaustion_cost * ex + a.debt_cost * debt + a.world_at_war_cost * at_war_share;
+            // Diplomacy: the treaties it would break, and the target's friends.
+            let diplo = w.diplo_cost.get(i).and_then(|row| row.get(j)).copied().unwrap_or(0.0);
             // Weakness on its own needs the power to win; the other motives
             // add to it (a grudge, a lost province, a holy war...).
-            let desire = ms.iter().map(|m| m.1).sum::<f64>() - costs;
+            let desire = ms.iter().map(|m| m.1).sum::<f64>() - costs - diplo;
+            if desire <= a.war_threshold && desire + diplo > a.war_threshold && ratio > 0.7 && ms.iter().any(|m| m.0 != "strength" && m.1 > 0.0) && !w.prevented.iter().any(|p| p.0 == i && p.1 == j && day - p.2 < 360) {
+                w.prevented.push((i, j, day));
+                w.count("wars prevented by diplomacy", 1.0);
+            }
             let reasons = ms.iter().filter(|m| m.0 != "strength" && m.1 > 0.0).count();
             let top = ms.into_iter().max_by(|x, y| x.1.total_cmp(&y.1)).unwrap();
             if reasons == 0 {
@@ -555,6 +572,8 @@ fn independence(w: &mut Wars, e: &mut Economy, ed: &EconData, mut brains: Option
             + 0.2 * (w.vassals_of(o).len() as f64 - 1.0).max(0.0)
             + if w.ideology[v] != w.ideology[o] { 0.3 } else { 0.0 }
             + 0.3 * resent
+            // Diplomacy: a loyal vassal wants it less, a resentful one more.
+            - w.loyalty.get(v).map_or(0.0, |l| (l - 50.0) / 100.0)
     };
     for v in 0..w.nations {
         let Some(o) = w.overlords[v] else { continue };
@@ -817,7 +836,7 @@ fn civil_wars(w: &mut Wars, e: &mut Economy, ed: &EconData) {
 }
 
 /// Rebels rise in nation `i`.
-fn rise(w: &mut Wars, e: &mut Economy, ed: &EconData, i: usize) {
+pub fn rise(w: &mut Wars, e: &mut Economy, ed: &EconData, i: usize) {
     let r = w.nations + i;
     let share = w.data.other.rebel_share;
     // The provinces furthest from the capital, about a third of them.

@@ -1,0 +1,309 @@
+{
+ "frames": 2700,
+ "events": [
+  {
+   "frame": 10,
+   "press": "S"
+  },
+  {
+   "frame": 12,
+   "release": "S"
+  },
+  {
+   "frame": 300,
+   "press": "Space"
+  },
+  {
+   "frame": 302,
+   "release": "Space"
+  },
+  {
+   "frame": 760,
+   "press": "Space"
+  },
+  {
+   "frame": 762,
+   "release": "Space"
+  },
+  {
+   "frame": 770,
+   "press": "Digit5"
+  },
+  {
+   "frame": 772,
+   "release": "Digit5"
+  },
+  {
+   "frame": 1700,
+   "press": "Space"
+  },
+  {
+   "frame": 1702,
+   "release": "Space"
+  },
+  {
+   "frame": 1720,
+   "press": "P"
+  },
+  {
+   "frame": 1722,
+   "release": "P"
+  },
+  {
+   "frame": 1750,
+   "press": "Down"
+  },
+  {
+   "frame": 1752,
+   "release": "Down"
+  },
+  {
+   "frame": 1760,
+   "press": "Down"
+  },
+  {
+   "frame": 1762,
+   "release": "Down"
+  },
+  {
+   "frame": 1770,
+   "press": "Down"
+  },
+  {
+   "frame": 1772,
+   "release": "Down"
+  },
+  {
+   "frame": 1800,
+   "press": "Enter"
+  },
+  {
+   "frame": 1802,
+   "release": "Enter"
+  },
+  {
+   "frame": 1830,
+   "press": "Right"
+  },
+  {
+   "frame": 1832,
+   "release": "Right"
+  },
+  {
+   "frame": 1850,
+   "press": "Enter"
+  },
+  {
+   "frame": 1852,
+   "release": "Enter"
+  },
+  {
+   "frame": 1880,
+   "press": "Right"
+  },
+  {
+   "frame": 1882,
+   "release": "Right"
+  },
+  {
+   "frame": 1890,
+   "press": "Right"
+  },
+  {
+   "frame": 1892,
+   "release": "Right"
+  },
+  {
+   "frame": 1900,
+   "press": "Enter"
+  },
+  {
+   "frame": 1902,
+   "release": "Enter"
+  },
+  {
+   "frame": 1930,
+   "press": "Tab"
+  },
+  {
+   "frame": 1932,
+   "release": "Tab"
+  },
+  {
+   "frame": 1950,
+   "press": "Y"
+  },
+  {
+   "frame": 1952,
+   "release": "Y"
+  },
+  {
+   "frame": 1970,
+   "press": "Tab"
+  },
+  {
+   "frame": 1972,
+   "release": "Tab"
+  },
+  {
+   "frame": 1990,
+   "press": "Tab"
+  },
+  {
+   "frame": 1992,
+   "release": "Tab"
+  },
+  {
+   "frame": 2000,
+   "press": "Tab"
+  },
+  {
+   "frame": 2002,
+   "release": "Tab"
+  },
+  {
+   "frame": 2030,
+   "press": "P"
+  },
+  {
+   "frame": 2032,
+   "release": "P"
+  },
+  {
+   "frame": 2050,
+   "press": "I"
+  },
+  {
+   "frame": 2052,
+   "release": "I"
+  },
+  {
+   "frame": 2070,
+   "press": "T"
+  },
+  {
+   "frame": 2072,
+   "release": "T"
+  },
+  {
+   "frame": 2090,
+   "press": "Right"
+  },
+  {
+   "frame": 2092,
+   "release": "Right"
+  },
+  {
+   "frame": 2110,
+   "press": "Tab"
+  },
+  {
+   "frame": 2112,
+   "release": "Tab"
+  },
+  {
+   "frame": 2130,
+   "press": "Right"
+  },
+  {
+   "frame": 2132,
+   "release": "Right"
+  },
+  {
+   "frame": 2140,
+   "press": "Right"
+  },
+  {
+   "frame": 2142,
+   "release": "Right"
+  },
+  {
+   "frame": 2160,
+   "press": "Enter"
+  },
+  {
+   "frame": 2162,
+   "release": "Enter"
+  },
+  {
+   "frame": 2180,
+   "press": "Down"
+  },
+  {
+   "frame": 2182,
+   "release": "Down"
+  },
+  {
+   "frame": 2200,
+   "press": "Tab"
+  },
+  {
+   "frame": 2202,
+   "release": "Tab"
+  },
+  {
+   "frame": 2230,
+   "press": "I"
+  },
+  {
+   "frame": 2232,
+   "release": "I"
+  },
+  {
+   "frame": 2250,
+   "press": "V"
+  },
+  {
+   "frame": 2252,
+   "release": "V"
+  },
+  {
+   "frame": 2260,
+   "press": "V"
+  },
+  {
+   "frame": 2262,
+   "release": "V"
+  },
+  {
+   "frame": 2270,
+   "press": "V"
+  },
+  {
+   "frame": 2272,
+   "release": "V"
+  },
+  {
+   "frame": 2280,
+   "press": "V"
+  },
+  {
+   "frame": 2282,
+   "release": "V"
+  },
+  {
+   "frame": 2310,
+   "press": "V"
+  },
+  {
+   "frame": 2312,
+   "release": "V"
+  },
+  {
+   "frame": 2340,
+   "press": "Space"
+  },
+  {
+   "frame": 2342,
+   "release": "Space"
+  },
+  {
+   "frame": 2600,
+   "press": "V"
+  },
+  {
+   "frame": 2602,
+   "release": "V"
+  }
+ ]
+}
