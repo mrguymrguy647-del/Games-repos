@@ -80,7 +80,7 @@ it plans: how much noise is in its judgement and how far ahead it looks
 
 ### New levers (for the player too)
 
-Phase 4 gives the player (and so every brain) four new buttons:
+Phase 4 gives the player (and so every brain) five new buttons:
 - **Research and schools** (budget page): a share of GDP a year. It raises
   technical progress.
 - **Arms purchases** (budget page): a share of GDP a year spent on weapons
@@ -89,6 +89,12 @@ Phase 4 gives the player (and so every brain) four new buttons:
   full, in the province where goods move worst.
 - **P: a port** (chains page): a level of port on the coast with the
   smallest one.
+- **Public works** (budget page): a job guarantee's size, as a share of the
+  workforce (0 to 25%). Left alone it is the autopilot's scheme, which
+  starts only in a slump (ECONOMY.md, section 11). Set by hand it takes on
+  the jobless from `public_works_from` (3 points) over the natural rate, up
+  to its size, at `public_works_pay` (0.6) of a wage, and retrains while
+  it runs. "A: back to autopilot" hands it back.
 
 Research works with a lag:
 
@@ -116,7 +122,7 @@ Planning starts from the nation's **needs**, each between 0 (fine) and 1
 | `jobs` | `clamp((u − u_natural) / 0.07, 0, 1)` | `jobs_span` |
 | `heat` (prices rising) | `clamp((π − 0.04) / 0.08, 0, 1)` | `heat_from`, `heat_span` |
 | `chill` (prices falling) | `clamp((0 − π) / 0.03, 0, 1)` | `chill_from`, `chill_span` |
-| `debt` | the largest of: deficit over 2% of GDP (`/0.06`); debt over half its rating's ceiling; how near the rating agencies' score is to junk, `clamp((70 − score) / 25, 0, 1)` with the agencies' own formula; 0.8 if printing money; 0.6 if rated junk (BB or worse). **Emergency**: printing money with a deficit over 8% makes it 1 + 1.5 = 2.5, so it outweighs everything else | `deficit_ok`, `rating_safe`, `emergency`, … |
+| `debt` | the largest of: deficit over 2% of GDP (`/0.06`); debt over half its rating's ceiling; how near the rating agencies' score is to junk, `clamp((85 − score) / 25, 0, 1)` with the agencies' own formula; 0.8 if printing money; 0.6 if rated junk (BB or worse). **Emergency**: printing money with a deficit over 8% makes it 1 + 1.5 = 2.5, so it outweighs everything else | `deficit_ok`, `rating_safe`, `emergency`, … |
 | `supply` | the worst shortage of food, power, consumer goods, fuel and every input in use, weighted by importance (food 1, power 0.9, inputs 0.7, goods 0.6, fuel 0.5) | `importance` |
 | `growth` | `clamp(1 − real growth / 0.03, growth_floor, 1)`: there is always some wish to grow | `growth_ok`, `growth_floor` |
 | `support` | `clamp((60 − stability) / 30, 0, 1)` | `support_ok`, `support_span` |
@@ -141,6 +147,7 @@ what it makes). The score is
 score(a) = Σ_c  W_goal[c] · weight(c, a) · effect[a][c]      (debt harm × (1 − risk))
            + like[category(a)]                     (personality)
            − flipflop(a)                           (section 7)
+           − change_cost                           (taxes, welfare, tariffs: 0.06)
 
 weight(c, a) = need[c]                          if effect[a][c] > 0   (relief only counts if needed)
              = max(need[c], harm_floor)         if effect[a][c] < 0   (harm always counts a little)
@@ -157,7 +164,7 @@ rank(a)  = score(a) + noise · Normal(0, 1)      noise = difficulty + personalit
   that letting noise decide whether to act made brains busier and
   luckier, and made easy brains as good as hard ones.)
 - The best of each category (fiscal, money, building, infrastructure,
-  trade, military, research) is taken, at most `max_actions` (3) a week.
+  trade, military, research, jobs) is taken, at most `max_actions` (3) a week.
   Holding still is always an option, so a calm nation does nothing.
 
 Every week's thinking is kept for the spectator panel:
@@ -248,13 +255,24 @@ needs differently (`[goal.*]`):
 
 | Category | Actions | Taken through |
 |---|---|---|
-| fiscal | income tax, corporate tax, sales tax, welfare, tariff: a point up or down | `pull_with` |
+| fiscal | income tax, corporate tax, sales tax, welfare, tariff: 1 to 3 points up or down, in a **budget** (below) | `pull_with` |
+| jobs | public works 2 points of the workforce bigger (never smaller: below) | `pull_with` |
 | research | research and schools: a quarter point up or down | `pull_with` |
 | money | fix the rate half a point lower (a slump the bank isn't fighting: jobs need over 0.5, no inflation) or higher (heat need over 0.5); hand it back to the central bank | `pull_with`, `free_rate` |
 | building | build more of the maker of a good that is short at home, or that sells abroad above its cost; close idle state-built buildings | `player_build`, `player_close` |
 | infrastructure | a road or rail level in the most choked province; a port where trade is full | `player_road`, `player_port` |
 | trade | ban exports of a good short at home; lift a ban once the store is full again; embargo the counterweight target (only with a threat level over 0.5 and an embargo-minded personality); lift an embargo | `set_trade_policy`, `toggle_embargo` |
 | military | arms purchases 0.2 points up (only with a security need) or down (not under the personality's floor) | `pull_with` |
+
+**Budgets.** Taxes, welfare and tariffs are not nudged weekly:
+- each move pays `change_cost` (0.06) in its score, and may be 1 to
+  `max_points` (3) points, so a clear need makes one bigger move;
+- each is set at most once in `budget_days` (180), or 90 days with a debt
+  need over 0.6, or 60 in a debt emergency;
+- in a debt emergency budgets only tighten: no tax cuts, welfare or
+  tariff rises, new research or public works. (One colony cut its sales
+  tax by three points while printing money for a 16% deficit: a cheap tax
+  looked free to cut.)
 
 Situational effects, on top of `[action.*]`:
 - **Taxes and welfare.**
@@ -275,6 +293,28 @@ Situational effects, on top of `[action.*]`:
     cost. Never a kind starved of inputs, never without the building goods
     in store, never with debt near the ceiling, and **one order of a kind at
     a time** (wait to see what the last one did).
+  - **A shortage expected to last**: short by `lasting_short` (5%) now and
+    on average over about ten weeks (20% for weapons, whose buying is
+    lumpy).
+  - **Workers and inputs will exist**: the new levels' crews are at most
+    half the jobless (and those on public works); none of its inputs is
+    short now or on average.
+  - **It will run**: more of a kind only while its buildings run at 90% or
+    more, at a profit; and it must beat importing (home cost under the
+    world price landed here). A new kind must show a margin at that price.
+  - Weapons: short only when its own factories can't make what it buys
+    (the store is always empty: weapons go to the stockpile, which had
+    made every weapon look 50% short). After ordering weapons factories,
+    no arms cuts for `arms.commit_days` (2 years): brains used to build
+    them and then cut the arms budget that was to use them.
+- **Public works.** Jobs effect × the jobless over the scheme's line it
+  would take on that aren't on works now, as a share of the step. Debt
+  harm: what those places cost a year, as a tax point's yield is
+  measured. Never cut: the scheme shrinks by itself as market jobs come
+  back, and cutting places in use in a debt crisis turned slumps into
+  collapses (every nation that defaulted had cut it to 0%).
+- **Rates.** A rate fixed for a slump goes back to the central bank only
+  once the jobs need is under `rate_release` (0.2): low for longer.
 - **Close.** Only the brain's own buildings standing idle (running at 30%
   or less, losing money for 90 days), making nothing short.
 - **Research.**
@@ -458,20 +498,49 @@ Beating the autopilot is measured by `--ai-compare` (section 13): a
 once with every nation run by a brain. The full table is in
 [ai_compare_50y.txt](ai_compare_50y.txt).
 
-| 50 years | Autopilot (phase 3) | NPC brains (phase 4) |
+| 50 years | Autopilot (phase 3) | Brains (phase 4) | Brains (tuning round 2) |
+|---|---|---|---|
+| World growth a year (W$ GDP) | 0.84% | 2.09% | **2.36%** |
+| Nations above 15% unemployment | 426 | 300 | **203** |
+| Junk credit ratings (BB or worse) | 241 | **123** | 138 |
+
+### Tuning round 2 (before the war phase)
+
+`--ai-tune 100 30` (100 NPC-only worlds of 30 years; output in
+[ai_tune.txt](ai_tune.txt)):
+
+| | Before | After |
 |---|---|---|
-| World growth a year (W$ GDP) | 0.84% | **2.09%** |
-| Nations above 15% unemployment | 426 | **300** |
-| Junk credit ratings (BB or worse) | 241 | **123** |
+| Builds still mostly idle a year later | 28.4% | 18.1% |
+| Income tax moves, of all decisions | 29.6% | 14.1% |
+| Tax, welfare and tariff moves, of all decisions | 58.7% | 33.8% |
+| Decisions | 1,882,620 | 1,151,252 |
+| Nations over 15% unemployment at year 30 | 830 | 504 |
+| Junk ratings at year 30 | 376 | 311 |
+| Defaults | 109 | 83 |
+| World growth in these worlds | 1.60% | 2.11% |
+| Moves adjusted back within half a year | 5.5% | 8.7% |
 
-- Seeds 1-6, the worlds the weights were tuned on: 0.93% → 2.18% growth,
-  217 → 161 over 15%, 124 → 65 junk.
-- Seeds 7-12, never used for tuning: 0.75% → 2.00%, 209 → 139, 117 → 58.
-- World by world, growth is better in all 36 (0.4% to 3.0% a year).
-  Fewer nations are over 15% unemployment in 31 (as many in 3), and fewer
-  are junk in 28 (as many in 2).
+- **Idle buildings.** Weapons factories were most of them, for three
+  reasons the tool's new breakdown by economy and building showed: every
+  weapon looked 50% short (its store is always empty), brains built
+  factories to replace imports they could buy for less, and brains cut
+  the arms budget after building. Planned economies' worst, 47 of 77 idle,
+  is now 9 of 21.
+- **Taxes.** The flat cost alone didn't cut income tax moves (nations
+  pulled between jobs and debt move anyway); the budget cycle did.
+- **Unemployment.** Down a third on the benchmark (300 → 203), not the
+  half aimed for. The public works lever, budgets that move taxes less
+  often and rates low for longer each helped. Most nations still over 15%
+  (42 of 51 on seeds 1-3) run a scheme of 20-25% of their workers and
+  are still around 20% jobless (ISSUES.md).
+- **The trade-off.** Every change that cut unemployment let deficits
+  drift and raised junk ratings (the old tax habits: 285 jobless, 128
+  junk; these budgets with the old debt worry: 207 and 183). The brains
+  now start worrying about their rating sooner (`rating_safe` 85, from
+  70), which bought most of it back: 203 and 138.
 
-### Dumb behaviour, before and after tuning
+### Dumb behaviour, before and after the first tuning
 
 `--ai-tune 40 30` (40 NPC-only worlds of 30 years, seeds 100-139; final
 output in [ai_tune.txt](ai_tune.txt)):

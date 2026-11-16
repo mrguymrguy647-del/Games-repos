@@ -1,17 +1,25 @@
-40 NPC-only worlds, 30 years, 1000 brains (51 s)
-  world growth 1.57% a year, 325 nations over 15% unemployment, 143 junk
-  decisions:      733407 (0 couldn't be done, 0.0%)
-  bankruptcies:   43 defaults; 10 nations ended near-default and printing money
-  unneeded builds: 3822 of 14034 (27.2%) still mostly idle a year later
-  flip-flops:     0 of 733407 decisions (0.00%) undid a move within 90 days; 40693 more (5.5%) adjusted one back within half a year
-                  most: income_tax_up 7890, income_tax_down 6948, research_up 3184, sales_tax_up 3125, research_down 2019, arms_up 2005
-  decisions by action: income_tax_up 116371, income_tax_down 101024, research_up 72855, research_down 58995, corporate_tax_down 51306, welfare_down 35955, arms_up 35498, welfare_up 34349, corporate_tax_up 33943, arms_down 33497, rate_down 26385, close 22698, sales_tax_down 20530, rate_up 20087, sales_tax_up 18037, tariff_down 15606, build 14034, ban_exports 5688, lift_ban 5295, tariff_up 5128, rate_auto 3081, road 1632, embargo 693, lift_embargo 644, port 76
+100 NPC-only worlds, 30 years, 2500 brains (125 s)
+  world growth 2.11% a year, 504 nations over 15% unemployment, 311 junk
+  decisions:      1151252 (0 couldn't be done, 0.0%)
+  bankruptcies:   83 defaults; 16 nations ended near-default and printing money
+  unneeded builds: 3961 of 21928 (18.1%) still mostly idle a year later
+                  most: Mixed economy: Ammo Factory 671, Planned economy: Ammo Factory 517, Mixed economy: Chemical Plant 378, Mixed economy: Tank Factory 377, Planned economy: Chemical Plant 236, Planned economy: Tank Factory 193, Free market: Ammo Factory 149, Free market: Tank Factory 136
+  flip-flops:     0 of 1151252 decisions (0.00%) undid a move within 90 days; 100231 more (8.7%) adjusted one back within half a year
+                  most: income_tax_up 14078, research_up 11203, research_down 10884, income_tax_down 9119, corporate_tax_down 8316, corporate_tax_up 8065
+  decisions by action: research_up 215569, research_down 191003, income_tax_up 124050, close 74508, arms_up 63604, arms_down 61549, corporate_tax_down 60303, corporate_tax_up 47764, rate_down 41246, income_tax_down 38303, rate_up 35615, sales_tax_up 28717, sales_tax_down 27172, build 21928, tariff_down 20863, welfare_down 18410, ban_exports 16425, lift_ban 15108, tariff_up 11977, welfare_up 11728, works_up 11609, rate_auto 4979, road 3698, embargo 2562, lift_embargo 2442, port 120
+  51 nations defaulted; the most:
+    map 0 seed 196 Grand Duchy of Vintmarfjell (Warlord, Monarchy, Mixed economy): 11 defaults; now CCC rating, debt 7%, deficit 23.8%, jobless 16%, works 24%
+    map 2 seed 123 Iskoström Territory (Coward, Colony, Colony): 7 defaults; now CCC rating, debt 27%, deficit 14.8%, jobless 43%, works 10%
+    map 2 seed 138 People's Republic of Iskmark (Builder, Communism, Planned economy): 7 defaults; now B rating, debt 28%, deficit 12.5%, jobless 0%, works 14%
+    map 0 seed 112 Colony of Kaldvikström (Diplomat, Colony, Colony): 3 defaults; now BB rating, debt 22%, deficit 13.3%, jobless 26%, works 10%
+    map 0 seed 115 State of Verarava (Warlord, Authoritarianism, Mixed economy): 3 defaults; now BBB rating, debt 60%, deficit 3.2%, jobless 7%, works 24%
+    map 0 seed 145 Tribal Lands of Qasir (Builder, Tribalism, Mixed economy): 3 defaults; now AAA rating, debt 25%, deficit 0.0%, jobless 2%, works 24%
   the worst:
-    map 1 seed 116 Workers' State of Iskefjell (Genius, Communism): 108 flips, 47/77 builds idle, 0 defaults
-    map 2 seed 102 Defense Republic of Qasun (Warlord, Military Rule): 149 flips, 1/9 builds idle, 0 defaults
-    map 0 seed 121 Workers' State of Mirah (Warlord, Communism): 118 flips, 28/84 builds idle, 0 defaults
-    map 1 seed 119 Casanora Junta (Warlord, Military Rule): 144 flips, 2/8 builds idle, 0 defaults
-    map 0 seed 139 Orotepec Junta (Warlord, Military Rule): 143 flips, 0/9 builds idle, 0 defaults
-    map 2 seed 105 People's Republic of Darhada (Warlord, Communism): 124 flips, 19/52 builds idle, 0 defaults
-    map 0 seed 106 Iskby Territory (Diplomat, Colony): 136 flips, 6/6 builds idle, 0 defaults
-    map 2 seed 126 Dariar Junta (Builder, Military Rule): 139 flips, 2/6 builds idle, 0 defaults
+    map 0 seed 106 Khaun Territory (Warlord, Colony): 222 flips, 2/3 builds idle, 1 defaults
+    map 0 seed 139 Darrah Territory (Warlord, Colony): 223 flips, 1/2 builds idle, 0 defaults
+    map 0 seed 112 Unified Altenor (Builder, Authoritarianism): 213 flips, 2/5 builds idle, 0 defaults
+    map 2 seed 165 Colony of Orolando (Warlord, Colony): 197 flips, 2/20 builds idle, 2 defaults
+    map 2 seed 168 Tulariria Protectorate (Warlord, Colony): 194 flips, 0/18 builds idle, 0 defaults
+    map 2 seed 159 Military State of Tamiya (Warlord, Military Rule): 186 flips, 1/4 builds idle, 1 defaults
+    map 0 seed 118 Workers' State of Keshar (Warlord, Communism): 181 flips, 9/21 builds idle, 0 defaults
+    map 0 seed 154 Military State of Iximaca (Warlord, Military Rule): 189 flips, 1/3 builds idle, 0 defaults

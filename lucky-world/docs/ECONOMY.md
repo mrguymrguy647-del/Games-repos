@@ -792,7 +792,10 @@ also keeps the world market alive:
     outgrowing their jobs (section 5).
 
 The player's economy runs on the same autopilot until the player takes a
-lever (their taxes, the rate, buildings, trade).
+lever (their taxes, the rate, buildings, trade). The **Public works** lever
+(phase 4) sets a scheme by hand: from `public_works_from` (3 points) over
+the natural rate, slump or not, up to the chosen share of the workforce,
+with retraining while it runs.
 
 ---
 

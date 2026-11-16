@@ -582,6 +582,7 @@ impl Lucky {
                 Lever::InterestRate => n.manual_rate.is_none(),
                 Lever::Tariff | Lever::Research => false,
                 Lever::Arms => n.arms.is_none(),
+                Lever::PublicWorks => n.works.is_none(),
                 _ => !n.manual_taxes,
             };
             right(canvas, &a.font, &pct(value), vec2(x + 360.0, ry + 4.0), 17.0, GOLD);
@@ -597,7 +598,7 @@ impl Lucky {
             }
         }
         // The state's money.
-        let y2 = y + 270.0;
+        let y2 = y + 34.0 + Lever::ALL.len() as f32 * LEVER_ROW;
         let gdp_year = (n.gdp_local * ed.days_per_year as f64).max(1.0);
         let lines = [
             ("Currency", format!("{} ({}): 1 = {:.4} W$", n.currency, n.symbol, n.exchange)),
@@ -999,7 +1000,7 @@ const EMBARGO_BUTTON: Rect = Rect { x: 1010.0, y: 618.0, w: 140.0, h: 30.0 };
 
 /// The -/+ buttons of a lever row.
 /// The height of a lever's row on the budget page.
-const LEVER_ROW: f32 = 31.0;
+const LEVER_ROW: f32 = 27.0;
 
 fn lever_buttons(k: usize) -> (Rect, Rect) {
     let y = WIN.y + 84.0 + 22.0 + k as f32 * LEVER_ROW;
@@ -1012,7 +1013,7 @@ fn row_at(tab: Tab, m: Vec2, rows: usize) -> Option<usize> {
         return None;
     }
     let (top, height, left, width) = match tab {
-        Tab::Budget => (WIN.y + 102.0, 40.0, WIN.x + 20.0, 370.0),
+        Tab::Budget => (WIN.y + 102.0, LEVER_ROW, WIN.x + 20.0, 370.0),
         Tab::Market => (WIN.y + 97.0, 26.5, WIN.x + 20.0, 1010.0),
         Tab::Trade => (WIN.y + 99.0, 25.0, WIN.x + 464.0, 560.0),
         _ => return None,

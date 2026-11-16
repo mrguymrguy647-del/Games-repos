@@ -21,7 +21,7 @@ pub const TRADE: usize = 8;
 pub type NeedVec = [f64; 9];
 
 /// What kind of thing an action is (a brain takes at most one of each a week).
-pub const CATEGORIES: [&str; 7] = ["fiscal", "money", "building", "infrastructure", "trade", "military", "research"];
+pub const CATEGORIES: [&str; 8] = ["fiscal", "money", "building", "infrastructure", "trade", "military", "research", "jobs"];
 
 /// The goals the strategy layer chooses between.
 pub const GOALS: [&str; 4] = ["grow", "get_rich", "dominate", "survive"];
@@ -88,7 +88,7 @@ pub struct Difficulty {
 #[derive(Debug, Clone, Default)]
 pub struct Traits {
     pub need: NeedVec,
-    pub like: [f64; 7],
+    pub like: [f64; 8],
     pub goal: [f64; 4],
     pub risk: f64,
     pub horizon_years: f64,
@@ -130,7 +130,21 @@ pub struct AiData {
     pub export_margin: f64,
     pub min_room: f64,
     pub roi_min: f64,
+    pub lasting_short: f64,
+    pub lasting_short_military: f64,
+    pub short_smoothing: f64,
+    pub free_workers: f64,
+    pub input_short: f64,
+    pub busy_min: f64,
     pub tax_level: f64,
+    pub change_cost: f64,
+    pub tighten_only: f64,
+    pub budget_days: u32,
+    pub budget_spending: bool,
+    pub emergency_budget_days: u32,
+    pub debt_budget_days: u32,
+    pub debt_budget_need: f64,
+    pub tax_max_points: i32,
     pub yield_ref: f64,
     pub income_tax_max: f64,
     pub corporate_tax_max: f64,
@@ -140,11 +154,16 @@ pub struct AiData {
     pub welfare_max: f64,
     pub welfare_level: f64,
     pub rate_from: f64,
+    pub rate_release: f64,
     pub close_idle: f64,
     pub close_days: u32,
     pub research_horizon_ref: f64,
     pub research_max: f64,
     pub arms_max: f64,
+    pub works_step: i32,
+    pub works_max: f64,
+    pub works_debt: f64,
+    pub arms_commit_days: u32,
     /// Intel error by secret service option id.
     pub intel: BTreeMap<String, f64>,
     pub army_value: f64,
@@ -177,7 +196,7 @@ pub struct AiData {
 }
 
 /// The actions every brain.toml must give effects for.
-pub const ACTIONS: [&str; 25] = [
+pub const ACTIONS: [&str; 27] = [
     "income_tax_down",
     "income_tax_up",
     "corporate_tax_down",
@@ -203,6 +222,8 @@ pub const ACTIONS: [&str; 25] = [
     "lift_ban",
     "embargo",
     "lift_embargo",
+    "works_up",
+    "works_down",
 ];
 
 /// Reads a table's numbers, refusing keys it doesn't know.
@@ -309,6 +330,7 @@ impl AiData {
             "arms",
             "fiscal",
             "money",
+            "works",
             "intel",
             "power",
             "threat",
@@ -427,7 +449,21 @@ impl AiData {
             export_margin: bu.num("export_margin")?,
             min_room: bu.num("min_room")?,
             roi_min: bu.num("roi_min")?,
+            lasting_short: bu.num("lasting_short")?,
+            lasting_short_military: bu.num("lasting_short_military")?,
+            short_smoothing: bu.num("short_smoothing")?.clamp(0.01, 1.0),
+            free_workers: bu.num("free_workers")?,
+            input_short: bu.num("input_short")?,
+            busy_min: bu.num("busy_min")?,
             tax_level: b.sub("fiscal")?.num("tax_level")?,
+            change_cost: b.sub("fiscal")?.num("change_cost")?,
+            tighten_only: b.sub("fiscal")?.num("tighten_only")?,
+            budget_days: b.sub("fiscal")?.num("budget_days")?.max(0.0) as u32,
+            budget_spending: b.sub("fiscal")?.num("budget_spending")? > 0.5,
+            emergency_budget_days: b.sub("fiscal")?.num("emergency_budget_days")?.max(0.0) as u32,
+            debt_budget_days: b.sub("fiscal")?.num("debt_budget_days")?.max(0.0) as u32,
+            debt_budget_need: b.sub("fiscal")?.num("debt_budget_need")?,
+            tax_max_points: b.sub("fiscal")?.num("max_points")?.clamp(1.0, 5.0) as i32,
             yield_ref: b.sub("fiscal")?.num("yield_ref")?,
             income_tax_max: b.sub("fiscal")?.num("income_tax_max")?,
             corporate_tax_max: b.sub("fiscal")?.num("corporate_tax_max")?,
@@ -437,11 +473,16 @@ impl AiData {
             welfare_max: b.sub("fiscal")?.num("welfare_max")?,
             welfare_level: b.sub("fiscal")?.num("welfare_level")?,
             rate_from: b.sub("money")?.num("rate_from")?,
+            rate_release: b.sub("money")?.num("rate_release")?,
             close_idle: cl.num("idle")?,
             close_days: cl.num("days")?.max(1.0) as u32,
             research_horizon_ref: re.num("horizon_ref")?,
             research_max: re.num("max")?,
             arms_max: ar.num("max")?,
+            works_step: b.sub("works")?.num("step")?.clamp(1.0, 10.0) as i32,
+            works_max: b.sub("works")?.num("max")?,
+            works_debt: b.sub("works")?.num("debt")?,
+            arms_commit_days: ar.num("commit_days")?.max(0.0) as u32,
             intel,
             army_value: pw.num("army_value")?,
             threat_border: th.num("border")?,

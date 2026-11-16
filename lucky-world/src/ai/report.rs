@@ -118,10 +118,11 @@ pub fn compare(args: &[String]) -> Res<()> {
                     for (i, n) in e.nations.iter().enumerate() {
                         if n.rating >= 4 || n.unemployment(&ed) > 0.15 {
                             println!(
-                                "  map {map} seed {seed} #{i} {}: {} u {:.0}% debt {:.0}% deficit {:.1}% infl {:.1}% stab {:.0} taxes {:.0}/{:.0}/{:.0} welfare {:.0}% research {:.1}% arms {:.1}%",
+                                "  map {map} seed {seed} #{i} {}: {} u {:.0}% debt {:.0}% deficit {:.1}% infl {:.1}% stab {:.0} taxes {:.0}/{:.0}/{:.0} welfare {:.0}% research {:.1}% arms {:.1}% works {:.0}% (on {:.1}%)",
                                 n.name, ed.ratings[n.rating].name, n.unemployment(&ed) * 100.0, n.debt_ratio(&ed) * 100.0, n.deficit_ema * 100.0,
                                 n.inflation * 100.0, n.stability, n.income_tax * 100.0, n.corporate_tax * 100.0, n.sales_tax * 100.0,
-                                n.welfare_rate * 100.0, n.research * 100.0, n.arms_share(&ed) * 100.0
+                                n.welfare_rate * 100.0, n.research * 100.0, n.arms_share(&ed) * 100.0,
+                                e.lever_with(i, crate::econ::player::Lever::PublicWorks, Some(&ed)) * 100.0, n.public_works / (n.population * ed.participation - n.army).max(1.0) * 100.0
                             );
                             let b = &n.budget_last_month;
                             let g = n.gdp_local * 30.0 / 100.0;
@@ -183,12 +184,15 @@ pub struct Dumb {
     pub taken_by: std::collections::BTreeMap<&'static str, u32>,
     pub builds: u32,
     pub unneeded: u32,
+    pub unneeded_by: std::collections::BTreeMap<String, u32>,
     pub defaults: u32,
     /// Nations that ended junk-rated while printing money (bad policy).
     pub broke: u32,
     pub outcome: Outcome,
     /// The worst nations: (flips + unneeded + defaults x 5, who).
     pub worst: Vec<(u32, String)>,
+    /// Nations that defaulted: (defaults, who).
+    pub defaulted: Vec<(u32, String)>,
 }
 
 /// `--ai-tune [WORLDS] [YEARS]`: NPC-only worlds (seeds 1.., the maps in
@@ -221,8 +225,14 @@ pub fn tune(args: &[String]) -> Res<()> {
                     }
                     d.builds += s.builds;
                     d.unneeded += s.unneeded;
+                    for (k, v) in &s.unneeded_by {
+                        *d.unneeded_by.entry(k.clone()).or_insert(0) += v;
+                    }
                     d.defaults += s.defaults;
                     d.broke += u32::from(n.rating >= 6 && n.printed_last_month > 0.0);
+                    if s.defaults > 0 {
+                        d.defaulted.push((s.defaults, format!("map {map} seed {seed} {} ({}, {}): {} defaults; now {} rating, debt {:.0}%, deficit {:.1}%, jobless {:.0}%, works {:.0}%", n.name, brain.personality.labels.join(", "), ed.models[n.model].name, s.defaults, ed.ratings[n.rating].name, n.debt_ratio(&ed) * 100.0, n.deficit_ema * 100.0, n.unemployment(&ed) * 100.0, e.lever_with(brain.nation, crate::econ::player::Lever::PublicWorks, Some(&ed)) * 100.0)));
+                    }
                     let bad = s.flips + s.unneeded + 5 * s.defaults;
                     d.worst.push((bad, format!("map {map} seed {seed} {} ({}): {} flips, {}/{} builds idle, {} defaults", n.name, brain.personality.labels.join(", "), s.flips, s.unneeded, s.builds, s.defaults)));
                 }
@@ -249,10 +259,14 @@ pub fn tune(args: &[String]) -> Res<()> {
         }
         t.builds += d.builds;
         t.unneeded += d.unneeded;
+        for (k, v) in &d.unneeded_by {
+            *t.unneeded_by.entry(k.clone()).or_insert(0) += v;
+        }
         t.defaults += d.defaults;
         t.broke += d.broke;
         t.outcome.add(&d.outcome);
         t.worst.extend(d.worst);
+        t.defaulted.extend(d.defaulted);
     }
     let pct = |a: u32, b: u32| if b == 0 { 0.0 } else { 100.0 * a as f64 / b as f64 };
     println!("{} NPC-only worlds, {} years, {} brains ({:.0} s)", worlds, years, t.brains, start.elapsed().as_secs_f64());
@@ -260,6 +274,9 @@ pub fn tune(args: &[String]) -> Res<()> {
     println!("  decisions:      {} ({} couldn't be done, {:.1}%)", t.taken, t.failed, pct(t.failed, t.taken + t.failed));
     println!("  bankruptcies:   {} defaults; {} nations ended near-default and printing money", t.defaults, t.broke);
     println!("  unneeded builds: {} of {} ({:.1}%) still mostly idle a year later", t.unneeded, t.builds, pct(t.unneeded, t.builds));
+    let mut by: Vec<(&String, &u32)> = t.unneeded_by.iter().collect();
+    by.sort_by(|a, b| b.1.cmp(a.1).then(a.0.cmp(b.0)));
+    println!("                  most: {}", by.iter().take(8).map(|(k, v)| format!("{k} {v}")).collect::<Vec<_>>().join(", "));
     println!(
         "  flip-flops:     {} of {} decisions ({:.2}%) undid a move within {} days; {} more ({:.1}%) adjusted one back within half a year",
         t.quick_flips, t.taken, pct(t.quick_flips, t.taken), super::planning::QUICK_DAYS, t.flips - t.quick_flips, pct(t.flips - t.quick_flips, t.taken)
@@ -271,6 +288,11 @@ pub fn tune(args: &[String]) -> Res<()> {
     by.sort_by(|a, b| b.1.cmp(a.1));
     println!("  decisions by action: {}", by.iter().map(|(k, v)| format!("{k} {v}")).collect::<Vec<_>>().join(", "));
     t.worst.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+    t.defaulted.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+    println!("  {} nations defaulted; the most:", t.defaulted.len());
+    for (_, who) in t.defaulted.iter().take(6) {
+        println!("    {who}");
+    }
     println!("  the worst:");
     for (_, who) in t.worst.iter().take(8) {
         println!("    {who}");

@@ -72,7 +72,7 @@ sets the picture quality. A running game re-reads it when you save it:
 | Rivals | 1-9 or click a nation for its full card, Esc or Space back, Left / Right turn pages, **Space** Begin | click a card |
 | World map | WASD / arrows pan, Q / E turn, R / F zoom, T / G tilt, Tab next nation, H home, M terrain / nations view, **V** resources / industry overlay, C country card, Esc deselect | drag pans, right-drag turns, wheel zooms, click a province, click a name or flag for its country card, click the minimap to jump |
 | The clock (map) | **Space** pause, **1-5** speed (1, 3, 7, 15 or 30 days a second); watching, **6** (90) | |
-| Economy window (map) | **O** open / close, **Tab** next page, Up / Down choose a row; Budget: Left / Right lower / raise (taxes, welfare, tariff, rate, research, arms), **A** back to autopilot; Chains: **B** build, **X** close, **R** a road where goods are stuck, **P** a port; Market: **T** trade policy; Trade: **X** embargo | click the ECONOMY button, the pages, rows, −/+ and the buttons |
+| Economy window (map) | **O** open / close, **Tab** next page, Up / Down choose a row; Budget: Left / Right lower / raise (taxes, welfare, tariff, rate, research, arms, public works), **A** back to autopilot; Chains: **B** build, **X** close, **R** a road where goods are stuck, **P** a port; Market: **T** trade policy; Trade: **X** embargo | click the ECONOMY button, the pages, rows, −/+ and the buttons |
 | Watching (map) | click a nation's name or a province, or **Tab**: its brain panel; Esc closes it | |
 | Anywhere | **F5** start over (for trying it out), **Esc** quit, F12 screenshot, F10 record | |
 
@@ -194,7 +194,7 @@ Every nation you don't run has a brain (the full design, with the math, is
   which weak neighbours could be opportunities, and its goal: grow, get
   rich, dominate or survive.
 - **Planning**, every week: every action it could take (taxes, welfare,
-  tariffs, the rate, research, arms, building and closing, roads, ports,
+  tariffs, the rate, research, arms, public works, building and closing, roads, ports,
   export bans, embargoes) gets a score for how much it helps its goal now.
   It takes the best, or holds still if nothing beats that.
 - **Battles**: a hook for the war phase; no orders yet.
@@ -215,9 +215,9 @@ the phase 3 autopilot on all three yardsticks:
 
 | | Autopilot | Brains |
 |---|---|---|
-| World growth a year | 0.84% | **2.09%** |
-| Nations above 15% unemployment | 426 of 900 | **300** |
-| Junk credit ratings | 241 | **123** |
+| World growth a year | 0.84% | **2.36%** |
+| Nations above 15% unemployment | 426 of 900 | **203** |
+| Junk credit ratings | 241 | **138** |
 
 **Spectator mode**: press **W** on the title (or start with
 `-- --spectate grand`). A world of brains only runs at up to three months a

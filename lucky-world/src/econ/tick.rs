@@ -627,14 +627,18 @@ impl Economy {
         let line = slump_line(ed, n);
         let jobless = if labour > 0.0 { (n.unemployed + n.public_works) / labour } else { 0.0 };
         let slump = jobless > line;
-        let pw_target = if n.state_autopilot {
-            (ed.state.public_works * (jobless - (line - 0.05)).max(0.0)).min(ed.state.public_works_max) * labour.max(0.0)
-        } else {
-            0.0
+        // Set by hand (the Public works lever), the scheme starts sooner,
+        // `public_works_from` over the natural rate, up to its chosen size.
+        let from = u_nat + ed.state.public_works_from;
+        let pw_target = match n.works {
+            Some(most) => (jobless - from).clamp(0.0, most) * labour.max(0.0),
+            None if n.state_autopilot => (ed.state.public_works * (jobless - (line - 0.05)).max(0.0)).min(ed.state.public_works_max) * labour.max(0.0),
+            None => 0.0,
         };
+        let scheme = n.works.is_some_and(|most| most > 0.0) && jobless > from;
         n.public_works += 0.01 * (pw_target - n.public_works);
         n.public_works = n.public_works.max(0.0);
-        if slump && n.state_autopilot {
+        if (slump && n.state_autopilot) || scheme {
             n.retrained = (n.retrained + ed.state.retraining / dpy).min(ed.state.retraining_max);
             // The courses cost about a tenth of a wage per jobless person.
             let cost = 0.1 * n.unemployed * n.wage;

@@ -458,19 +458,23 @@ Worth keeping as they are:
 
 ## The brains' known weak spots (game, not tools)
 
-- **Taxes are adjusted back and forth over months.** No move is undone
-  within 90 days, but 5% of decisions turn a tax back within half a year,
-  as the business cycle turns. Stiffer penalties made unemployment worse
-  (164 instead of 139 nations over 15% in one test), so they stay.
-- **A quarter of new buildings are still mostly idle a year later.**
-  Mostly they are in planned economies and Builder-led nations, and mostly
-  for want of inputs or workers. Down from half before the "one order of a
-  kind at a time" and "goods in store" rules.
+- **Taxes are set in budgets** (every six months, quarterly with debt
+  trouble), so they no longer move weekly: income tax moves fell from 30%
+  of all decisions to 14%. But 8.7% of decisions turn a tax back within
+  half a year (it was 5.5%), mostly quarterly budgets in nations pulled
+  between their jobs and their debt.
+- **About 18% of new buildings are still mostly idle a year later**
+  (28% before tuning round 2). Most are still weapons factories in mixed
+  and planned economies, where arms buying swings with the threat.
 - **Noise as luck.** Letting noise decide whether to act at all beat the
   careful rule on the yardsticks (more activity, more lucky moves), but it
   made easy brains as good as hard ones. The brains use the careful rule
   (section 4 of docs/AI.md), so difficulty means what it says.
-- **Some poor nations stay above 15% unemployment** whatever the brain does
-  (316 of 900 at year 50, against 426 under the autopilot). As the balance
-  pass found, it is structural.
+- **Some poor nations stay above 15% unemployment** (203 of 900 at year
+  50, against 426 under the autopilot and 300 before tuning round 2). Most
+  of them (42 of 51 on seeds 1-3) already run a public works scheme of
+  20-25% of their workers, and still have a fifth without work. Bigger schemes cost
+  more than their ratings can carry: every setting that cut the jobless
+  further raised junk ratings (a structural problem the balance pass
+  found too).
 

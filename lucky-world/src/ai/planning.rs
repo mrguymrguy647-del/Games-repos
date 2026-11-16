@@ -15,6 +15,9 @@ const EPS: f64 = 1e-9;
 /// tool's measure; `undo_days` in brain.toml is the rule against it).
 pub const QUICK_DAYS: u32 = 90;
 
+/// `Brain::moves` key for "ordered weapons factories" (the arms commitment).
+const ARMS_COMMIT: u64 = 9000;
+
 /// Something a brain can do: every one is a button the player has too.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Act {
@@ -47,6 +50,7 @@ impl Act {
                     Lever::InterestRate => if up { "rate_up" } else { "rate_down" },
                     Lever::Research => if up { "research_up" } else { "research_down" },
                     Lever::Arms => if up { "arms_up" } else { "arms_down" },
+                    Lever::PublicWorks => if up { "works_up" } else { "works_down" },
                 }
             }
             Act::RateAuto => "rate_auto",
@@ -68,6 +72,7 @@ impl Act {
             Act::Lever(Lever::Tariff, _) | Act::BanExports(_) | Act::LiftBan(_) | Act::Embargo(_) | Act::LiftEmbargo(_) => 4,
             Act::Lever(Lever::Research, _) => 6,
             Act::Lever(Lever::Arms, _) => 5,
+            Act::Lever(Lever::PublicWorks, _) => 7,
             Act::Lever(..) => 0,
             Act::Build(_) | Act::Close(_) => 2,
             Act::Road(_) | Act::Port(_) => 3,
@@ -103,8 +108,10 @@ impl Act {
                     Lever::InterestRate => "the interest rate",
                     Lever::Research => "research and schools",
                     Lever::Arms => "arms purchases",
+                    Lever::PublicWorks => "public works",
                 };
-                format!("{} {what}", if s > 0 { "Raise" } else { "Cut" })
+                let by = if s.abs() > 1 && !matches!(l, Lever::InterestRate | Lever::Arms) { format!(" by {} points", s.abs()) } else { String::new() };
+                format!("{} {what}{by}", if s > 0 { "Raise" } else { "Cut" })
             }
             Act::RateAuto => "Let the central bank set the rate".to_string(),
             Act::Build(k) => format!("Build {}", ed.buildings[k].name),
@@ -134,6 +141,7 @@ struct Look {
 
 fn look(ai: &AiData, e: &Economy, ed: &EconData, i: usize) -> Look {
     let n = &e.nations[i];
+    let capacity = e.capacity(ed, i);
     let goods = ed.goods.len();
     let input_goods: Vec<bool> = (0..goods).map(|g| ed.buildings.iter().any(|b| b.inputs.iter().any(|&(x, _)| x == g))).collect();
     let mut short = vec![0.0; goods];
@@ -155,6 +163,14 @@ fn look(ai: &AiData, e: &Economy, ed: &EconData, i: usize) -> Look {
         } else {
             0.3 * im.inputs
         };
+        if ed.goods[g].military {
+            // Weapons go straight into the stockpile (the store is always
+            // empty) and the arms budget buys whatever is offered: short
+            // only when its own factories can't make what it buys.
+            let need = n.use_rate[g];
+            short[g] = if need > EPS { (1.0 - capacity[g] / need).clamp(0.0, 1.0) } else { 0.0 };
+            continue;
+        }
         let got = if n.wanted[g] > EPS { 1.0 - n.got[g] / n.wanted[g] } else { 0.0 };
         let cover = ed.prices.days_of_cover * n.use_rate[g];
         let stock = if cover > EPS && ed.goods[g].spoil < 1.0 { 1.0 - n.stock[g] / (0.5 * cover) } else { 0.0 };
@@ -166,7 +182,7 @@ fn look(ai: &AiData, e: &Economy, ed: &EconData, i: usize) -> Look {
     Look {
         short,
         importance,
-        capacity: e.capacity(ed, i),
+        capacity,
         debt_use: n.debt_ratio(ed) / ceiling,
         gdp_year: (n.gdp_local * ed.days_per_year as f64).max(EPS),
         choked,
@@ -286,17 +302,25 @@ fn candidates(brain: &Brain, ai: &AiData, dif: &Difficulty, e: &Economy, ed: &Ec
             Lever::Welfare => 0.5 + v / ai.welfare_level.max(EPS),
             _ => 0.5 + v / ai.tax_level.max(EPS),
         };
-        if v < ceiling - EPS {
-            let mut eff = base(Act::Lever(lever, 1));
-            eff.iter_mut().filter(|x| **x < 0.0).for_each(|x| *x = (*x * level).max(-1.0));
-            eff[DEBT] = (eff[DEBT] * pays).clamp(-1.0, 1.0);
-            out.push((Act::Lever(lever, 1), eff));
-        }
-        if v > floor + EPS {
-            let mut eff = base(Act::Lever(lever, -1));
-            eff.iter_mut().filter(|x| **x > 0.0).for_each(|x| *x = (*x * level).min(1.0));
-            eff[DEBT] = (eff[DEBT] * pays).clamp(-1.0, 1.0);
-            out.push((Act::Lever(lever, -1), eff));
+        // One point, or two at once (each move pays `change_cost` in the
+        // scoring, so a clear need makes one bigger move, not many small ones).
+        let step = Economy::lever_step(lever);
+        for points in 1..=ai.tax_max_points {
+            let k = points as f64;
+            if v + k * step <= ceiling + EPS {
+                let mut eff = base(Act::Lever(lever, 1));
+                eff.iter_mut().filter(|x| **x < 0.0).for_each(|x| *x = (*x * level).max(-1.0));
+                eff[DEBT] = (eff[DEBT] * pays).clamp(-1.0, 1.0);
+                eff.iter_mut().for_each(|x| *x = (*x * k).clamp(-1.0, 1.0));
+                out.push((Act::Lever(lever, points), eff));
+            }
+            if v - k * step >= floor - EPS {
+                let mut eff = base(Act::Lever(lever, -1));
+                eff.iter_mut().filter(|x| **x > 0.0).for_each(|x| *x = (*x * level).min(1.0));
+                eff[DEBT] = (eff[DEBT] * pays).clamp(-1.0, 1.0);
+                eff.iter_mut().for_each(|x| *x = (*x * k).clamp(-1.0, 1.0));
+                out.push((Act::Lever(lever, -points), eff));
+            }
         }
     }
 
@@ -313,11 +337,41 @@ fn candidates(brain: &Brain, ai: &AiData, dif: &Difficulty, e: &Economy, ed: &Ec
     }
     if n.manual_rate.is_some() {
         let mut eff = base(Act::RateAuto);
-        // Worth more the further the reason for fixing it has gone.
-        let calm = 1.0 - nd[JOBS].max(nd[HEAT]) / ai.rate_from.max(EPS);
+        // Worth more the further the reason for fixing it has gone: for a
+        // slump, only once jobs are nearly back (rates low for longer).
+        let calm = 1.0 - (nd[JOBS] / ai.rate_release.max(EPS)).max(nd[HEAT] / ai.rate_from.max(EPS));
         eff[HEAT] *= calm.max(0.0) * 2.0;
         eff[CHILL] *= calm.max(0.0) * 2.0;
         out.push((Act::RateAuto, eff));
+    }
+
+    // Public works: a job guarantee from a little over the natural rate,
+    // as big as chosen. Worth raising by the jobless it would take on.
+    {
+        let labour = (n.population * ed.participation - n.army).max(1.0);
+        let jobless = (n.unemployed + n.public_works) / labour;
+        let from = interpolate(&ed.natural_unemployment_by_hdi, n.hdi) + ed.state.public_works_from;
+        let size = e.lever_with(i, Lever::PublicWorks, Some(ed));
+        let step = ai.works_step as f64 * Economy::lever_step(Lever::PublicWorks);
+        let over = jobless - from;
+        // What a step of places costs a year, as a share of GDP, in the
+        // same measure as a tax point's yield.
+        let cost = step * labour * n.wage * ed.state.public_works_pay * ed.days_per_year as f64 / l.gdp_year;
+        let debt = (ai.works_debt * cost / ai.yield_ref.max(EPS)).min(1.0);
+        if size + step <= ai.works_max.min(Economy::lever_range(Lever::PublicWorks).1) + EPS && over > 0.0 {
+            let mut eff = base(Act::Lever(Lever::PublicWorks, 1));
+            // How many more it would employ than are on works now (on the
+            // autopilot's scheme, which starts only at the slump line, often
+            // none), as a share of the step.
+            let in_use = n.public_works / labour;
+            let binding = ((over.min(size + step) - in_use) / step).clamp(0.0, 1.0);
+            eff[DEBT] = -debt;
+            eff.iter_mut().for_each(|x| *x *= binding);
+            out.push((Act::Lever(Lever::PublicWorks, ai.works_step), eff));
+        }
+        // It is never cut: the scheme shrinks by itself as market jobs come
+        // back, and unused places cost nothing. (Cutting places in use in a
+        // debt crisis turned slumps into collapses and defaults.)
     }
 
     // Research: worth more the further the brain looks, less the more there is.
@@ -341,13 +395,17 @@ fn candidates(brain: &Brain, ai: &AiData, dif: &Difficulty, e: &Economy, ed: &Ec
         eff[SECURITY] *= 1.0 - arms / ai.arms_max;
         out.push((Act::Lever(Lever::Arms, 2), eff));
     }
-    if arms > p.arms_floor + EPS {
+    // Not while weapons factories it ordered are young: it ordered them to
+    // supply its arms purchases (cutting those leaves the factories idle).
+    let committed = brain.moves.iter().any(|m| m.0 == ARMS_COMMIT && e.day.saturating_sub(m.1) < ai.arms_commit_days);
+    if arms > p.arms_floor + EPS && !committed {
         out.push((Act::Lever(Lever::Arms, -2), base(Act::Lever(Lever::Arms, -2))));
     }
 
     // Buildings: what is short, or sells abroad for well over its cost.
     let dpy = ed.days_per_year as f64;
     let mut builds: Vec<(f64, Act, NeedVec)> = Vec::new();
+    let arms_key = Act::Lever(Lever::Arms, 1).moves().map_or(0, |m| m.0);
     if room {
         for (k, bd) in ed.buildings.iter().enumerate() {
             let g = bd.output;
@@ -364,6 +422,28 @@ fn candidates(brain: &Brain, ai: &AiData, dif: &Difficulty, e: &Economy, ed: &Ec
             let levels: f64 = existing.iter().map(|b| b.levels).sum();
             if levels > 0.5 && existing.iter().map(|b| b.fed * b.levels).sum::<f64>() / levels < 0.8 {
                 continue;
+            }
+            // Nor more of a kind whose buildings already idle or lose money
+            // (they cut back to a fifth: new ones would too); a new kind must
+            // look able to pay its way (output at today's price over inputs,
+            // crews and upkeep).
+            // And it must beat importing: made at home for less than the
+            // world's price landed here (transport and our own tariff on).
+            let (import_price, _) = crate::econ::tick::parity(ed, n, g, e.world_price[g]);
+            let price = n.price[g].min(import_price);
+            if levels > 0.5 {
+                let busy = existing.iter().map(|b| b.utilization * b.levels).sum::<f64>() / levels;
+                let profit = existing.iter().map(|b| b.profit * b.levels).sum::<f64>() / levels;
+                if busy < ai.busy_min || profit < 0.0 || n.unit_cost[g] > price {
+                    continue;
+                }
+            } else {
+                let out = bd.amount * crate::econ::tech(ed, n) * crate::econ::skill_factor(n, bd) * crate::econ::output_mod(ed, n, g) * (1.0 - crate::econ::defect_rate(n, bd));
+                let inputs: f64 = bd.inputs.iter().map(|&(x, per)| out * per * n.price[x]).sum();
+                let margin = out * price - inputs - ed.workers_per_level * n.wage * (1.0 + bd.skill * ed.skill_pay) - bd.upkeep / n.exchange;
+                if margin <= 0.0 {
+                    continue;
+                }
             }
             let (_, cost) = e.build_block(ed, i, k);
             let block = e.build_block(ed, i, k).0;
@@ -382,8 +462,27 @@ fn candidates(brain: &Brain, ai: &AiData, dif: &Difficulty, e: &Economy, ed: &Ec
             if l.capacity[g] > ai.build_margin * demand.max(EPS) {
                 continue;
             }
-            // Not short: only a proven earner that sells abroad.
-            if short < 0.05 && !(exportable && roi > ai.roi_min) {
+            // Short, and short for months (a shortage expected to last, not a
+            // bad week); or not short, but a proven earner that sells abroad.
+            // Weapons are wanted only while the arms budget lasts: a stronger
+            // shortage, and no cut to arms purchases in the last year.
+            let military = ed.goods[g].military;
+            let need = if military { ai.lasting_short_military } else { ai.lasting_short };
+            let arms_cut = brain.moves.iter().any(|m| m.0 == arms_key && m.2 < 0 && e.day.saturating_sub(m.1) < ed.days_per_year);
+            let lasting = short >= need && brain.shortage_trend[g] >= need && !(military && arms_cut);
+            // (Weapons aren't built to sell: the arms trade is too thin.)
+            if !lasting && !(short < 0.05 && exportable && roi > ai.roi_min && !military) {
+                continue;
+            }
+            // Workers for it: the new levels' crews among the jobless (and
+            // those on public works).
+            let crews = block * ed.workers_per_level;
+            if crews > ai.free_workers * (n.unemployed + n.public_works) {
+                continue;
+            }
+            // Its inputs: none of them short now or for months (else it
+            // would stand idle; that shortage is the one to fix first).
+            if bd.inputs.iter().any(|&(x, _)| l.short[x] >= ai.input_short || brain.shortage_trend[x] >= ai.input_short) {
                 continue;
             }
             // The building goods must be in store (the player's build button says no otherwise).
@@ -485,6 +584,17 @@ fn candidates(brain: &Brain, ai: &AiData, dif: &Difficulty, e: &Economy, ed: &Ec
             out.push((Act::LiftEmbargo(j), base(Act::LiftEmbargo(j))));
         }
     }
+    // In debt trouble (printing money, or worse) a budget only tightens:
+    // no tax cuts, welfare or tariff rises... (one colony cut its sales tax
+    // by three points while printing money for a 16% deficit: a cheap tax
+    // looks free to cut, and the jobs it helps look worth it).
+    if brain.needs[DEBT] >= ai.tighten_only {
+        out.retain(|(act, eff)| {
+            let loosens = matches!(act, Act::Lever(Lever::IncomeTax | Lever::CorporateTax | Lever::SalesTax | Lever::Tariff, s) if *s < 0)
+                || matches!(act, Act::Lever(Lever::Welfare | Lever::Research | Lever::PublicWorks, s) if *s > 0);
+            !loosens || eff[DEBT] >= 0.0
+        });
+    }
     out
 }
 
@@ -527,6 +637,14 @@ pub fn plan(brain: &mut Brain, ai: &AiData, dif: &Difficulty, e: &mut Economy, e
         needs[c] = if first || (c == DEBT && now[c] > 1.0) { now[c] } else { needs[c] + (now[c] - needs[c]) * ai.need_smoothing };
     }
     brain.needs = needs;
+    // How long each shortage has lasted (a weekly average over a few months).
+    if brain.shortage_trend.len() != l.short.len() {
+        brain.shortage_trend = l.short.clone();
+    } else {
+        for (t, &x) in brain.shortage_trend.iter_mut().zip(&l.short) {
+            *t += (x - *t) * ai.short_smoothing;
+        }
+    }
     brain.need_words = words;
     check_builds(brain, e, ed);
 
@@ -534,12 +652,33 @@ pub fn plan(brain: &mut Brain, ai: &AiData, dif: &Difficulty, e: &mut Economy, e
     for (act, eff) in candidates(brain, ai, dif, e, ed, &l) {
         let (mut s, parts) = score(brain, ai, &eff);
         s += brain.personality.t.like[act.category()];
+        // Touching taxes, welfare or tariffs costs something in itself
+        // (firms and households re-plan; trust in the rules wears): only a
+        // clear gain is worth it.
+        if let Act::Lever(Lever::IncomeTax | Lever::CorporateTax | Lever::SalesTax | Lever::Welfare | Lever::Tariff, _) = act {
+            s -= ai.change_cost;
+        }
         let mut flip = false;
         if let Some((key, dir)) = act.moves() {
             if let Some(&(_, when, last)) = brain.moves.iter().find(|m| m.0 == key) {
                 let age = day.saturating_sub(when);
                 // Patience: a lever just moved waits to show what it did.
                 if age < ai.patience_days && key < 100 {
+                    continue;
+                }
+                // Taxes, welfare and tariffs are set in a budget: each at
+                // most once every `budget_days` (a debt emergency calls an
+                // emergency budget).
+                let wait = if brain.needs[DEBT] > 1.0 {
+                    ai.emergency_budget_days
+                } else if brain.needs[DEBT] >= ai.debt_budget_need {
+                    ai.debt_budget_days
+                } else {
+                    ai.budget_days
+                };
+                let budgeted = matches!(act, Act::Lever(Lever::IncomeTax | Lever::CorporateTax | Lever::SalesTax | Lever::Welfare | Lever::Tariff, _))
+                    || matches!(act, Act::Lever(Lever::Research | Lever::Arms, _)) && ai.budget_spending;
+                if age < wait && budgeted {
                     continue;
                 }
                 // Nor undone before its effect has had time to show.
@@ -614,6 +753,12 @@ pub fn plan(brain: &mut Brain, ai: &AiData, dif: &Difficulty, e: &mut Economy, e
                 *brain.stats.flips_by.entry(c.act.effect_key()).or_insert(0) += 1;
             }
             if let Act::Build(k) = c.act {
+                if ed.goods[ed.buildings[k].output].military {
+                    match brain.moves.iter_mut().find(|m| m.0 == ARMS_COMMIT) {
+                        Some(m) => m.1 = day,
+                        None => brain.moves.push((ARMS_COMMIT, day, 1)),
+                    }
+                }
                 brain.stats.builds += 1;
                 brain.stats.checks.push((day + ed.days_per_year, k));
             }
@@ -650,9 +795,10 @@ fn check_builds(brain: &mut Brain, e: &Economy, ed: &EconData) {
         let mine: Vec<&crate::econ::Building> = n.buildings.iter().filter(|b| b.kind == kind && b.player_built && b.levels > 0.0).collect();
         let levels: f64 = mine.iter().map(|b| b.levels).sum();
         let busy = if levels > EPS { mine.iter().map(|b| b.utilization * b.fed.min(1.0) * b.levels).sum::<f64>() / levels } else { 0.0 };
-        let _ = ed;
         if busy < 0.5 {
             brain.stats.unneeded += 1;
+            let key = format!("{}: {}", ed.models[n.model].name, ed.buildings[kind].name);
+            *brain.stats.unneeded_by.entry(key).or_insert(0) += 1;
         }
     }
 }

@@ -161,6 +161,10 @@ starting_stockpile_years = 5
 public_works = 1.0
 public_works_pay = 0.6
 public_works_max = 0.1
+# A scheme set by hand (the Public works lever: its size, as a share of the
+# workforce) takes on the jobless from this far over the natural rate, slump
+# or not, and retrains while it runs.
+public_works_from = 0.03
 # In a slump taxes are cut and welfare kept up, until printing has pushed
 # inflation past this: then they rise a step a month.
 slump_inflation_limit = 0.08

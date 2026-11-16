@@ -162,6 +162,8 @@ pub struct Brain {
     pub goal_why: String,
     pub needs: NeedVec,
     pub need_words: Vec<String>,
+    /// Each good's shortage, averaged over the last few months (does it last?).
+    pub shortage_trend: Vec<f64>,
     /// Its beliefs about every nation (the last four quarters' too).
     pub estimates: Vec<Estimate>,
     pub history: Vec<Vec<Estimate>>,
@@ -200,8 +202,9 @@ pub struct Stats {
     /// Decisions by action.
     pub taken_by: std::collections::BTreeMap<&'static str, u32>,
     pub builds: u32,
-    /// Builds still mostly idle a year later.
+    /// Builds still mostly idle a year later (and by "model: building").
     pub unneeded: u32,
+    pub unneeded_by: std::collections::BTreeMap<String, u32>,
     pub defaults: u32,
     /// Builds waiting for their year-later check: (day, building kind).
     pub checks: Vec<(u32, usize)>,
@@ -292,6 +295,7 @@ impl Brains {
                     goal_why: "Starting out".to_string(),
                     needs: [0.0; 9],
                     need_words: vec![String::new(); NEEDS.len()],
+                    shortage_trend: Vec::new(),
                     estimates: vec![Estimate::default(); count],
                     history: Vec::new(),
                     threat: None,

@@ -203,6 +203,8 @@ pub struct State {
     pub public_works: f64,
     pub public_works_pay: f64,
     pub public_works_max: f64,
+    /// With a public works scheme set by hand: it starts this far over the natural rate.
+    pub public_works_from: f64,
     pub slump_inflation_limit: f64,
     pub retraining: f64,
     pub retraining_max: f64,

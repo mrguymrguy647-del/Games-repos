@@ -44,7 +44,7 @@ support_span = 30.0
 trade_full = 0.8        # trade capacity used over this starts to worry
 choked = 0.92           # a province moving less than this of its goods is choked
 dominate_floor = 0.5    # a nation set on dominating always feels this much need for security
-rating_safe = 70.0      # the agencies' score (docs/ECONOMY.md) under this starts to worry (BB is under 55)
+rating_safe = 85.0      # the agencies' score (docs/ECONOMY.md) under this starts to worry (BB is under 55)
 rating_span = 25.0
 emergency = 1.5         # printing money for a deep deficit: the debt need is 1 + this (it outweighs all else)
 
@@ -196,6 +196,15 @@ jobs = 0.05
 debt = -0.35
 support = -0.05
 
+[action.works_up]        # x how far the jobless over the line outnumber the places; debt: its cost ([works])
+jobs = 0.6
+support = 0.15
+growth = 0.05
+
+[action.works_down]      # x how much of the scheme is in use; debt: its saving ([works])
+jobs = -0.5
+support = -0.1
+
 [action.arms_down]
 security = -0.40
 debt = 0.25
@@ -242,9 +251,23 @@ roi_full = 0.5         # a return this good counts fully for growth
 cost_harm = 6.0        # debt harm = cost over a year's GDP x this
 export_margin = 1.25   # an export pays when the world pays this x its cost
 min_room = 0.05        # and not when debt would go over (1 - this) of the ceiling
+lasting_short = 0.05   # build for a shortage only if it is this short now and on average over months...
+lasting_short_military = 0.2  # weapons: this short (arms buying is lumpy), and no arms cut in the last year
+short_smoothing = 0.1  # ...(each week the average moves this share of the way: about 10 weeks)
+free_workers = 0.5     # the new levels' crews must be at most this share of the jobless
+busy_min = 0.9         # more of a kind only while its buildings run at least this much, at a profit
+input_short = 0.1      # and none of its inputs this short (now or on average)
 roi_min = 0.12         # not short: build only a kind that already earns this a year on its cost, and sells abroad
 
 [fiscal]
+change_cost = 0.06     # every tax, welfare or tariff move costs this much score...
+tighten_only = 1.01    # in a debt emergency (need over 1: printing money for a deep deficit) budgets only tighten
+max_points = 3         # ...and may move 1 to this many points at once...
+debt_budget_days = 90  # ...or this many with a debt need over debt_budget_need...
+debt_budget_need = 0.6
+emergency_budget_days = 60   # ...or this many in a debt emergency (printing money for a deep deficit)
+budget_spending = 0    # 1: research and arms purchases are set in the budget too (0: any week)
+budget_days = 180       # ...and each is set at most once in this many days (a budget)
 tax_level = 0.35       # a tax at this level hurts 1.5x as much to raise (0.5 + tax / this)
 yield_ref = 0.004      # a tax point bringing in this share of GDP helps the debt as written (more: more, to 2.5x)
 income_tax_max = 0.55  # the same ceilings as the treasury's autopilot
@@ -256,6 +279,7 @@ welfare_max = 0.5
 welfare_level = 0.25   # welfare this high costs 1.5x as much to raise again (0.5 + welfare / this)
 
 [money]
+rate_release = 0.2     # a rate fixed for a slump goes back to the bank only once the jobs need is under this
 rate_from = 0.5        # the brain fixes the rate only with jobs or heat need over this
 
 [close]
@@ -266,8 +290,14 @@ days = 90              # for this many days
 horizon_ref = 10.0     # research's growth effect x horizon_years / this
 max = 0.05             # never above this share of GDP (the personality may lower it)
 
+[works]
+step = 2               # public works move this many points of the workforce at a time
+max = 0.25             # a brain's scheme stays under this share of the workforce (the lever's top)
+debt = 0.45            # debt effect per yield_ref of GDP the step costs a year (as a tax point's)
+
 [arms]
 max = 0.03
+commit_days = 720      # after ordering weapons factories, no arms cuts for this long
 
 # How sure each secret service level makes a brain of others' numbers
 # (estimate = truth x exp(error x a normal number)).

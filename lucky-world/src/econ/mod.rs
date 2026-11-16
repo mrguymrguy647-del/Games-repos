@@ -421,6 +421,9 @@ pub struct NationEcon {
     /// Arms purchases as a share of GDP a year, if set by hand (else the Army
     /// Strength wheel's).
     pub arms: Option<f64>,
+    /// A public works scheme set by hand: its most, as a share of the
+    /// workforce (else the autopilot's, in a slump only).
+    pub works: Option<f64>,
 }
 
 /// The whole world's economy.

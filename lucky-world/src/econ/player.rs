@@ -24,10 +24,13 @@ pub enum Lever {
     Research,
     /// Weapons bought for the stockpile, a share of GDP a year.
     Arms,
+    /// The public works scheme's size, a share of the workforce (a job
+    /// guarantee from a little over the natural rate, with retraining).
+    PublicWorks,
 }
 
 impl Lever {
-    pub const ALL: [Lever; 8] = [
+    pub const ALL: [Lever; 9] = [
         Lever::IncomeTax,
         Lever::CorporateTax,
         Lever::SalesTax,
@@ -36,6 +39,7 @@ impl Lever {
         Lever::InterestRate,
         Lever::Research,
         Lever::Arms,
+        Lever::PublicWorks,
     ];
 
     pub fn name(self) -> &'static str {
@@ -48,6 +52,7 @@ impl Lever {
             Lever::InterestRate => "Interest rate",
             Lever::Research => "Research and schools (of GDP)",
             Lever::Arms => "Arms purchases (of GDP)",
+            Lever::PublicWorks => "Public works (of workers)",
         }
     }
 
@@ -62,6 +67,7 @@ impl Lever {
             Lever::InterestRate => (0.0025, 0.0, 0.4),
             Lever::Research => (0.0025, 0.0, 0.05),
             Lever::Arms => (0.001, 0.0, 0.06),
+            Lever::PublicWorks => (0.01, 0.0, 0.25),
         }
     }
 }
@@ -87,7 +93,13 @@ impl Economy {
                 Some(ed) => n.arms_share(ed),
                 None => n.arms.unwrap_or(0.0),
             },
+            Lever::PublicWorks => n.works.unwrap_or_else(|| ed.map_or(0.0, |ed| ed.state.public_works_max)),
         }
+    }
+
+    /// How far one press moves a lever.
+    pub fn lever_step(lever: Lever) -> f64 {
+        lever.step().0
     }
 
     /// The lowest and highest a lever can go.
@@ -116,8 +128,9 @@ impl Economy {
             Lever::InterestRate => n.manual_rate = Some(value),
             Lever::Research => n.research = value,
             Lever::Arms => n.arms = Some(value),
+            Lever::PublicWorks => n.works = Some(value),
         }
-        if !matches!(lever, Lever::InterestRate | Lever::Tariff | Lever::Research | Lever::Arms) {
+        if !matches!(lever, Lever::InterestRate | Lever::Tariff | Lever::Research | Lever::Arms | Lever::PublicWorks) {
             n.manual_taxes = true;
         }
         format!("{}: {:.1}%", lever.name(), value * 100.0)
@@ -132,7 +145,8 @@ impl Economy {
     /// Hands taxes and welfare back to the fiscal autopilot.
     pub fn free_taxes(&mut self, nation: usize) -> String {
         self.nations[nation].manual_taxes = false;
-        "The treasury sets taxes and welfare again".to_string()
+        self.nations[nation].works = None;
+        "The treasury sets taxes, welfare and public works again".to_string()
     }
 
     /// Where a new building of a kind would go: the richest deposit with room

@@ -356,6 +356,7 @@ impl Economy {
             research: 0.0,
             knowledge: 0.0,
             arms: None,
+            works: None,
         };
         n.skilled = (interpolate(&ed.skill_by_hdi, hdi) + effects.get("skill")).clamp(0.01, 0.9);
         n.refresh_fast_mods(ed);
