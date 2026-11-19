@@ -1,0 +1,127 @@
+# Defeat: a sombre falling phrase in A minor, about 3 s. A muted horn
+# steps down E-D-C-B-A over low strings (Am, then F, then Am), with one
+# soft low drum under the last note.
+# Every note is given its full length: a song note stops its sound when it
+# ends (the 1-beat default would clip the final held A).
+version = 0
+name = "defeat"
+description = "Sombre 3 s falling horn phrase over low strings, A minor, for losing."
+tags = ["jingle", "lose", "defeat", "sad", "horn", "strings"]
+tempo = 120
+beats_per_bar = 5
+bars = 1
+seed = 37
+channels = 2
+
+[master]
+normalize_lufs = -20
+trim_silence = true
+
+[[effects]]
+type = "reverb"
+size = 0.7
+decay = 0.9
+damping = 0.6
+mix = 0.22
+
+# ---- instruments ---------------------------------------------------------
+
+# A muted horn: a saw and a triangle through a dark low-pass, slow-ish
+# attack, a little vibrato once held.
+[instruments.horn]
+version = 0
+
+[[instruments.horn.layers]]
+name = "brass"
+source = "saw"
+volume = 0.35
+envelope = { attack = 0.09, decay = 0.2, sustain = 0.75, release = 0.35 }
+pitch = { start = 220, vibrato = { rate = 4.5, depth = 0.1, delay = 0.35 } }
+filter = { kind = "lowpass", cutoff = 750, resonance = 0.8 }
+
+[[instruments.horn.layers]]
+name = "round"
+source = "triangle"
+volume = 0.5
+envelope = { attack = 0.07, decay = 0.2, sustain = 0.8, release = 0.35 }
+pitch = { start = 220 }
+
+# Low strings: three saws a few cents apart, dark and slow to speak.
+[instruments.strings]
+version = 0
+
+[[instruments.strings.layers]]
+name = "mid"
+source = "saw"
+volume = 0.25
+envelope = { attack = 0.35, decay = 0, sustain = 1, release = 0.6 }
+pitch = { start = 110 }
+filter = { kind = "lowpass", cutoff = 900, resonance = 0.7 }
+
+[[instruments.strings.layers]]
+name = "sharp"
+source = "saw"
+volume = 0.18
+envelope = { attack = 0.4, decay = 0, sustain = 1, release = 0.6 }
+pitch = { start = 110.4 }
+filter = { kind = "lowpass", cutoff = 800, resonance = 0.7 }
+
+[[instruments.strings.layers]]
+name = "flat"
+source = "saw"
+volume = 0.18
+envelope = { attack = 0.4, decay = 0, sustain = 1, release = 0.6 }
+pitch = { start = 109.6 }
+filter = { kind = "lowpass", cutoff = 800, resonance = 0.7 }
+
+# A soft, low drum.
+[instruments.lowdrum]
+version = 0
+
+[[instruments.lowdrum.layers]]
+name = "skin"
+source = "sine"
+volume = 0.9
+envelope = { attack = 0.004, decay = 0.8 }
+pitch = { start = 55 }
+
+[[instruments.lowdrum.layers]]
+name = "felt"
+source = "noise"
+volume = 0.15
+envelope = { attack = 0.002, decay = 0.06 }
+filter = { kind = "lowpass", cutoff = 500 }
+
+# ---- tracks --------------------------------------------------------------
+
+[[tracks]]
+name = "horn"
+instrument = "horn"
+volume = 0.9
+pan = -0.1
+notes = [
+  { beat = 0, note = "E4", length = 0.9 },
+  { beat = 1, note = "D4", length = 0.9, velocity = 0.9 },
+  { beat = 2, note = "C4", length = 0.9, velocity = 0.85 },
+  { beat = 3, note = "B3", length = 0.9, velocity = 0.8 },
+  { beat = 4, note = "A3", length = 1.6, velocity = 0.8 },
+]
+
+[[tracks]]
+name = "strings"
+instrument = "strings"
+volume = 0.8
+pan = 0.15
+notes = [
+  { beat = 0, note = ["A2", "E3", "A3"], length = 2 },
+  { beat = 2, note = ["F2", "C3", "A3"], length = 2 },
+  { beat = 4, note = ["A2", "E3", "A3"], length = 1.6 },
+]
+
+[[tracks]]
+name = "drum"
+instrument = "lowdrum"
+volume = 0.6
+notes = [
+  { beat = 4, note = 55, length = 2 },
+]

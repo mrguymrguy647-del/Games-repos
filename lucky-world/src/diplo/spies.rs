@@ -8,7 +8,7 @@ use crate::econ::{EconData, Economy};
 use crate::war::{escalation, Wars};
 
 /// A kind of mission.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Kind {
     Intel,
     Sabotage,
@@ -54,7 +54,7 @@ impl Kind {
 }
 
 /// A nation's secret service.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct Service {
     pub agents: u32,
     pub skill: f64,
@@ -67,7 +67,7 @@ pub struct Service {
 }
 
 /// A mission under way.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct Mission {
     pub by: usize,
     pub target: usize,
@@ -78,7 +78,7 @@ pub struct Mission {
 }
 
 /// A mission's result, for the log.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct Report {
     pub day: u32,
     pub by: usize,
@@ -92,7 +92,7 @@ pub struct Report {
     pub words: String,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Default)]
 pub struct Spies {
     pub services: Vec<Service>,
     pub missions: Vec<Mission>,

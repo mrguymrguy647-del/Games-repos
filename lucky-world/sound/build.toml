@@ -1,0 +1,60 @@
+# Something built: two hammer blows on wood, the second a little lower and
+# heavier, with a low clunk. About 0.5 s.
+version = 0
+name = "build"
+description = "Hammer and wood clunk for building something, about 0.5 s."
+tags = ["ui", "build", "hammer", "construction", "impact"]
+seed = 61
+channels = 2
+
+[master]
+normalize_lufs = -20
+trim_silence = true
+
+[[layers]]
+name = "knock one"
+source = "triangle"
+volume = 0.7
+pan = -0.15
+envelope = { attack = 0.001, decay = 0.07 }
+pitch = { start = 420, end = 300, curve = "exponential" }
+
+[[layers]]
+name = "crack one"
+source = "noise"
+volume = 0.4
+pan = -0.15
+envelope = { attack = 0.0005, decay = 0.025 }
+filter = { kind = "bandpass", cutoff = 2200, resonance = 1.2 }
+
+[[layers]]
+name = "knock two"
+source = "triangle"
+offset = 0.17
+volume = 0.8
+pan = 0.15
+envelope = { attack = 0.001, decay = 0.09 }
+pitch = { start = 360, end = 250, curve = "exponential" }
+
+[[layers]]
+name = "crack two"
+source = "noise"
+offset = 0.17
+volume = 0.45
+pan = 0.15
+envelope = { attack = 0.0005, decay = 0.03 }
+filter = { kind = "bandpass", cutoff = 1900, resonance = 1.2 }
+
+[[layers]]
+name = "clunk"
+source = "sine"
+offset = 0.17
+volume = 0.9
+envelope = { attack = 0.002, decay = 0.2 }
+pitch = { start = 140, end = 70, curve = "exponential", sweep_time = 0.08 }
+
+[[effects]]
+type = "reverb"
+size = 0.2
+decay = 0.15
+mix = 0.12

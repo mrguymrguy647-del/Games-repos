@@ -1,0 +1,80 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Help: a question mark drawn with shapes",
+  "seed": 1,
+  "palette": {
+    "ink": "#1A1030",
+    "gold": "#F5C542"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "cmd": "layer",
+      "name": "Art"
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        12,
+        12
+      ],
+      "radius": 11,
+      "fill": "ink",
+      "outline": "gold",
+      "outline_size": 1.5
+    },
+    {
+      "cmd": "path",
+      "points": [
+        [
+          8.8,
+          9.6
+        ],
+        [
+          9.4,
+          7.4
+        ],
+        [
+          12,
+          6.2
+        ],
+        [
+          14.6,
+          7.4
+        ],
+        [
+          15.2,
+          9.4
+        ],
+        [
+          14.2,
+          11.1
+        ],
+        [
+          12.3,
+          12.3
+        ],
+        [
+          12,
+          14.2
+        ]
+      ],
+      "color": "gold",
+      "size": 2.3
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        12,
+        17.4
+      ],
+      "radius": 1.45,
+      "fill": "gold"
+    }
+  ]
+}

@@ -10,6 +10,13 @@
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
 mod country;
+mod save_codec;
+mod balance;
+mod fullscreen;
+mod settings;
+mod save;
+mod sim;
+mod victory;
 mod data;
 mod files;
 mod diplo;
@@ -24,8 +31,11 @@ mod ui;
 mod wheel;
 mod war;
 mod world;
+mod bot;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod player_test;
 
 use duckforge::prelude::*;
 
@@ -35,11 +45,13 @@ pub const WHEELS_THE_CODE_NAMES: [&str; 11] = [
 ];
 
 pub fn config() -> Config {
+    // The window's size comes from the settings (tests always use 1).
+    let scale = if cfg!(test) { 1 } else { settings::Settings::load().0.window_scale };
     Config {
         title: String::from("LUCKY WORLD"),
         width: ui::W as usize,
         height: ui::H as usize,
-        scale: 1,
+        scale,
         tune_file: Some("lucky_world.tune.json".into()),
         ..Config::default()
     }
@@ -54,6 +66,7 @@ pub fn new_game() -> Result<game::Lucky, Box<dyn std::error::Error>> {
     let ai_data = ai::AiData::load()?;
     let war_data = war::WarData::load()?;
     let diplo_data = diplo::DiploData::load()?;
+    let extra = game::Extra::load()?;
     let notes = files::notes();
     if !notes.is_empty() && !cfg!(test) {
         // The game started on built-in copies; say which files Windows held back.
@@ -62,7 +75,7 @@ pub fn new_game() -> Result<game::Lucky, Box<dyn std::error::Error>> {
             format!("LUCKY WORLD started, but couldn't read these files beside it:\n{}\n", notes.join("\n")),
         );
     }
-    Ok(game::Lucky::new(data, atlas, assets, models, econ_data, ai_data, war_data, diplo_data))
+    Ok(game::Lucky::new(data, atlas, assets, models, econ_data, ai_data, war_data, diplo_data, extra))
 }
 
 /// Everything a world is made of: its data, maps, economy rules, owners and economy.
@@ -269,6 +282,18 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(at) = args.iter().position(|a| a == "--ai-trace") {
         return ai::report::trace(&args[at + 1..]).map_err(|e| e.to_string().into());
     }
+    if let Some(at) = args.iter().position(|a| a == "--tour") {
+        return bot::tour(&args[at + 1..]).map_err(|e| e.into());
+    }
+    if let Some(at) = args.iter().position(|a| a == "--balance") {
+        return balance::balance(&args[at + 1..]).map_err(|e| e.into());
+    }
+    if let Some(at) = args.iter().position(|a| a == "--wheel-effects") {
+        return balance::wheel_effects(&args[at + 1..]).map_err(|e| e.into());
+    }
+    if let Some(at) = args.iter().position(|a| a == "--long-game") {
+        return balance::long_game(&args[at + 1..]).map_err(|e| e.into());
+    }
     if let Some(at) = args.iter().position(|a| a == "--economy-report") {
         return economy_report(&args[at + 1..]);
     }
@@ -282,6 +307,22 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             game.map = game.data.maps.iter().position(|m| &m.id == id).ok_or(format!("there's no map \"{id}\" (try grand, isles or five_shores)"))?;
         }
         game.spectate_at_start = true;
+    } else if !args.iter().any(|a| a == "--title") {
+        // A real start: the main menu (--title skips it, as the tests do).
+        game.menu_started = true;
+        game.open_menu();
     }
+    // --saves DIR: keep saves somewhere else; --years N: a game of N years
+    // (for trying the ending); --difficulty NAME.
+    if let Some(dir) = args.iter().position(|a| a == "--saves").and_then(|k| args.get(k + 1)) {
+        save::set_folder(dir);
+    }
+    if let Some(y) = args.iter().position(|a| a == "--years").and_then(|k| args.get(k + 1)).and_then(|v| v.parse().ok()) {
+        game.setup.years = y;
+    }
+    if let Some(d) = args.iter().position(|a| a == "--difficulty").and_then(|k| args.get(k + 1)) {
+        game.setup.difficulty = d.clone();
+    }
+    game.start_settings();
     duckforge::run(config(), game)
 }

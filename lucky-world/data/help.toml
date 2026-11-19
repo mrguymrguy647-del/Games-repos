@@ -1,0 +1,96 @@
+# The help screen's pages (F2 on the map, or Help on the menus).
+# A blank line starts a new paragraph; a paragraph starting "- " is a bullet.
+
+[[page]]
+title = "The goal"
+body = """
+LUCKY WORLD is a strategy game where fate deals your nation. You spin sixteen wheels to find out who you are, then you rule that nation among up to 24 rivals who spun the same wheels, for as long as the game lasts (50, 100 or 150 years, or forever).
+
+- Conquest: hold half of the map's provinces yourself.
+
+- Economic power: an economy two and a half times the size of the next biggest, for ten years in a row.
+
+- Diplomatic: lead an alliance (your allies by alliance treaty, and your vassals) that holds 60% of the map, with at least two allies, as its richest member, for five years in a row.
+
+- Score: the best score in the world when the game's length runs out. The score counts your share of the world's GDP, land, people and technology, and your stability. A vassal's score counts half.
+
+You lose if you are conquered (your last province falls), overthrown (rebels take your capital in a civil war), or made a vassal. A vassal can play on and fight for independence: winning it back clears the defeat."""
+
+[[page]]
+title = "The wheels"
+body = """
+Each wheel's slices are its odds: the bigger the slice, the likelier. The panel beside the wheel lists every chance, and "Linked to" names the earlier results that shaped this wheel (a big country has more people, a rich one a bigger army...).
+
+SPACE spins (and again to hurry it), S rolls every wheel left at once with the same odds. The wheels come in four rounds: Land, People, Power and Fate.
+
+Every result does something: land and resources decide what you make well, GDP and population start your economy, the army and active duty raise your divisions, the secret service sets your spies, ideology and leader shape how others see you, and the blessing or curse lasts the whole game.
+
+The underdog's luck: a nation whose start is far below the median nation's (the player's or any brain's) gets development aid for twelve years, a floor under its stability, and five years in which no brain starts a war on it. A perfect spin gets nothing extra, and everyone gangs up on a nation grown too strong."""
+
+[[page]]
+title = "The map"
+body = """
+Drag to pan, scroll or R / F to zoom, right-drag or Q / E to turn, T / G to tilt. Click a province to see its terrain, people, buildings and deposits; click a nation's name or flag for its country card. Tab visits each nation in turn, H goes home, M switches between nations and terrain, V cycles the overlays (resources, industry, war, alliances, relations).
+
+The clock: SPACE pauses, 1 to 5 set the speed (a day, three days, a week, two weeks or a month each second). Esc opens the pause menu: save, load, settings, help, the main menu. F6 quick-saves, F9 loads the quick save, L shows every notification. Settings can change all of these keys."""
+
+[[page]]
+title = "The economy"
+body = """
+O opens the economy window. Every nation has sixteen goods made in chains: grain, ore, coal, oil, timber and bauxite are dug and farmed; power, steel, fuel, aluminium and chemicals refined; food, consumer goods, ammunition, tanks and jets made. Break a link and everything after it stops.
+
+- Budget: taxes in; army, welfare, government, roads, building and weapons out. A deficit becomes debt with a credit rating; past the rating's ceiling, money is printed and the currency falls.
+
+- Chains: build (B) or close (X) buildings, roads (R) where goods are stuck, ports (P).
+
+- Market, Trade, Stockpile, Charts: prices, partners and embargoes (X), the weapons you have, and your history.
+
+An autopilot runs every lever you haven't touched; A hands a lever back to it. Hover any number to read what it is and what changes it."""
+
+[[page]]
+title = "War and supply"
+body = """
+K opens the war room. Armies are divisions of 10,000 soldiers with real equipment from your factories (with defects: rifles jam, shells are duds). Battles are fought hour by hour; terrain, weather, generals, air power, supply and morale all count.
+
+- Wars: declare (D) at a level (L): border skirmish, military operation, declared war, total war. Escalate (E), match (M) or back down (B); offer peace (P), answer offers (Y / N).
+
+- Army: orders for each front: attack, hold, dig in, retreat, reinforce. The generals fight on their own if you leave them.
+
+- Supply: everything travels from the capital along roads, rail and sea lanes. Set each front's priority, approve or deny your generals' requests, or leave it on Auto. An army without ammunition and fuel loses.
+
+- Reports: every battle, on paper.
+
+Peace comes by war score: white peace, reparations, provinces, a vassal or a new government."""
+
+[[page]]
+title = "Diplomacy and spies"
+body = """
+P opens diplomacy. Every nation's view of you is built from reasons you can read: trade, borders, ideology, treaties, reputation, old wars, broken words.
+
+- Propose treaties: trade agreements, non-aggression, defensive pacts, alliances, military access, guarantees, arms deals, loans. Every answer says why.
+
+- Break a treaty and your reputation falls with everyone.
+
+- Allies are called to your wars and decide by honour, relations and the odds. Peace talks go back and forth week by week.
+
+I opens the spy window: train agents, set counter-intelligence, and send missions (intel, sabotage, stealing research, unrest, revolts, funding rebels, meddling, killing or bribing a general). The chances shown are your own service's estimate."""
+
+[[page]]
+title = "Difficulty"
+body = """
+Difficulty never cheats: the brains have the same buttons, money and fog of war as you. It changes how well they think.
+
+- Easy: noisy plans, short sight, one move a week, slow to rethink; they misjudge the odds of a war, notice a rising power late, and look for wars less often.
+
+- Normal: the brains as they were built.
+
+- Hard: sharper plans, further sight, quicker to rethink and to gang up on a rising power.
+
+- Brutal: no noise, the furthest sight, four moves a week, the quickest to react, and the first to gang up on whoever grows too strong (you)."""
+
+[[page]]
+title = "Saving"
+body = """
+The game saves itself every game year (Settings can turn it off), and when you go back to the main menu or quit. Esc then Save game writes one of six slots; F6 quick-saves and F9 loads the quick save. Continue on the main menu loads your newest save.
+
+Saves are in the "saves" folder beside the game. Everything is saved, down to every random number, so a loaded game goes on exactly as it would have. Each save carries a version: a save from a different version of the game is listed with the reason it can't be loaded, never a crash."""

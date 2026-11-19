@@ -1,0 +1,207 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Main menu panel 460x560",
+  "seed": 1,
+  "palette": {
+    "gold": "#F5C542"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 460,
+      "height": 560
+    },
+    {
+      "cmd": "layer",
+      "name": "Panel"
+    },
+    {
+      "cmd": "rect",
+      "x": 6,
+      "y": 6,
+      "width": 448,
+      "height": 548,
+      "radius": 22,
+      "fill": {
+        "gradient": "linear",
+        "from": [
+          0,
+          0
+        ],
+        "to": [
+          0,
+          560
+        ],
+        "colors": [
+          "#2B1C5CEE",
+          "#140C33F2"
+        ]
+      },
+      "outline": "gold",
+      "outline_size": 4
+    },
+    {
+      "cmd": "rect",
+      "x": 16,
+      "y": 16,
+      "width": 428,
+      "height": 528,
+      "radius": 15,
+      "outline": "#F5C54240",
+      "outline_size": 1.5
+    },
+    {
+      "cmd": "gradient",
+      "kind": "linear",
+      "from": [
+        0,
+        6
+      ],
+      "to": [
+        0,
+        74
+      ],
+      "stops": [
+        [
+          0,
+          "#FFFFFF1C"
+        ],
+        [
+          1,
+          "#FFFFFF00"
+        ]
+      ],
+      "area": {
+        "rect": [
+          12,
+          10,
+          436,
+          64
+        ]
+      }
+    },
+    {
+      "cmd": "gradient",
+      "kind": "radial",
+      "from": [
+        230.0,
+        0
+      ],
+      "to": [
+        230.0,
+        260
+      ],
+      "stops": [
+        [
+          0,
+          "#F5C54218"
+        ],
+        [
+          1,
+          "#F5C54200"
+        ]
+      ],
+      "area": {
+        "rect": [
+          12,
+          10,
+          436,
+          250
+        ]
+      }
+    },
+    {
+      "cmd": "layer",
+      "name": "Corners"
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          30,
+          25
+        ],
+        [
+          35,
+          30
+        ],
+        [
+          30,
+          35
+        ],
+        [
+          25,
+          30
+        ]
+      ],
+      "fill": "gold"
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          430,
+          25
+        ],
+        [
+          435,
+          30
+        ],
+        [
+          430,
+          35
+        ],
+        [
+          425,
+          30
+        ]
+      ],
+      "fill": "gold"
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          30,
+          525
+        ],
+        [
+          35,
+          530
+        ],
+        [
+          30,
+          535
+        ],
+        [
+          25,
+          530
+        ]
+      ],
+      "fill": "gold"
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          430,
+          525
+        ],
+        [
+          435,
+          530
+        ],
+        [
+          430,
+          535
+        ],
+        [
+          425,
+          530
+        ]
+      ],
+      "fill": "gold"
+    }
+  ]
+}

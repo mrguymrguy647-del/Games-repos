@@ -1,0 +1,1750 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Defeat banner 900x130 (no words: the game writes them)",
+  "seed": 1,
+  "palette": {},
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 900,
+      "height": 130
+    },
+    {
+      "cmd": "layer",
+      "name": "Tails"
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          14,
+          38
+        ],
+        [
+          124,
+          38
+        ],
+        [
+          124,
+          118
+        ],
+        [
+          14,
+          118
+        ],
+        [
+          42,
+          78
+        ]
+      ],
+      "fill": {
+        "gradient": "linear",
+        "from": [
+          0,
+          38
+        ],
+        "to": [
+          0,
+          118
+        ],
+        "colors": [
+          "#4A4550",
+          "#24202A"
+        ]
+      }
+    },
+    {
+      "cmd": "path",
+      "points": [
+        [
+          22,
+          44
+        ],
+        [
+          118,
+          44
+        ]
+      ],
+      "color": "#8C849466",
+      "size": 1.5
+    },
+    {
+      "cmd": "path",
+      "points": [
+        [
+          22,
+          112
+        ],
+        [
+          118,
+          112
+        ]
+      ],
+      "color": "#8C849466",
+      "size": 1.5
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          96,
+          100
+        ],
+        [
+          124,
+          100
+        ],
+        [
+          124,
+          118
+        ]
+      ],
+      "fill": "#141018"
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          886,
+          38
+        ],
+        [
+          776,
+          38
+        ],
+        [
+          776,
+          118
+        ],
+        [
+          886,
+          118
+        ],
+        [
+          858,
+          78
+        ]
+      ],
+      "fill": {
+        "gradient": "linear",
+        "from": [
+          0,
+          38
+        ],
+        "to": [
+          0,
+          118
+        ],
+        "colors": [
+          "#4A4550",
+          "#24202A"
+        ]
+      }
+    },
+    {
+      "cmd": "path",
+      "points": [
+        [
+          878,
+          44
+        ],
+        [
+          782,
+          44
+        ]
+      ],
+      "color": "#8C849466",
+      "size": 1.5
+    },
+    {
+      "cmd": "path",
+      "points": [
+        [
+          878,
+          112
+        ],
+        [
+          782,
+          112
+        ]
+      ],
+      "color": "#8C849466",
+      "size": 1.5
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          804,
+          100
+        ],
+        [
+          776,
+          100
+        ],
+        [
+          776,
+          118
+        ]
+      ],
+      "fill": "#141018"
+    },
+    {
+      "cmd": "layer",
+      "name": "Band",
+      "note": "the middle (x 200..700) is left plain: the game writes the words there"
+    },
+    {
+      "cmd": "group",
+      "name": "band",
+      "filter": {
+        "shadow": {
+          "offset": [
+            0,
+            4
+          ],
+          "blur": 5,
+          "color": "#00000066"
+        }
+      },
+      "commands": [
+        {
+          "cmd": "rect",
+          "x": 96,
+          "y": 22,
+          "width": 708,
+          "height": 78,
+          "radius": 4,
+          "fill": {
+            "gradient": "linear",
+            "from": [
+              0,
+              22
+            ],
+            "to": [
+              0,
+              100
+            ],
+            "stops": [
+              [
+                0,
+                "#8E2A3A"
+              ],
+              [
+                0.45,
+                "#5E1626"
+              ],
+              [
+                1,
+                "#300A14"
+              ]
+            ]
+          },
+          "outline": "#1A0610",
+          "outline_size": 2
+        }
+      ]
+    },
+    {
+      "cmd": "path",
+      "points": [
+        [
+          104,
+          28
+        ],
+        [
+          796,
+          28
+        ]
+      ],
+      "color": "#8C849499",
+      "size": 1.5
+    },
+    {
+      "cmd": "path",
+      "points": [
+        [
+          104,
+          94
+        ],
+        [
+          796,
+          94
+        ]
+      ],
+      "color": "#8C849499",
+      "size": 1.5
+    },
+    {
+      "cmd": "gradient",
+      "kind": "linear",
+      "from": [
+        0,
+        24
+      ],
+      "to": [
+        0,
+        61.0
+      ],
+      "stops": [
+        [
+          0,
+          "#FFFFFF30"
+        ],
+        [
+          1,
+          "#FFFFFF00"
+        ]
+      ],
+      "area": {
+        "rect": [
+          98,
+          24,
+          704,
+          37.0
+        ]
+      }
+    },
+    {
+      "cmd": "layer",
+      "name": "Emblems"
+    },
+    {
+      "cmd": "path",
+      "points": [
+        [
+          146.27,
+          93.5
+        ],
+        [
+          140.94,
+          92.09
+        ],
+        [
+          135.92,
+          89.82
+        ],
+        [
+          131.34,
+          86.74
+        ],
+        [
+          127.35,
+          82.94
+        ],
+        [
+          124.04,
+          78.53
+        ],
+        [
+          121.51,
+          73.63
+        ],
+        [
+          119.84,
+          68.38
+        ],
+        [
+          119.06,
+          62.92
+        ],
+        [
+          119.2,
+          57.41
+        ],
+        [
+          120.25,
+          52.0
+        ],
+        [
+          122.19,
+          46.84
+        ],
+        [
+          124.97,
+          42.07
+        ]
+      ],
+      "color": "#2A2630",
+      "size": 2
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        138.94,
+        97.7
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 234.58,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        142.93,
+        86.49
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 164.58,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        127.62,
+        91.38
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 253.75,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        135.07,
+        82.1
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 183.75,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        119.0,
+        81.69
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 272.92,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        129.08,
+        75.37
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 202.92,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        114.04,
+        69.71
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 292.08,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        125.63,
+        67.05
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 222.08,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        113.28,
+        56.76
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 311.25,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        125.11,
+        58.06
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 241.25,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        116.82,
+        44.28
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 330.42,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        127.57,
+        49.39
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 260.42,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        124.97,
+        42.07
+      ],
+      "radius": [
+        6.5,
+        3
+      ],
+      "rotation": 305,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "path",
+      "points": [
+        [
+          157.73,
+          93.5
+        ],
+        [
+          163.06,
+          92.09
+        ],
+        [
+          168.08,
+          89.82
+        ],
+        [
+          172.66,
+          86.74
+        ],
+        [
+          176.65,
+          82.94
+        ],
+        [
+          179.96,
+          78.53
+        ],
+        [
+          182.49,
+          73.63
+        ],
+        [
+          184.16,
+          68.38
+        ],
+        [
+          184.94,
+          62.92
+        ],
+        [
+          184.8,
+          57.41
+        ],
+        [
+          183.75,
+          52.0
+        ],
+        [
+          181.81,
+          46.84
+        ],
+        [
+          179.03,
+          42.07
+        ]
+      ],
+      "color": "#2A2630",
+      "size": 2
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        165.06,
+        97.7
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -54.58,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        161.07,
+        86.49
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 15.42,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        176.38,
+        91.38
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -73.75,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        168.93,
+        82.1
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -3.75,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        185.0,
+        81.69
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -92.92,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        174.92,
+        75.37
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -22.92,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        189.96,
+        69.71
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -112.08,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        178.37,
+        67.05
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -42.08,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        190.72,
+        56.76
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -131.25,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        178.89,
+        58.06
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -61.25,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        187.18,
+        44.28
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -150.42,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        176.43,
+        49.39
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -80.42,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        179.03,
+        42.07
+      ],
+      "radius": [
+        6.5,
+        3
+      ],
+      "rotation": -125,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        152,
+        61.0
+      ],
+      "radius": 24,
+      "fill": {
+        "gradient": "radial",
+        "from": [
+          152,
+          55.0
+        ],
+        "to": [
+          152,
+          85.0
+        ],
+        "colors": [
+          "#2E2638",
+          "#1A1030"
+        ]
+      },
+      "outline": "#8C8494",
+      "outline_size": 2.5
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          152.0,
+          47.0
+        ],
+        [
+          155.64,
+          56.98
+        ],
+        [
+          166.27,
+          57.36
+        ],
+        [
+          157.9,
+          63.92
+        ],
+        [
+          160.82,
+          74.14
+        ],
+        [
+          152.0,
+          68.2
+        ],
+        [
+          143.18,
+          74.14
+        ],
+        [
+          146.1,
+          63.92
+        ],
+        [
+          137.73,
+          57.36
+        ],
+        [
+          148.36,
+          56.98
+        ]
+      ],
+      "fill": "#5A5462",
+      "outline": "#8C8494",
+      "outline_size": 1
+    },
+    {
+      "cmd": "path",
+      "points": [
+        [
+          149,
+          48.0
+        ],
+        [
+          154,
+          57.0
+        ],
+        [
+          150,
+          64.0
+        ],
+        [
+          156,
+          73.0
+        ]
+      ],
+      "color": "#120A28",
+      "size": 1.8
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          206.0,
+          35.0
+        ],
+        [
+          206.91,
+          38.09
+        ],
+        [
+          210.0,
+          39.0
+        ],
+        [
+          206.91,
+          39.91
+        ],
+        [
+          206.0,
+          43.0
+        ],
+        [
+          205.09,
+          39.91
+        ],
+        [
+          202.0,
+          39.0
+        ],
+        [
+          205.09,
+          38.09
+        ]
+      ],
+      "fill": "#FF607066"
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          212.0,
+          74.0
+        ],
+        [
+          212.68,
+          76.32
+        ],
+        [
+          215.0,
+          77.0
+        ],
+        [
+          212.68,
+          77.68
+        ],
+        [
+          212.0,
+          80.0
+        ],
+        [
+          211.32,
+          77.68
+        ],
+        [
+          209.0,
+          77.0
+        ],
+        [
+          211.32,
+          76.32
+        ]
+      ],
+      "fill": "#FF607066"
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          198.0,
+          88.5
+        ],
+        [
+          198.57,
+          90.43
+        ],
+        [
+          200.5,
+          91.0
+        ],
+        [
+          198.57,
+          91.57
+        ],
+        [
+          198.0,
+          93.5
+        ],
+        [
+          197.43,
+          91.57
+        ],
+        [
+          195.5,
+          91.0
+        ],
+        [
+          197.43,
+          90.43
+        ]
+      ],
+      "fill": "#FF607066"
+    },
+    {
+      "cmd": "path",
+      "points": [
+        [
+          742.27,
+          93.5
+        ],
+        [
+          736.94,
+          92.09
+        ],
+        [
+          731.92,
+          89.82
+        ],
+        [
+          727.34,
+          86.74
+        ],
+        [
+          723.35,
+          82.94
+        ],
+        [
+          720.04,
+          78.53
+        ],
+        [
+          717.51,
+          73.63
+        ],
+        [
+          715.84,
+          68.38
+        ],
+        [
+          715.06,
+          62.92
+        ],
+        [
+          715.2,
+          57.41
+        ],
+        [
+          716.25,
+          52.0
+        ],
+        [
+          718.19,
+          46.84
+        ],
+        [
+          720.97,
+          42.07
+        ]
+      ],
+      "color": "#2A2630",
+      "size": 2
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        734.94,
+        97.7
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 234.58,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        738.93,
+        86.49
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 164.58,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        723.62,
+        91.38
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 253.75,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        731.07,
+        82.1
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 183.75,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        715.0,
+        81.69
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 272.92,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        725.08,
+        75.37
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 202.92,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        710.04,
+        69.71
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 292.08,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        721.63,
+        67.05
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 222.08,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        709.28,
+        56.76
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 311.25,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        721.11,
+        58.06
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 241.25,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        712.82,
+        44.28
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 330.42,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        723.57,
+        49.39
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 260.42,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        720.97,
+        42.07
+      ],
+      "radius": [
+        6.5,
+        3
+      ],
+      "rotation": 305,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "path",
+      "points": [
+        [
+          753.73,
+          93.5
+        ],
+        [
+          759.06,
+          92.09
+        ],
+        [
+          764.08,
+          89.82
+        ],
+        [
+          768.66,
+          86.74
+        ],
+        [
+          772.65,
+          82.94
+        ],
+        [
+          775.96,
+          78.53
+        ],
+        [
+          778.49,
+          73.63
+        ],
+        [
+          780.16,
+          68.38
+        ],
+        [
+          780.94,
+          62.92
+        ],
+        [
+          780.8,
+          57.41
+        ],
+        [
+          779.75,
+          52.0
+        ],
+        [
+          777.81,
+          46.84
+        ],
+        [
+          775.03,
+          42.07
+        ]
+      ],
+      "color": "#2A2630",
+      "size": 2
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        761.06,
+        97.7
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -54.58,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        757.07,
+        86.49
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": 15.42,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        772.38,
+        91.38
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -73.75,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        764.93,
+        82.1
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -3.75,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        781.0,
+        81.69
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -92.92,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        770.92,
+        75.37
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -22.92,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        785.96,
+        69.71
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -112.08,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        774.37,
+        67.05
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -42.08,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        786.72,
+        56.76
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -131.25,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        774.89,
+        58.06
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -61.25,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        783.18,
+        44.28
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -150.42,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        772.43,
+        49.39
+      ],
+      "radius": [
+        7,
+        3.2
+      ],
+      "rotation": -80.42,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        775.03,
+        42.07
+      ],
+      "radius": [
+        6.5,
+        3
+      ],
+      "rotation": -125,
+      "fill": "#6E6878",
+      "outline": "#2A2630",
+      "outline_size": 1
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        748,
+        61.0
+      ],
+      "radius": 24,
+      "fill": {
+        "gradient": "radial",
+        "from": [
+          748,
+          55.0
+        ],
+        "to": [
+          748,
+          85.0
+        ],
+        "colors": [
+          "#2E2638",
+          "#1A1030"
+        ]
+      },
+      "outline": "#8C8494",
+      "outline_size": 2.5
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          748.0,
+          47.0
+        ],
+        [
+          751.64,
+          56.98
+        ],
+        [
+          762.27,
+          57.36
+        ],
+        [
+          753.9,
+          63.92
+        ],
+        [
+          756.82,
+          74.14
+        ],
+        [
+          748.0,
+          68.2
+        ],
+        [
+          739.18,
+          74.14
+        ],
+        [
+          742.1,
+          63.92
+        ],
+        [
+          733.73,
+          57.36
+        ],
+        [
+          744.36,
+          56.98
+        ]
+      ],
+      "fill": "#5A5462",
+      "outline": "#8C8494",
+      "outline_size": 1
+    },
+    {
+      "cmd": "path",
+      "points": [
+        [
+          745,
+          48.0
+        ],
+        [
+          750,
+          57.0
+        ],
+        [
+          746,
+          64.0
+        ],
+        [
+          752,
+          73.0
+        ]
+      ],
+      "color": "#120A28",
+      "size": 1.8
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          694.0,
+          35.0
+        ],
+        [
+          694.91,
+          38.09
+        ],
+        [
+          698.0,
+          39.0
+        ],
+        [
+          694.91,
+          39.91
+        ],
+        [
+          694.0,
+          43.0
+        ],
+        [
+          693.09,
+          39.91
+        ],
+        [
+          690.0,
+          39.0
+        ],
+        [
+          693.09,
+          38.09
+        ]
+      ],
+      "fill": "#FF607066"
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          688.0,
+          74.0
+        ],
+        [
+          688.68,
+          76.32
+        ],
+        [
+          691.0,
+          77.0
+        ],
+        [
+          688.68,
+          77.68
+        ],
+        [
+          688.0,
+          80.0
+        ],
+        [
+          687.32,
+          77.68
+        ],
+        [
+          685.0,
+          77.0
+        ],
+        [
+          687.32,
+          76.32
+        ]
+      ],
+      "fill": "#FF607066"
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          702.0,
+          88.5
+        ],
+        [
+          702.57,
+          90.43
+        ],
+        [
+          704.5,
+          91.0
+        ],
+        [
+          702.57,
+          91.57
+        ],
+        [
+          702.0,
+          93.5
+        ],
+        [
+          701.43,
+          91.57
+        ],
+        [
+          699.5,
+          91.0
+        ],
+        [
+          701.43,
+          90.43
+        ]
+      ],
+      "fill": "#FF607066"
+    }
+  ]
+}

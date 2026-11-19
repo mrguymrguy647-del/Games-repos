@@ -9,7 +9,7 @@ use duckforge::prelude::Rng;
 use crate::data::{Data, Kind, Test, Unique, WheelOption};
 
 /// What one wheel landed on.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq)]
 pub struct Landed {
     /// Index into the wheel's options (on this map, for the Continent wheel).
     pub option: usize,

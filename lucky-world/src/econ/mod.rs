@@ -12,6 +12,7 @@ pub mod player;
 mod policy;
 pub mod report;
 pub mod tick;
+pub mod underdog;
 #[cfg(test)]
 mod tests;
 
@@ -21,7 +22,7 @@ pub use data::EconData;
 use data::Effects;
 
 /// What a nation's government does with a good at the border.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TradePolicy {
     Free,
     NoExports,
@@ -29,7 +30,7 @@ pub enum TradePolicy {
 }
 
 /// One building kind in one province, with however many levels it has.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Building {
     pub kind: usize,
     pub province: usize,
@@ -55,7 +56,7 @@ pub struct Building {
 }
 
 /// Levels being built.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Construction {
     pub kind: usize,
     pub province: usize,
@@ -66,7 +67,7 @@ pub struct Construction {
 }
 
 /// A province's economy: deposits and infrastructure.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct ProvinceEcon {
     /// Richness of each good's deposit (0 for goods that aren't dug).
     pub deposits: Vec<f64>,
@@ -87,14 +88,14 @@ pub struct ProvinceEcon {
 }
 
 /// An event happening to a nation now.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct ActiveEvent {
     pub event: usize,
     pub days_left: u32,
 }
 
 /// A line in the news.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct News {
     pub day: u32,
     pub nation: Option<usize>,
@@ -103,13 +104,15 @@ pub struct News {
 }
 
 /// One budget, by line (local money per day, or summed over a period).
-#[derive(Debug, Clone, Default)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Default)]
 pub struct Budget {
     pub income_tax: f64,
     pub corporate_tax: f64,
     pub sales_tax: f64,
     pub tariffs: f64,
     pub tribute_in: f64,
+    /// Development aid from the world fund (the underdog rule).
+    pub aid_in: f64,
     pub corruption: f64,
     pub army: f64,
     pub welfare: f64,
@@ -124,7 +127,7 @@ pub struct Budget {
 
 impl Budget {
     pub fn revenue(&self) -> f64 {
-        self.income_tax + self.corporate_tax + self.sales_tax + self.tariffs + self.tribute_in - self.corruption
+        self.income_tax + self.corporate_tax + self.sales_tax + self.tariffs + self.tribute_in + self.aid_in - self.corruption
     }
 
     pub fn spending(&self) -> f64 {
@@ -137,6 +140,7 @@ impl Budget {
         self.sales_tax += o.sales_tax;
         self.tariffs += o.tariffs;
         self.tribute_in += o.tribute_in;
+        self.aid_in += o.aid_in;
         self.corruption += o.corruption;
         self.army += o.army;
         self.welfare += o.welfare;
@@ -152,7 +156,7 @@ impl Budget {
 
 /// The goods ledger: where every unit came from and went (for the test
 /// that goods are never made from nothing).
-#[derive(Debug, Clone, Default)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Default)]
 pub struct Ledger {
     pub produced: Vec<f64>,
     pub used: Vec<f64>,
@@ -196,7 +200,7 @@ impl Ledger {
 }
 
 /// Weekly samples for the charts.
-#[derive(Debug, Clone, Default)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Default)]
 pub struct History {
     pub day: Vec<u32>,
     /// GDP, W$ per year.
@@ -212,7 +216,7 @@ pub struct History {
 }
 
 /// One nation's economy.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct NationEcon {
     pub name: String,
     pub currency: String,
@@ -447,7 +451,7 @@ pub struct NationEcon {
 }
 
 /// The whole world's economy.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Economy {
     pub day: u32,
     pub nations: Vec<NationEcon>,
@@ -463,9 +467,12 @@ pub struct Economy {
     pub trade_pref: f64,
     pub news: Vec<News>,
     pub world_history: Vec<Vec<f32>>,
+    #[serde(with = "crate::save_codec::rng")]
     pub rng: Rng,
     pub world_inflation: f64,
     pub world_rate: f64,
+    /// Help for the worst starts (off unless a game turns it on).
+    pub underdog: underdog::Underdog,
 }
 
 impl Economy {

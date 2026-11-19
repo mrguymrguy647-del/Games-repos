@@ -373,6 +373,20 @@ fn decide(w: &mut Wars, e: &mut Economy, ed: &EconData, k: usize, mut brains: Op
 }
 
 /// A faction's taste for war (docs/WAR.md, section 11).
+/// A brain's error in judging a war's odds: a factor spread by `judgement`
+/// round 1, fixed for a pair in a month (a hash, so it uses no dice).
+fn misjudge(judgement: f64, i: usize, j: usize, month: u32) -> f64 {
+    if judgement <= 0.0 {
+        return 1.0;
+    }
+    let mut h = (i as u32).wrapping_mul(0x9E37_79B9) ^ (j as u32).wrapping_mul(0x85EB_CA6B) ^ month.wrapping_mul(0xC2B2_AE35);
+    h ^= h >> 16;
+    h = h.wrapping_mul(0x7FEB_352D);
+    h ^= h >> 15;
+    let u = (h as f64 / u32::MAX as f64) * 2.0 - 1.0;
+    (1.0 + judgement * u).max(0.2)
+}
+
 pub fn aggression(w: &Wars, f: Faction, brains: Option<&Brains>) -> f64 {
     let a = &w.data.ai;
     a.base_aggression + a.leader.get(&w.leader[f]).copied().unwrap_or(0.0) + a.ideology.get(&w.ideology[f]).copied().unwrap_or(0.0) + risk(f, brains)
@@ -399,7 +413,7 @@ fn start_wars(w: &mut Wars, e: &mut Economy, ed: &EconData, b: &mut Brains) {
     let n = w.nations;
     let at_war_share = (0..n).filter(|&x| w.level_of(x) >= 3).count() as f64 / n.max(1) as f64;
     for i in 0..n {
-        if (day + i as u32 * 7) % 30 != 0 || Some(i) == w.player {
+        if !(day + i as u32 * 7).is_multiple_of(b.difficulty.war_every) || Some(i) == w.player {
             continue;
         }
         let Some(brain) = b.brain(i) else { continue };
@@ -440,10 +454,12 @@ fn start_wars(w: &mut Wars, e: &mut Economy, ed: &EconData, b: &mut Brains) {
         }
         let mut best: Option<(usize, f64, Motive)> = None;
         for &j in &cands {
-            if j == i || w.forces[i].truces.iter().any(|&(t, until)| t == j && day < until) || !reachable(w, e, ed, i, j) || w.strength(j).0 <= 0.0 {
+            // The underdog rule: the world's eye is on a weak start for its first years.
+            if j == i || e.underdog.protected(j, day, ed) || w.forces[i].truces.iter().any(|&(t, until)| t == j && day < until) || !reachable(w, e, ed, i, j) || w.strength(j).0 <= 0.0 {
                 continue;
             }
-            let ratio = my_power / brain.estimates[j].power(&b.data).max(1.0);
+            // A weaker planner misjudges the odds (difficulty), the same way each month.
+            let ratio = my_power / brain.estimates[j].power(&b.data).max(1.0) * misjudge(b.difficulty.judgement, i, j, day / 30);
             let ms = motives(w, e, ed, b, i, j, ratio, aggr);
             // A world already at war makes a new one riskier (who would
             // come to whose aid?): the more nations at war, the less desire.

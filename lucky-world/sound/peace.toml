@@ -1,0 +1,68 @@
+# Peace made: a warm bell chime, C5 then E5 a moment later, ringing out
+# with a soft hall. About 1.5 s.
+version = 0
+name = "peace"
+description = "Warm 1.5 s bell chime for making peace."
+tags = ["jingle", "diplomacy", "peace", "bell", "warm"]
+seed = 59
+channels = 2
+
+[master]
+normalize_lufs = -20
+trim_silence = true
+
+[[layers]]
+name = "bell one"
+source = "sine"
+volume = 0.6
+pan = -0.2
+envelope = { attack = 0.003, decay = 1.45 }
+pitch = { start = "C5" }
+
+[[layers]]
+name = "bell one hum"
+source = "sine"
+volume = 0.25
+pan = -0.2
+envelope = { attack = 0.01, decay = 1.45 }
+pitch = { start = "C4" }
+
+[[layers]]
+name = "bell one partial"
+source = "sine"
+volume = 0.12
+pan = -0.2
+envelope = { attack = 0.002, decay = 0.5 }
+pitch = { start = 1442 }
+
+[[layers]]
+name = "bell two"
+source = "sine"
+offset = 0.14
+volume = 0.5
+pan = 0.2
+envelope = { attack = 0.003, decay = 1.35 }
+pitch = { start = "E5" }
+
+[[layers]]
+name = "bell two partial"
+source = "sine"
+offset = 0.14
+volume = 0.1
+pan = 0.2
+envelope = { attack = 0.002, decay = 0.45 }
+pitch = { start = 1817 }
+
+[[layers]]
+name = "strike"
+source = "triangle"
+volume = 0.08
+envelope = { attack = 0.001, decay = 0.06 }
+pitch = { start = "C7" }
+
+[[effects]]
+type = "reverb"
+size = 0.6
+decay = 0.35
+damping = 0.5
+mix = 0.2

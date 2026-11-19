@@ -22,13 +22,13 @@ fn one_line(text: &str) -> String {
 // The files
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Deserialize)]
+#[derive(serde::Serialize, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct GoodsFile {
     good: Vec<GoodEntry>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(serde::Serialize, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct GoodEntry {
     id: String,
@@ -49,13 +49,13 @@ fn yes() -> bool {
     true
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(serde::Serialize, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct BuildingsFile {
     building: Vec<BuildingEntry>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(serde::Serialize, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct BuildingEntry {
     id: String,
@@ -81,7 +81,7 @@ struct BuildingEntry {
     coastal: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(serde::Serialize, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct EffectEntry {
     #[serde(default)]
@@ -90,13 +90,13 @@ struct EffectEntry {
     effects: BTreeMap<String, f64>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(serde::Serialize, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct EventsFile {
     event: Vec<EventEntry>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(serde::Serialize, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct EventEntry {
     id: String,
@@ -117,19 +117,19 @@ struct EventEntry {
     destroy: Option<[f64; 2]>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(serde::Serialize, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct CurrenciesFile {
     style: BTreeMap<String, CurrencyStyle>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(serde::Serialize, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct CurrencyStyle {
     names: Vec<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Basket {
     pub food: f64,
@@ -146,7 +146,7 @@ pub struct Basket {
     pub day_one_share: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Prices {
     pub price_speed: f64,
@@ -170,7 +170,7 @@ pub struct Prices {
     pub cpi_services: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Money {
     pub credit_growth_base: f64,
@@ -188,7 +188,7 @@ pub struct Money {
     pub taylor_recent: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct State {
     pub deficit_target: f64,
@@ -216,7 +216,7 @@ pub struct State {
     pub port_cost: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Trade {
     pub sea_cost_share: f64,
@@ -235,7 +235,7 @@ pub struct Trade {
     pub capital_flow: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Rating {
     pub name: String,
@@ -244,7 +244,7 @@ pub struct Rating {
     pub premium: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ModelDef {
     pub name: String,
@@ -262,7 +262,7 @@ pub struct ModelDef {
     pub id: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(serde::Serialize, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct SettingsFile {
     days_per_year: u32,
@@ -325,14 +325,14 @@ struct SettingsFile {
 // As the simulation uses them
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Tier {
     Raw,
     Refined,
     Final,
 }
 
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Good {
     pub id: String,
     pub name: String,
@@ -342,17 +342,18 @@ pub struct Good {
     pub spoil: f64,
     pub trade: bool,
     pub military: bool,
+    #[serde(with = "crate::save_codec::color")]
     pub color: Color,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Sector {
     Farming,
     Mining,
     Industry,
 }
 
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct BuildingDef {
     pub id: String,
     pub name: String,
@@ -375,7 +376,7 @@ pub struct BuildingDef {
 }
 
 /// Every modifier a wheel result or an event can carry.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Default, PartialEq)]
 pub struct Effects(pub BTreeMap<String, f64>);
 
 /// Modifiers multiplied together (1 = no change); all others are added.
@@ -429,7 +430,7 @@ impl Effects {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EventKind {
     Modifier,
     Discovery,
@@ -437,7 +438,7 @@ pub enum EventKind {
     Damage,
 }
 
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct EventDef {
     pub id: String,
     pub name: String,
@@ -453,7 +454,7 @@ pub struct EventDef {
 }
 
 /// The economy's data.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct EconData {
     pub goods: Vec<Good>,
     pub buildings: Vec<BuildingDef>,

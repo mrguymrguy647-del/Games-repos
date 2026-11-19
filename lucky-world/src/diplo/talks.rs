@@ -10,7 +10,7 @@ use crate::econ::{EconData, Economy};
 use crate::war::{peace, Wars, LEVELS};
 
 /// One round of talks, for the log.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct Round {
     pub day: u32,
     pub war: usize,
@@ -24,7 +24,7 @@ pub struct Round {
 }
 
 /// Where the talks over one war stand.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq)]
 pub struct TalkState {
     pub weeks: u32,
     /// Each side's demand, in its own view of the score.
@@ -32,7 +32,7 @@ pub struct TalkState {
     pub opener: usize,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Default)]
 pub struct Talks {
     pub rounds: Vec<Round>,
     pub state: BTreeMap<usize, TalkState>,

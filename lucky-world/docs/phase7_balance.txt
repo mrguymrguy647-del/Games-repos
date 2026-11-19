@@ -1,0 +1,26 @@
+LUCKY WORLD balance: 30 worlds x 3 maps x 20 years, every nation run by a brain (2250 starts each way, 968 s)
+
+Starts by luck (share of the median nation's GDP and soldiers on day 1), underdog rule ON:
+  start              starts  underdog    alive   vassal  rank then   rank now    won
+  terrible (<0.25)      697      100%     100%      10%       15.0       14.8     0%
+  poor (0.25-0.5)       180      100%     100%       9%       18.2       17.8     0%
+  below median          203        0%     100%       5%       17.3       17.3     0%
+  above median          313        0%     100%       6%       15.9       16.2     0%
+  strong (2-5x)         247        0%     100%       4%       13.1       13.2     0%
+  giant (5x+)           610        0%     100%       0%        6.2        6.4     3%
+
+The same worlds with the underdog rule OFF:
+  start              starts  underdog    alive   vassal  rank then   rank now    won
+  terrible (<0.25)      697      100%     100%      11%       15.0       14.8     0%
+  poor (0.25-0.5)       180      100%     100%       9%       18.2       17.8     0%
+  below median          203        0%     100%       7%       17.3       17.2     0%
+  above median          313        0%     100%       4%       15.9       15.8     0%
+  strong (2-5x)         247        0%     100%       5%       13.1       13.5     0%
+  giant (5x+)           610        0%     100%       1%        6.2        6.5     3%
+
+Terrible spins (under a quarter of the median): 697 starts
+  free and alive after 20 years: 90% with the underdog rule, 89% without
+  climbed the ranks:                 46% with, 44% without
+Perfect spins (the strongest nation of its world on day 1): 90 starts
+  still first after 20 years: 72%; won (conquest, economic or diplomatic) within them: 18%
+  every win in those worlds (any nation): {"diplomatic": 18, "economic": 3}

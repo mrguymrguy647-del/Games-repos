@@ -1,0 +1,149 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Victory: a trophy cup",
+  "seed": 1,
+  "palette": {
+    "ink": "#1A1030",
+    "gold": "#F5C542",
+    "gold_dark": "#A8740E",
+    "gold_hi": "#FFF1B8"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "cmd": "layer",
+      "name": "Art"
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        12,
+        12
+      ],
+      "radius": 11,
+      "fill": "ink",
+      "outline": "gold",
+      "outline_size": 1.5
+    },
+    {
+      "cmd": "path",
+      "points": [
+        [
+          8,
+          7.2
+        ],
+        [
+          5.6,
+          7.4
+        ],
+        [
+          5.6,
+          9.6
+        ],
+        [
+          8.6,
+          11
+        ]
+      ],
+      "color": "gold",
+      "size": 1.2
+    },
+    {
+      "cmd": "path",
+      "points": [
+        [
+          16,
+          7.2
+        ],
+        [
+          18.4,
+          7.4
+        ],
+        [
+          18.4,
+          9.6
+        ],
+        [
+          15.4,
+          11
+        ]
+      ],
+      "color": "gold",
+      "size": 1.2
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          7.4,
+          5.8
+        ],
+        [
+          16.6,
+          5.8
+        ],
+        [
+          16.2,
+          9.4
+        ],
+        [
+          14.6,
+          12
+        ],
+        [
+          12.9,
+          12.9
+        ],
+        [
+          11.1,
+          12.9
+        ],
+        [
+          9.4,
+          12
+        ],
+        [
+          7.8,
+          9.4
+        ]
+      ],
+      "fill": "gold"
+    },
+    {
+      "cmd": "line",
+      "from": [
+        9.4,
+        7
+      ],
+      "to": [
+        9.9,
+        10.4
+      ],
+      "color": "gold_hi",
+      "size": 1,
+      "taper": 0
+    },
+    {
+      "cmd": "rect",
+      "x": 11,
+      "y": 12.6,
+      "width": 2,
+      "height": 2.8,
+      "fill": "gold_dark"
+    },
+    {
+      "cmd": "rect",
+      "x": 8.4,
+      "y": 15.2,
+      "width": 7.2,
+      "height": 2.4,
+      "radius": 0.6,
+      "fill": "gold"
+    }
+  ]
+}

@@ -19,7 +19,7 @@ pub const QUICK_DAYS: u32 = 90;
 const ARMS_COMMIT: u64 = 9000;
 
 /// Something a brain can do: every one is a button the player has too.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum Act {
     /// Presses on a lever (the interest rate's are fixed-rate presses).
     Lever(Lever, i32),
@@ -127,6 +127,7 @@ impl Act {
 }
 
 /// What the brain sees of its own nation this week (all of it is its own).
+#[derive(serde::Serialize, serde::Deserialize)]
 struct Look {
     /// Each good's shortage (0 to 1) and how much that good matters.
     short: Vec<f64>,

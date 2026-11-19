@@ -1,0 +1,97 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Load: an open folder",
+  "seed": 1,
+  "palette": {
+    "ink": "#1A1030",
+    "gold": "#F5C542",
+    "gold_dark": "#A8740E",
+    "gold_hi": "#FFF1B8",
+    "paper": "#EFE3C4"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "cmd": "layer",
+      "name": "Art"
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        12,
+        12
+      ],
+      "radius": 11,
+      "fill": "ink",
+      "outline": "gold",
+      "outline_size": 1.5
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          5.5,
+          7.5
+        ],
+        [
+          9.5,
+          7.5
+        ],
+        [
+          10.8,
+          9
+        ],
+        [
+          17,
+          9
+        ],
+        [
+          17,
+          16.5
+        ],
+        [
+          5.5,
+          16.5
+        ]
+      ],
+      "fill": "gold_dark"
+    },
+    {
+      "cmd": "rect",
+      "x": 7.5,
+      "y": 8.3,
+      "width": 8,
+      "height": 5,
+      "fill": "paper"
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          8,
+          11.3
+        ],
+        [
+          19,
+          11.3
+        ],
+        [
+          16.8,
+          16.8
+        ],
+        [
+          5.2,
+          16.8
+        ]
+      ],
+      "fill": "gold",
+      "outline": "gold_hi",
+      "outline_size": 0.6
+    }
+  ]
+}

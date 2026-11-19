@@ -27,7 +27,7 @@ pub const CATEGORIES: [&str; 8] = ["fiscal", "money", "building", "infrastructur
 pub const GOALS: [&str; 4] = ["grow", "get_rich", "dominate", "survive"];
 
 /// Where a key's value went wrong.
-#[derive(Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct AiDataError(pub String);
 
 impl std::fmt::Display for AiDataError {
@@ -44,7 +44,7 @@ fn err<T>(words: String) -> R<T> {
     Err(AiDataError(words))
 }
 
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Needs {
     pub jobs_span: f64,
     pub heat_from: f64,
@@ -67,7 +67,7 @@ pub struct Needs {
     pub emergency: f64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Importance {
     pub food: f64,
     pub electricity: f64,
@@ -77,15 +77,36 @@ pub struct Importance {
     pub military: f64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Difficulty {
+    /// Noise in its planning scores.
     pub noise: f64,
+    /// How far ahead it looks (a factor on its personality's years).
     pub horizon: f64,
+    /// Most moves in one week's plan.
     pub max_actions: usize,
+    /// A factor on how often it rethinks its strategy and plans (below 1 is
+    /// quicker to react).
+    pub react: f64,
+    /// A factor on the share of world power that makes a nation "too strong"
+    /// (below 1: brains notice a rising power, perhaps the player, sooner).
+    pub alert: f64,
+    /// How badly it misjudges the odds of a war it is weighing (a spread
+    /// on the power ratio its spies gave it; 0 judges them as given).
+    pub judgement: f64,
+    /// Days between its looks for a war to start.
+    pub war_every: u32,
+}
+
+impl Default for Difficulty {
+    /// Normal: the brains as they were before difficulty touched war.
+    fn default() -> Difficulty {
+        Difficulty { noise: 0.05, horizon: 1.0, max_actions: 3, react: 1.0, alert: 1.0, judgement: 0.0, war_every: 30 }
+    }
 }
 
 /// A personality, or a wheel result's change to one.
-#[derive(Debug, Clone, Default)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Default)]
 pub struct Traits {
     pub need: NeedVec,
     pub like: [f64; 8],
@@ -104,7 +125,7 @@ pub struct Traits {
 }
 
 /// Everything in `data/ai/`.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct AiData {
     pub strategy_days: u32,
     pub planning_days: u32,
@@ -420,8 +441,20 @@ impl AiData {
         let dt = b.sub("difficulty")?;
         for name in dt.t.keys() {
             let t = dt.sub(name)?;
-            t.only(&["noise", "horizon", "max_actions"])?;
-            difficulties.insert(name.clone(), Difficulty { noise: t.num("noise")?, horizon: t.num("horizon")?, max_actions: t.num("max_actions")?.max(1.0) as usize });
+            t.only(&["noise", "horizon", "max_actions", "react", "alert", "judgement", "war_every"])?;
+            let or = |k: &str, d: f64| if t.t.contains_key(k) { t.num(k) } else { Ok(d) };
+            difficulties.insert(
+                name.clone(),
+                Difficulty {
+                    noise: t.num("noise")?,
+                    horizon: t.num("horizon")?,
+                    max_actions: t.num("max_actions")?.max(1.0) as usize,
+                    react: or("react", 1.0)?.clamp(0.25, 4.0),
+                    alert: or("alert", 1.0)?.clamp(0.5, 2.0),
+                    judgement: or("judgement", 0.0)?.clamp(0.0, 1.0),
+                    war_every: or("war_every", 30.0)?.clamp(5.0, 120.0) as u32,
+                },
+            );
         }
         if !difficulties.contains_key(&difficulty_name) {
             return err(format!("{B}: default_difficulty is \"{difficulty_name}\", but there is no [difficulty.{difficulty_name}]"));
@@ -565,7 +598,7 @@ impl AiData {
 
     /// The difficulty a name stands for (unknown names: normal).
     pub fn difficulty(&self, name: &str) -> Difficulty {
-        self.difficulties.get(name).or_else(|| self.difficulties.get("normal")).cloned().unwrap_or(Difficulty { noise: 0.05, horizon: 1.0, max_actions: 3 })
+        self.difficulties.get(name).or_else(|| self.difficulties.get("normal")).cloned().unwrap_or_default()
     }
 
     /// An action's effects (all zero for a name brain.toml doesn't have).

@@ -340,11 +340,23 @@ partner = 0.05         # ...a partner: it sold us at least this share of all we 
 help = 0.03
 log = 32
 
-# How well a brain plans: noise in its scores, how far it looks, how much it does a week.
+# How well a brain plans and reacts. Never more money, soldiers or sight:
+#   noise        noise in its planning scores
+#   horizon      how far ahead it looks (a factor on its personality's years)
+#   max_actions  most moves in one week's plan
+#   react        a factor on how often it rethinks (below 1: quicker)
+#   alert        a factor on the power share that counts as "too strong"
+#                (below 1: it gangs up on a rising power sooner)
+#   judgement    how badly it misjudges a war's odds (0: as its spies say)
+#   war_every    days between its looks for a war to start
 [difficulty.easy]
 noise = 0.12
 horizon = 0.6
 max_actions = 1
+react = 1.6
+alert = 1.25
+judgement = 0.35
+war_every = 45
 
 [difficulty.normal]
 noise = 0.05
@@ -355,3 +367,14 @@ max_actions = 3
 noise = 0.02
 horizon = 1.3
 max_actions = 3
+react = 0.8
+alert = 0.9
+war_every = 20
+
+[difficulty.brutal]
+noise = 0.0
+horizon = 1.6
+max_actions = 4
+react = 0.6
+alert = 0.8
+war_every = 14

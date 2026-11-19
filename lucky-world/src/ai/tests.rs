@@ -25,7 +25,7 @@ fn the_brain_files_load_and_name_real_wheel_results() {
     for level in ["none", "amateur", "competent", "feared", "legendary"] {
         assert!(data.wheels.iter().any(|w| w.id == "secret_service" && w.options.iter().any(|o| o.id == level)), "no secret service level {level}");
     }
-    for d in ["easy", "normal", "hard"] {
+    for d in ["easy", "normal", "hard", "brutal"] {
         assert!(ai.difficulties.contains_key(d), "no [difficulty.{d}]");
     }
 }
@@ -122,7 +122,7 @@ fn npcs_never_use_information_they_shouldnt_have() {
     }
     let think = |e: &mut Economy, b: &Brains| {
         let mut brain = b.brains[me].clone().unwrap();
-        strategy::think(&mut brain, &b.data, &b.geo, e, &ed);
+        strategy::think(&mut brain, &b.data, &b.geo, e, &ed, 1.0);
         planning::plan(&mut brain, &b.data, &b.difficulty, e, &ed);
         (brain.goal, brain.threat, brain.counter, brain.estimates.clone(), brain.needs, brain.thinking.clone())
     };

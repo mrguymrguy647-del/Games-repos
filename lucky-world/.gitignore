@@ -4,3 +4,5 @@ duckforge-out/
 *.quill
 lucky-world-notes.txt
 lucky-world-error.txt
+saves/
+lucky_world.settings.toml

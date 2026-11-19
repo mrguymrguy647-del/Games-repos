@@ -216,7 +216,7 @@ impl Lucky {
             if k <= top && ctx.input.was_pressed(key) {
                 self.clock.speed = k;
                 self.clock.paused = false;
-                ctx.play_with(&self.assets.click, 0.6, 0.0);
+                crate::ui::sfx(ctx, &self.assets.click, 0.6, 0.0);
             }
         }
         if !self.clock.paused {
@@ -224,27 +224,31 @@ impl Lucky {
             let days = (self.clock.carry.floor() as u32).min(30);
             self.clock.carry -= days as f32;
             self.clock.carry = self.clock.carry.min(1.0);
+            let mut result = None;
             for _ in 0..days {
-                e.tick(ed);
-                // The NPCs think after each day, through the same levers.
-                if let Some(b) = self.brains.as_mut() {
-                    b.day(e, ed);
-                }
-                // Then the war: battles hour by hour, supply, air, sea, the ladder.
-                if let Some(w) = self.wars.as_mut() {
-                    w.day(e, ed, self.brains.as_mut());
-                    // Then diplomacy: treaties, calls to arms, talks, spies.
-                    if let Some(d) = self.diplo.as_mut() {
-                        d.day(e, ed, w, self.brains.as_mut());
+                // The economy, then the NPCs think (through the same levers),
+                // then the war hour by hour, then diplomacy (src/sim.rs).
+                crate::sim::day(e, ed, self.brains.as_mut(), self.wars.as_mut(), self.diplo.as_mut());
+                // How the player's game is going: the story, wins and losses.
+                if !self.spectating {
+                    if let (Some(w), Some(d)) = (self.wars.as_ref(), self.diplo.as_ref()) {
+                        if let Some(o) = self.fate.day(&self.victory.victory, self.setup.years, e, ed, w, d, 0) {
+                            result = Some(o);
+                            break;
+                        }
                     }
                 }
+            }
+            if let Some(o) = result {
+                self.show_outcome(ctx, o);
+                return;
             }
         }
         // A soft chime each month, and news worth hearing about.
         let month = e.day / 30;
         if month != self.clock.last_month {
             self.clock.last_month = month;
-            ctx.play_with(&self.assets.month, 0.35, 0.0);
+            crate::ui::sfx(ctx, &self.assets.month, 0.35, 0.0);
             if self.map_ui.econ.overlay != Overlay::Off {
                 self.map_ui.econ.overlay_month = u32::MAX;
             }
@@ -263,13 +267,28 @@ impl Lucky {
             .collect();
         self.clock.last_news = e.news.len();
         if let Some(words) = fresh.last() {
-            self.toast = Some((words.clone(), 4.0));
-            ctx.play_with(&self.assets.news, 0.6, 0.0);
+            let level = if words.starts_with("World:") { super::shell::MINOR } else { super::shell::IMPORTANT };
+            self.notify(ctx, words.clone(), level);
         }
         self.after_war_days(ctx);
         self.after_diplo_days(ctx);
+        self.maybe_autosave(ctx);
         self.refresh_overlay();
         self.refresh_war_scene();
+    }
+
+    /// After loading a game: everything already in it counts as seen
+    /// (no old news pops up), and the overlays are redrawn.
+    pub(super) fn after_load_seen(&mut self) {
+        if let Some(e) = self.economy.as_ref() {
+            self.clock.last_news = e.news.len();
+            self.clock.last_month = e.day / 30;
+        }
+        self.map_ui.econ.force_overlay();
+        self.war_seen_all();
+        if let Some(d) = self.diplo.as_ref() {
+            self.map_ui.diplo.inbox_seen = d.inbox.len();
+        }
     }
 
     /// Rebuilds the map overlay when it changes (and each month for industry).
@@ -381,19 +400,19 @@ impl Lucky {
         ui.overlay_month = u32::MAX;
         self.map_ui.war.all_armies = ui.overlay == Overlay::War;
         self.map_ui.war.refresh();
-        ctx.play_with(&self.assets.click, 0.8, 0.0);
+        crate::ui::sfx(ctx, &self.assets.click, 0.8, 0.0);
         self.refresh_overlay();
     }
 
     /// The economy window is open: its keys and clicks (the camera rests).
     pub(super) fn update_econ_window(&mut self, ctx: &mut Context) {
         let Some(mut tab) = self.map_ui.econ.open else { return };
+        let mouse = self.ui_mouse();
         let (Some(e), ed) = (self.economy.as_mut(), &self.econ_data) else { return };
-        let mouse = self.mouse;
         let click = ctx.input.was_mouse_pressed(MouseButton::Left).then_some(mouse).flatten();
         if ctx.input.was_pressed(Key::Escape) || ctx.input.was_pressed(Key::O) || click.is_some_and(|m| !WIN.contains(m) && !ECON_BUTTON.contains(m)) {
             self.map_ui.econ.open = None;
-            ctx.play_with(&self.assets.click, 0.7, 0.0);
+            crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
             return;
         }
         // Pages.
@@ -414,7 +433,7 @@ impl Lucky {
                 tab = t;
                 self.map_ui.econ.open = Some(t);
                 self.map_ui.econ.row = 0;
-                ctx.play_with(&self.assets.click, 0.8, 0.0);
+                crate::ui::sfx(ctx, &self.assets.click, 0.8, 0.0);
             }
         }
         let rows = tab.rows(ed, e).max(1);
@@ -506,11 +525,13 @@ impl Lucky {
         }
         match said {
             Some(Ok(words)) => {
-                ctx.play_with(&self.assets.coin, 0.7, 0.0);
+                // Building something: a hammer; a lever: a coin.
+                let built = words.starts_with("Building") || words.contains("road") || words.contains("port");
+                crate::ui::sfx(ctx, if built { &self.assets.build } else { &self.assets.coin }, 0.7, 0.0);
                 self.toast = Some((words, 2.5));
             }
             Some(Err(words)) => {
-                ctx.play_with(&self.assets.click, 0.5, 0.0);
+                crate::ui::sfx(ctx, &self.assets.denied, 0.6, 0.0);
                 self.toast = Some((words, 2.5));
             }
             None => {}
@@ -539,8 +560,37 @@ impl Lucky {
         let ed = &self.econ_data;
         let n = &e.nations[0];
         let speed = if self.clock.paused { "PAUSED".to_string() } else { format!("{}  x{}", ">".repeat(self.clock.speed + 1), SPEEDS[self.clock.speed]) };
-        ui::plain(canvas, &a.font, &speed, vec2(1076.0, 32.0), 13.0, if self.clock.paused { WARN } else { GOLD }, Align::Right);
-        ui::plain(canvas, &a.font, &e.date(ed), vec2(990.0, 30.0), 16.0, Color::WHITE, Align::Right);
+        let r = ui::plain(canvas, &a.font, &speed, vec2(1076.0, 32.0), 13.0, if self.clock.paused { WARN } else { GOLD }, Align::Right);
+        self.tip(r, "speed");
+        let r = ui::plain(canvas, &a.font, &e.date(ed), vec2(990.0, 30.0), 16.0, Color::WHITE, Align::Right);
+        self.tip(r, "date");
+        if !self.spectating {
+            // The player's numbers, each with its tip, right to left.
+            let parts = [
+                ("treasury", format!("Treasury {}", money(n.treasury * n.exchange))),
+                ("jobless", format!("Jobless {}", pct(n.unemployment(ed)))),
+                ("inflation", format!("Inflation {}", pct(n.inflation))),
+                ("gdp", format!("GDP {}", money(n.gdp))),
+            ];
+            let mut x = 1266.0;
+            for (k, (tip, words)) in parts.iter().enumerate() {
+                let r = ui::plain(canvas, &a.font, words, vec2(x, 8.0), 13.0, Color::WHITE, Align::Right);
+                self.tip(r, tip);
+                x = r.x - 6.0;
+                if k + 1 < parts.len() {
+                    let dot = ui::plain(canvas, &a.font, "·", vec2(x, 8.0), 13.0, SOFT, Align::Right);
+                    x = dot.x - 6.0;
+                }
+            }
+            // Score and rank (now), with how close each victory is.
+            if let Some(w) = self.wars.as_ref() {
+                let s = crate::victory::scores(&self.victory.victory, e, ed, w);
+                let rank = 1 + (1..s.len()).filter(|&j| s[j] > s[0]).count();
+                let r = ui::plain(canvas, &a.font, &format!("Score {:.0} · #{}", s[0], rank), vec2(x - 14.0, 8.0), 13.0, GOLD, Align::Right);
+                canvas.blit_sprite(&a.icon_trophy, vec2(r.x - 22.0, 5.0), Blit { scale: 0.75, ..Blit::default() });
+                self.tip_words(Rect::new(r.x - 22.0, r.y, r.w + 22.0, r.h), self.victory_progress());
+            }
+        }
         let facts = if self.spectating {
             let (now, start): (f64, f64) = e.nations.iter().fold((0.0, 0.0), |(a, b), n| (a + n.gdp, b + n.gdp_start));
             let years = e.day as f64 / ed.days_per_year as f64;
@@ -558,7 +608,9 @@ impl Lucky {
                 money(n.treasury * n.exchange)
             )
         };
-        ui::plain(canvas, &a.font, &facts, vec2(1266.0, 8.0), 13.0, Color::WHITE, Align::Right);
+        if self.spectating {
+            ui::plain(canvas, &a.font, &facts, vec2(1266.0, 8.0), 13.0, Color::WHITE, Align::Right);
+        }
         let hot = self.mouse.is_some_and(|m| ECON_BUTTON.contains(m));
         canvas.fill_rect(ECON_BUTTON, if hot { Color::rgba(245, 197, 66, 90) } else { Color::rgba(245, 197, 66, 40) });
         canvas.blit_sprite(&a.icon_coin, vec2(ECON_BUTTON.x + 2.0, ECON_BUTTON.y - 1.0), Blit::default());
@@ -654,7 +706,7 @@ impl Lucky {
         for (k, t) in Tab::ALL.iter().enumerate() {
             let r = Tab::tab_rect(k);
             let on = *t == tab;
-            let hot = self.mouse.is_some_and(|m| r.contains(m));
+            let hot = self.ui_mouse().is_some_and(|m| r.contains(m));
             canvas.fill_rect(r, if on { Color::rgba(245, 197, 66, 70) } else if hot { Color::rgba(255, 255, 255, 30) } else { Color::rgba(255, 255, 255, 12) });
             canvas.blit_sprite(icons[k], vec2(r.x + 10.0, r.y + 8.0), Blit::default());
             plain(canvas, &a.font, t.name(), vec2(r.x + 42.0, r.y + 11.0), 15.0, if on { GOLD } else { Color::WHITE });
@@ -693,6 +745,18 @@ impl Lucky {
                 canvas.fill_rect(r, Color::rgba(245, 197, 66, 40));
             }
             plain(canvas, &a.font, lever.name(), vec2(x, ry + 4.0), 16.0, Color::WHITE);
+            let key = match lever {
+                Lever::IncomeTax => "income_tax",
+                Lever::CorporateTax => "corporate_tax",
+                Lever::SalesTax => "sales_tax",
+                Lever::Welfare => "welfare",
+                Lever::Tariff => "tariffs",
+                Lever::InterestRate => "rate",
+                Lever::Research => "research",
+                Lever::Arms => "procurement",
+                Lever::PublicWorks => "jobless",
+            };
+            self.tip(Rect::new(x - 6.0, ry - 4.0, 380.0, LEVER_ROW - 4.0), key);
             let value = e.lever_with(0, *lever, Some(ed));
             let auto = match lever {
                 Lever::InterestRate => n.manual_rate.is_none(),
@@ -707,7 +771,7 @@ impl Lucky {
             }
             let (minus, plus) = lever_buttons(k);
             for (b, s) in [(minus, "-"), (plus, "+")] {
-                let hot = self.mouse.is_some_and(|m| b.contains(m));
+                let hot = self.ui_mouse().is_some_and(|m| b.contains(m));
                 canvas.fill_rect(b, if hot { Color::rgba(245, 197, 66, 120) } else { Color::rgba(255, 255, 255, 30) });
                 ui::plain(canvas, &a.font, s, vec2(b.center().x, b.y + 2.0), 18.0, Color::WHITE, Align::Center);
                 canvas.label(&format!("{} {}", lever.name(), if s == "-" { "down" } else { "up" }), b);
@@ -728,6 +792,12 @@ impl Lucky {
             let ly = y2 + k as f32 * 24.0;
             plain(canvas, &a.font, label, vec2(x, ly), 14.0, MUTED);
             plain(canvas, &a.font, value, vec2(x + 190.0, ly), 14.0, Color::WHITE);
+            let key = ["exchange", "debt", "rating", "treasury", "exchange", "model"][k];
+            if key == "model" {
+                self.tip_words(Rect::new(x, ly, 470.0, 20.0), format!("The economic model, from the Ideology wheel: {}. Planned economies set quotas (and get shortages), market ones follow prices, colonies pay tribute.", ed.models[n.model].name));
+            } else {
+                self.tip(Rect::new(x, ly, 470.0, 20.0), key);
+            }
         }
         // Last month's budget, as bars (W$ a year).
         let b = &n.budget_last_month;
@@ -738,6 +808,7 @@ impl Lucky {
             ("Sales tax", b.sales_tax),
             ("Tariffs", b.tariffs),
             ("Tribute in", b.tribute_in),
+            ("Development aid", b.aid_in),
         ];
         let spending = [
             ("Army", b.army),
@@ -761,6 +832,25 @@ impl Lucky {
             for (label, v) in items {
                 let w = (yr(*v) / top * 250.0) as f32;
                 plain(canvas, &a.font, label, vec2(bx, ly), 13.0, Color::WHITE);
+                let key = match *label {
+                    "Income tax" => "income_tax",
+                    "Corporate tax" => "corporate_tax",
+                    "Sales tax" => "sales_tax",
+                    "Tariffs" => "tariffs",
+                    "Tribute in" => "tribute_in",
+                    "Development aid" => "aid_in",
+                    "Army" => "army",
+                    "Welfare" => "welfare",
+                    "Government" => "government",
+                    "Interest" => "interest",
+                    "Infrastructure" => "infrastructure",
+                    "Building" => "construction",
+                    "Weapons" => "procurement",
+                    "Research" => "research",
+                    "Lost to corruption" => "corruption",
+                    _ => "tribute_out",
+                };
+                self.tip(Rect::new(bx, ly, 480.0, 18.0), key);
                 canvas.fill_rect(Rect::new(bx + 140.0, ly + 3.0, w.max(1.0), 12.0), color);
                 plain(canvas, &a.font, &money(yr(*v)), vec2(bx + 146.0 + w, ly), 12.0, MUTED);
                 ly += 19.0;
@@ -851,7 +941,7 @@ impl Lucky {
             let (block, cost) = self.economy.as_ref().map_or((0.0, 0.0), |e| e.build_block(ed, 0, kind));
             plain(canvas, &a.font, &format!("B: build {:.0} levels for {}", block, money(cost * n.exchange)), vec2(px, ly + 8.0), 13.0, SOFT);
             for (b, label) in [(BUILD_BUTTON, "BUILD (B)"), (CLOSE_BUTTON, "CLOSE (X)")] {
-                let hot = self.mouse.is_some_and(|m| b.contains(m));
+                let hot = self.ui_mouse().is_some_and(|m| b.contains(m));
                 canvas.fill_rect(b, if hot { Color::rgba(245, 197, 66, 140) } else { Color::rgba(245, 197, 66, 60) });
                 ui::plain(canvas, &a.font, label, vec2(b.center().x, b.y + 8.0), 14.0, Color::WHITE, Align::Center);
                 canvas.label(label, b);
@@ -887,8 +977,20 @@ impl Lucky {
             ("IN / OUT", 790.0),
             ("POLICY", 860.0),
         ];
-        for (title, cx) in cols {
+        let col_tips = [
+            "Each good: its square is green when there's enough, red when buildings are starved of it.",
+            "The price at home, in W$ a unit (red: dearer than the world's, green: cheaper). Supply and demand set it; trade pulls it towards the world's.",
+            "The world price, in W$ a unit: what every nation trades at, before tariffs and transport.",
+            "Days of use held in store. Under 10 days (red) a shortage is near.",
+            "Made at home each day.",
+            "Used each day: by buildings, households and the state, and put in the stockpile.",
+            "Bought from abroad / sold abroad each day.",
+            "Trade policy for this good (T): free, no exports or no imports.",
+        ];
+        for (k, (title, cx)) in cols.iter().enumerate() {
             plain(canvas, &a.font, title, vec2(x + cx, y), 11.0, GOLD);
+            let w = cols.get(k + 1).map_or(150.0, |c| c.1 - cx);
+            self.tip_words(Rect::new(x + cx - 4.0, y - 2.0, w, 20.0 + ed.goods.len() as f32 * 26.5), col_tips[k].to_string());
         }
         for g in 0..ed.goods.len() {
             let ry = y + 20.0 + g as f32 * 26.5;
@@ -921,7 +1023,7 @@ impl Lucky {
             plain(canvas, &a.font, policy, vec2(x + 870.0, ry), 13.0, if policy == "free" { SOFT } else { WARN });
             canvas.label(&format!("market {}", ed.goods[g].id), Rect::new(x - 6.0, ry - 3.0, 1010.0, 25.0));
         }
-        let hot = self.mouse.is_some_and(|m| POLICY_BUTTON.contains(m));
+        let hot = self.ui_mouse().is_some_and(|m| POLICY_BUTTON.contains(m));
         canvas.fill_rect(POLICY_BUTTON, if hot { Color::rgba(245, 197, 66, 140) } else { Color::rgba(245, 197, 66, 60) });
         ui::plain(canvas, &a.font, "TRADE POLICY (T)", vec2(POLICY_BUTTON.center().x, POLICY_BUTTON.y + 8.0), 14.0, Color::WHITE, Align::Center);
     }
@@ -984,7 +1086,7 @@ impl Lucky {
                 plain(canvas, &a.font, if n.embargo[j] { "EMBARGO" } else { "embargoes you" }, vec2(px + 452.0, ry + 1.0), 11.0, BAD);
             }
         }
-        let hot = self.mouse.is_some_and(|m| EMBARGO_BUTTON.contains(m));
+        let hot = self.ui_mouse().is_some_and(|m| EMBARGO_BUTTON.contains(m));
         canvas.fill_rect(EMBARGO_BUTTON, if hot { Color::rgba(245, 197, 66, 140) } else { Color::rgba(245, 197, 66, 60) });
         ui::plain(canvas, &a.font, "EMBARGO (X)", vec2(EMBARGO_BUTTON.center().x, EMBARGO_BUTTON.y + 8.0), 14.0, Color::WHITE, Align::Center);
     }
@@ -1000,6 +1102,7 @@ impl Lucky {
             canvas.fill_rect(r, Color::rgba(20, 12, 45, 220));
             plain(canvas, &a.font, &ed.goods[g].name.to_uppercase(), vec2(cx + 16.0, y + 36.0), 14.0, GOLD);
             ui::plain(canvas, &a.font, &amount(n.stockpile[g]), vec2(cx + 16.0, y + 58.0), 38.0, Color::WHITE, Align::Left);
+            self.tip(r, "stockpile");
             let worth = n.stockpile[g] * e.world_price[g];
             plain(canvas, &a.font, &format!("worth {}", money(worth)), vec2(cx + 16.0, y + 110.0), 13.0, MUTED);
             plain(canvas, &a.font, &format!("made at home: {}/day", amount(n.ledger.produced[g])), vec2(cx + 16.0, y + 130.0), 13.0, MUTED);
@@ -1016,6 +1119,7 @@ impl Lucky {
         ];
         for (k, (label, value)) in facts.iter().enumerate() {
             let ly = y + 200.0 + k as f32 * 26.0;
+            self.tip(Rect::new(x, ly, 600.0, 22.0), ["soldiers", "army", "procurement", "army", "army"][k]);
             plain(canvas, &a.font, label, vec2(x, ly), 14.0, MUTED);
             plain(canvas, &a.font, value, vec2(x + 240.0, ly), 14.0, Color::WHITE);
         }

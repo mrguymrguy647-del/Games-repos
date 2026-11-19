@@ -146,7 +146,7 @@ impl Lucky {
                 self.map_ui.diplo.nation = Some(o);
             }
         }
-        ctx.play_with(&self.assets.card_sound, 0.8, 0.0);
+        crate::ui::sfx(ctx, &self.assets.card_sound, 0.8, 0.0);
     }
 
     /// Keys in the diplomacy window.
@@ -154,7 +154,7 @@ impl Lucky {
         let Some(page) = self.map_ui.diplo.open else { return };
         if ctx.input.was_pressed(Key::Escape) || ctx.input.was_pressed(Key::P) {
             self.map_ui.diplo.open = None;
-            ctx.play_with(&self.assets.click, 0.7, 0.0);
+            crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
             return;
         }
         let mut next = None;
@@ -163,7 +163,7 @@ impl Lucky {
             next = Some(Page::ALL[(k + 1) % Page::ALL.len()]);
         }
         if ctx.input.was_mouse_pressed(MouseButton::Left) {
-            if let Some(m) = self.mouse {
+            if let Some(m) = self.ui_mouse() {
                 for (k, p) in Page::ALL.iter().enumerate() {
                     if tab_rect(k).contains(m) {
                         next = Some(*p);
@@ -174,7 +174,7 @@ impl Lucky {
         if let Some(p) = next {
             self.map_ui.diplo.open = Some(p);
             self.map_ui.diplo.row = 0;
-            ctx.play_with(&self.assets.click, 0.7, 0.0);
+            crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
             return;
         }
         let rows = self.diplo_rows(page);
@@ -198,7 +198,7 @@ impl Lucky {
             ui.nation = list.get(ui.row).copied();
             if ctx.input.was_pressed(Key::Enter) && !self.spectating {
                 ui.open = Some(Page::Propose);
-                ctx.play_with(&self.assets.click, 0.7, 0.0);
+                crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
             }
             return;
         }
@@ -206,6 +206,7 @@ impl Lucky {
             return;
         }
         let mut said = None;
+        let mut sound: Option<&'static str> = None;
         match page {
             Page::Propose => {
                 if ctx.input.was_pressed(Key::Right) {
@@ -228,7 +229,8 @@ impl Lucky {
                             _ => (None, 0.0),
                         };
                         let p = Proposal { from: v, to, kind, day: d.day, good, amount, target: None };
-                        let (_, words) = treaties::propose(d, e, ed, w, b, p);
+                        let (yes, words) = treaties::propose(d, e, ed, w, b, p);
+                        sound = Some(if yes { "treaty" } else { "denied" });
                         said = Some(format!("{}: {words}", d.names[to]));
                     }
                 }
@@ -238,6 +240,7 @@ impl Lucky {
                     let ours: Vec<usize> = d.live().filter(|t| t.involves(v)).map(|t| t.id).collect();
                     if let Some(&id) = ours.get(ui.row) {
                         treaties::break_treaty(d, e, id, v, "the player ended it");
+                        sound = Some("denied");
                         said = Some(format!("You break the {}: your word is worth less now", d.treaties[id].kind.name().to_lowercase()));
                     }
                 }
@@ -245,6 +248,7 @@ impl Lucky {
             Page::Inbox => {
                 let yes = ctx.input.was_pressed(Key::Y);
                 if yes || ctx.input.was_pressed(Key::N) {
+                    sound = Some(if yes { "treaty" } else { "click" });
                     said = Some(treaties::answer_inbox(d, e, ed, w, b, ui.row, yes));
                 }
             }
@@ -266,7 +270,7 @@ impl Lucky {
         }
         if let Some(s) = said {
             self.map_ui.diplo.message = Some(s);
-            ctx.play_with(&self.assets.select, 0.7, 0.0);
+            self.sound_named(ctx, sound.unwrap_or("select"));
         }
     }
 
@@ -275,7 +279,7 @@ impl Lucky {
         let Some(page) = self.map_ui.diplo.spies else { return };
         if ctx.input.was_pressed(Key::Escape) || ctx.input.was_pressed(Key::I) {
             self.map_ui.diplo.spies = None;
-            ctx.play_with(&self.assets.click, 0.7, 0.0);
+            crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
             return;
         }
         let mut next = None;
@@ -284,7 +288,7 @@ impl Lucky {
             next = Some(SpyPage::ALL[(k + 1) % SpyPage::ALL.len()]);
         }
         if ctx.input.was_mouse_pressed(MouseButton::Left) {
-            if let Some(m) = self.mouse {
+            if let Some(m) = self.ui_mouse() {
                 for (k, p) in SpyPage::ALL.iter().enumerate() {
                     if tab_rect(k).contains(m) {
                         next = Some(*p);
@@ -295,7 +299,7 @@ impl Lucky {
         if let Some(p) = next {
             self.map_ui.diplo.spies = Some(p);
             self.map_ui.diplo.row = 0;
-            ctx.play_with(&self.assets.click, 0.7, 0.0);
+            crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
             return;
         }
         if self.spectating {
@@ -306,6 +310,7 @@ impl Lucky {
         let ui = &mut self.map_ui.diplo;
         let others: Vec<usize> = (0..d.n).filter(|&j| j != v).collect();
         let mut said = None;
+        let mut sound: Option<&'static str> = None;
         match page {
             SpyPage::Agents => {
                 if ctx.input.was_pressed(Key::T) {
@@ -339,7 +344,9 @@ impl Lucky {
                 if ctx.input.was_pressed(Key::Enter) {
                     if let Some(t) = ui.nation {
                         let agents = d.spies.idle(v).min(2);
-                        said = Some(spies::launch(d, e, w, v, t, Mission::ALL[ui.mission], agents).unwrap_or_else(|x| x));
+                        let r = spies::launch(d, e, w, v, t, Mission::ALL[ui.mission], agents);
+                        sound = Some(if r.is_ok() { "spy" } else { "denied" });
+                        said = Some(r.unwrap_or_else(|x| x));
                     }
                 }
             }
@@ -347,7 +354,7 @@ impl Lucky {
         }
         if let Some(s) = said {
             self.map_ui.diplo.message = Some(s);
-            ctx.play_with(&self.assets.select, 0.7, 0.0);
+            self.sound_named(ctx, sound.unwrap_or("select"));
         }
     }
 
@@ -363,8 +370,9 @@ impl Lucky {
                 Some(Inbox::Call { ally, .. }) => format!("{} calls you to war: P, then Inbox, to answer (14 days)", d.names[*ally]),
                 None => String::new(),
             };
-            self.toast = Some((words, 6.0));
-            ctx.play_with(&self.assets.news, 0.7, 0.0);
+            self.map_ui.diplo.inbox_seen = d.inbox.len();
+            self.notify(ctx, words, super::shell::IMPORTANT);
+            return;
         }
         self.map_ui.diplo.inbox_seen = d.inbox.len();
     }
@@ -398,7 +406,7 @@ impl Lucky {
         canvas.label(label, WIN);
         for (k, name) in names.iter().enumerate() {
             let r = tab_rect(k);
-            let hot = self.mouse.is_some_and(|m| r.contains(m));
+            let hot = self.ui_mouse().is_some_and(|m| r.contains(m));
             canvas.fill_rect(r, if k == on { Color::rgba(120, 170, 255, 80) } else if hot { Color::rgba(255, 255, 255, 30) } else { Color::rgba(255, 255, 255, 12) });
             let icon = icons[k % icons.len()];
             canvas.blit_sprite(icon, vec2(r.x + 10.0, r.y + 8.0), Blit { scale: 24.0 / icon.width().max(1) as f32, ..Blit::default() });
@@ -416,7 +424,8 @@ impl Lucky {
         self.draw_tabs(canvas, &names, &[&a.icon_handshake, &a.icon_treaty, &a.icon_scales, &a.icon_crate, &a.icon_swords], on, "diplomacy window");
         let v = self.diplo_viewer();
         let (x, y) = (WIN.x + 26.0, WIN.y + 76.0);
-        ui::plain(canvas, &a.font, &format!("{} · reputation {:.0}", d.names[v], d.reputation[v]), vec2(WIN.right() - 28.0, WIN.y + 28.0), 13.0, SOFT, Align::Right);
+        let r = ui::plain(canvas, &a.font, &format!("{} · reputation {:.0}", d.names[v], d.reputation[v]), vec2(WIN.right() - 28.0, WIN.y + 28.0), 13.0, SOFT, Align::Right);
+        self.tip(r, "reputation");
         let row = self.map_ui.diplo.row;
         let list = order(d, v);
         match page {
@@ -439,6 +448,8 @@ impl Lucky {
                     let mid = bar.x + 60.0;
                     canvas.fill_rect(if len >= 0.0 { Rect::new(mid, bar.y, len, bar.h) } else { Rect::new(mid + len, bar.y, -len, bar.h) }, rel_color(r1));
                     plain(canvas, &a.font, &format!("{:+.0} · {:+.0}", r1, r2), vec2(x + 370.0, ry), 13.0, rel_color(r1));
+                    self.tip_words(Rect::new(x + 236.0, ry - 3.0, 200.0, 24.0), format!("Relations: our view of {} ({:+.0}) and theirs of us ({:+.0}), -100 to 100. Built from the reasons on the right: trade, borders, ideology, treaties, reputation and old wars.", d.names[j], r1, r2));
+                    self.tip_words(Rect::new(x + 436.0, ry - 3.0, 40.0, 24.0), "Treaties with them: T trade, N non-aggression, D defensive pact, A alliance, M military access, G guarantee, L loan.".to_string());
                     let pacts: Vec<&str> = d.between(v, j).map(|t| match t.kind {
                         Kind::Trade => "T",
                         Kind::NonAggression => "N",
@@ -628,6 +639,8 @@ impl Lucky {
                 ];
                 for (k, l) in lines.iter().enumerate() {
                     fit(canvas, &a.font, l, vec2(x, y + k as f32 * 26.0), 16.0, Color::WHITE, 1000.0);
+                    let key = ["agents", "agents", "counter", "agents"][k];
+                    self.tip(Rect::new(x, y + k as f32 * 26.0, 1000.0, 22.0), key);
                 }
                 plain(canvas, &a.font, "MISSIONS UNDER WAY", vec2(x, y + 120.0), 12.0, GOLD);
                 for (k, m) in d.spies.missions.iter().filter(|m| m.by == v).enumerate().take(10) {
@@ -654,6 +667,7 @@ impl Lucky {
                     let (ps, pc) = spies::seen_chances(d, v, target, *m, agents);
                     plain(canvas, &a.font, m.name(), vec2(x, ry), 15.0, Color::WHITE);
                     plain(canvas, &a.font, &format!("{:.0}% · {:.0}%", ps * 100.0, pc * 100.0), vec2(x + 420.0, ry), 15.0, if ps > 0.5 { GOOD } else if ps > 0.25 { WARN } else { BAD });
+                    self.tip_words(Rect::new(x + 416.0, ry - 3.0, 130.0, 26.0), format!("{} {}", self.tip_text.get("chance").cloned().unwrap_or_default(), self.tip_text.get("caught").cloned().unwrap_or_default()));
                     let ok = match (self.economy.as_ref(), self.wars.as_ref()) {
                         (Some(e), Some(w)) => spies::check(d, e, w, v, target, *m, agents).err().unwrap_or_default(),
                         _ => String::new(),

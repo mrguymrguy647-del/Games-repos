@@ -1,0 +1,34 @@
+# How a game is won and lost (docs/VICTORY.md). Read when the game starts.
+
+[victory]
+# Conquest: hold this share of the map's provinces yourself.
+conquest_share = 0.5
+# Economic power: a GDP this many times the next biggest...
+economic_lead = 2.5
+# ...for this many years in a row.
+economic_years = 10
+# Diplomatic: lead an alliance (you, your allies by alliance treaty, and
+# your vassals) that holds this share of the map's provinces, with at
+# least this many allies, you the richest of them, for this many years in a row.
+diplomatic_share = 0.6
+diplomatic_allies = 2
+diplomatic_years = 5
+# Score: the weights of each share of the world (they add to 1000 points),
+# plus stability (0-100 points at full weight).
+score_gdp = 450
+score_land = 300
+score_people = 150
+score_tech = 100
+score_stability = 1.0
+# Game lengths on the New Game screen, in years (0 = no limit).
+lengths = [50, 100, 150, 0]
+default_length = 100
+
+# The underdog rule (src/econ/underdog.rs): a world rule for every nation
+# whose start is far below the median nation's, the player's or a brain's.
+[underdog]
+below_median = 0.5
+years = 12.0
+grace_years = 5.0
+aid = 0.06
+rally = 25.0

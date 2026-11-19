@@ -5,7 +5,7 @@ use duckforge::prelude::*;
 use crate::data::{Data, Kind, Unit};
 use crate::fate::{self, Landed, Nation};
 
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Country {
     pub map: usize,
     pub landed: Vec<Landed>,
@@ -20,23 +20,25 @@ impl Nation for Country {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct Flag {
     pub layout: String,
+    #[serde(with = "crate::save_codec::color3")]
     pub colors: [Color; 3],
     pub emblem: Option<Emblem>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum EmblemShape {
     Star,
     Disc,
     Diamond,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq)]
 pub struct Emblem {
     pub shape: EmblemShape,
+    #[serde(with = "crate::save_codec::color")]
     pub color: Color,
 }
 

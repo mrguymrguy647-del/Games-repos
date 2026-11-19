@@ -79,6 +79,7 @@ impl Economy {
             rng: Rng::new(seed ^ 0xec0),
             world_inflation: 0.02,
             world_rate: 0.04,
+            underdog: Default::default(),
         };
         for i in 0..world.nations.len() {
             let n = economy.make_nation(data, ed, atlas, world, i, &mut rng);

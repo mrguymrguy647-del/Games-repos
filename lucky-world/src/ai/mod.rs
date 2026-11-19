@@ -26,7 +26,7 @@ pub use memory::Relation;
 pub use planning::Act;
 
 /// A brain's personality: its traits from the wheels, and their names.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Personality {
     /// The combined traits (default plus every wheel's change, clamped).
     pub t: Traits,
@@ -80,7 +80,7 @@ impl Personality {
 }
 
 /// What a brain believes about another nation (its own: the truth).
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Default, PartialEq)]
 pub struct Estimate {
     /// W$ a year.
     pub gdp: f64,
@@ -103,7 +103,7 @@ impl Estimate {
 }
 
 /// A weak neighbour, noted for the war phase.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct Opportunity {
     pub target: usize,
     pub day: u32,
@@ -113,7 +113,7 @@ pub struct Opportunity {
 }
 
 /// One option the brain weighed this week.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct Considered {
     pub act: Act,
     pub label: String,
@@ -127,7 +127,7 @@ pub struct Considered {
 }
 
 /// What a brain thought about at its last planning.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Default, PartialEq)]
 pub struct Thinking {
     pub day: u32,
     /// The best options, best first (the spectator shows three).
@@ -137,7 +137,7 @@ pub struct Thinking {
 }
 
 /// A decision, for the log and the tuning tool.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct Decision {
     pub day: u32,
     pub act: Act,
@@ -150,7 +150,7 @@ pub struct Decision {
 }
 
 /// One nation's brain.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Brain {
     pub nation: usize,
     pub personality: Personality,
@@ -186,6 +186,7 @@ pub struct Brain {
     /// Each lever's last move: (key, day, direction).
     pub moves: Vec<(u64, u32, i8)>,
     /// The brain's own randomness (its noise and its spies' errors).
+    #[serde(with = "crate::save_codec::rng")]
     pub rng: Rng,
     /// Counts for the tuning tool.
     pub stats: Stats,
@@ -193,7 +194,7 @@ pub struct Brain {
 }
 
 /// What a brain has done, for the tuning tool (docs/AI.md, section 11).
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Default, PartialEq)]
 pub struct Stats {
     pub taken: u32,
     pub failed: u32,
@@ -201,8 +202,10 @@ pub struct Stats {
     pub flips: u32,
     pub quick_flips: u32,
     /// Flips by action (brain.toml's names).
+    #[serde(with = "crate::save_codec::static_keys")]
     pub flips_by: std::collections::BTreeMap<&'static str, u32>,
     /// Decisions by action.
+    #[serde(with = "crate::save_codec::static_keys")]
     pub taken_by: std::collections::BTreeMap<&'static str, u32>,
     pub builds: u32,
     /// Builds still mostly idle a year later (and by "model: building").
@@ -214,7 +217,7 @@ pub struct Stats {
 }
 
 /// Each pair of nations' proximity: border, continent or far.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Geo {
     pub proximity: Vec<Vec<f64>>,
 }
@@ -250,7 +253,7 @@ impl Geo {
 }
 
 /// Every brain in a world.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Brains {
     pub data: AiData,
     pub difficulty: Difficulty,
@@ -332,7 +335,9 @@ impl Brains {
     /// and planning come round on its own days.
     pub fn day(&mut self, e: &mut Economy, ed: &EconData) {
         let day = e.day;
-        let (sd, pd) = (self.data.strategy_days, self.data.planning_days);
+        let react = self.difficulty.react;
+        let quicker = |d: u32| ((d as f64 * react).round() as u32).max(1);
+        let (sd, pd) = (quicker(self.data.strategy_days), quicker(self.data.planning_days));
         for i in 0..self.brains.len() {
             let Some(brain) = self.brains[i].as_mut() else { continue };
             // A default today (the news says so): counted for the tuning tool.
@@ -343,7 +348,7 @@ impl Brains {
             }
             let first = brain.estimates.iter().all(|x| x.gdp == 0.0);
             if first || (day + i as u32 * 3).is_multiple_of(sd) {
-                strategy::think(brain, &self.data, &self.geo, e, ed);
+                strategy::think(brain, &self.data, &self.geo, e, ed, self.difficulty.alert);
             }
             if (day + i as u32).is_multiple_of(pd) {
                 memory::watch(brain, &self.data, e, ed);

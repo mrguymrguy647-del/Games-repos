@@ -44,7 +44,7 @@ pub fn observe(brain: &mut Brain, e: &Economy, ed: &EconData, j: usize) -> Estim
 }
 
 /// The quarter's strategy.
-pub fn think(brain: &mut Brain, ai: &AiData, geo: &Geo, e: &Economy, ed: &EconData) {
+pub fn think(brain: &mut Brain, ai: &AiData, geo: &Geo, e: &Economy, ed: &EconData, alert: f64) {
     let me = brain.nation;
     let count = e.nations.len();
     memory::fade(brain, ai);
@@ -93,7 +93,7 @@ pub fn think(brain: &mut Brain, ai: &AiData, geo: &Geo, e: &Economy, ed: &EconDa
     let mut order: Vec<usize> = (0..count).collect();
     order.sort_by(|&a, &b| share[b].total_cmp(&share[a]).then(a.cmp(&b)));
     let (first, second) = (order[0], order.get(1).copied().unwrap_or(order[0]));
-    brain.hegemon = (share[first] > ai.hegemon_share && share[first] > ai.hegemon_lead * share[second]).then_some(first);
+    brain.hegemon = (share[first] > ai.hegemon_share * alert && share[first] > ai.hegemon_lead * share[second]).then_some(first);
     brain.alliance_wishes.clear();
     brain.counter = None;
     if let Some(h) = brain.hegemon.filter(|&h| h != me) {

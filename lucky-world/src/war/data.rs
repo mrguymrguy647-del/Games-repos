@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Army {
     pub division_size: f64,
@@ -21,7 +21,7 @@ pub struct Army {
     pub entrench_gain: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Generals {
     pub skill_sd: f64,
@@ -35,7 +35,7 @@ pub struct Generals {
     pub reserve_frontages: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Combat {
     pub frontage_base: f64,
@@ -75,7 +75,7 @@ pub struct Combat {
     pub flank_max: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Morale {
     pub shock: f64,
@@ -98,7 +98,7 @@ pub struct Morale {
     pub starving_deaths: f64,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Copy, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Terrain {
     pub defence: f64,
@@ -108,7 +108,7 @@ pub struct Terrain {
     pub move_days: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Weather {
     pub rain: f64,
@@ -124,7 +124,7 @@ pub struct Weather {
     pub storm_sea: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Supply {
     pub hop_base: f64,
@@ -144,7 +144,7 @@ pub struct Supply {
     pub request_wait: u32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Hospital {
     pub heal_days: f64,
@@ -153,7 +153,7 @@ pub struct Hospital {
     pub die: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Air {
     pub pilot_training_days: f64,
@@ -170,7 +170,7 @@ pub struct Air {
     pub aa_loss: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Sea {
     pub zone_cells: f64,
@@ -183,7 +183,7 @@ pub struct Sea {
     pub transport_tanks: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Levels {
     pub mobilisation: [f64; 5],
@@ -197,7 +197,7 @@ pub struct Levels {
     pub match_days: u32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Escalation {
     pub military_rule: f64,
@@ -232,7 +232,7 @@ impl Escalation {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Other {
     pub proxy_share: f64,
@@ -243,7 +243,7 @@ pub struct Other {
     pub civil_war_years: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Exhaustion {
     pub losses: f64,
@@ -256,7 +256,7 @@ pub struct Exhaustion {
     pub prisoner_release_days: u32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Peace {
     pub white: f64,
@@ -274,7 +274,7 @@ pub struct Peace {
     pub won_years: [f64; 5],
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Ai {
     pub war_threshold: f64,
@@ -312,7 +312,7 @@ pub struct Ai {
 }
 
 /// Everything in `data/war/war.toml`.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct WarData {
     pub army: Army,

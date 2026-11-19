@@ -1,0 +1,26 @@
+# Moving between menu rows: a very short, soft, high tick, about 0.05 s.
+# Higher and quieter than click.wav (1100 Hz, -24 LUFS).
+version = 0
+name = "menu_move"
+description = "Very short soft high tick for moving between menu rows."
+tags = ["ui", "hover", "tick", "short", "soft"]
+seed = 71
+channels = 2
+
+[master]
+normalize_lufs = -30
+trim_silence = true
+
+[[layers]]
+name = "tip"
+source = "sine"
+volume = 0.8
+envelope = { attack = 0.0008, hold = 0.004, decay = 0.05 }
+pitch = { start = 2000, end = 1550, curve = "exponential" }
+
+[[layers]]
+name = "air"
+source = "noise"
+volume = 0.2
+envelope = { attack = 0.0005, decay = 0.006 }
+filter = { kind = "highpass", cutoff = 5000 }

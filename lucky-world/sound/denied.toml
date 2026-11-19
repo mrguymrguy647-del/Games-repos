@@ -1,0 +1,36 @@
+# Refused action: a short, low, muted "nope" buzz. Two dull pulses, the
+# second lower, about 0.25 s.
+version = 0
+name = "denied"
+description = "Short low muted buzz for a refused action."
+tags = ["ui", "error", "denied", "buzz"]
+seed = 43
+channels = 2
+
+[master]
+normalize_lufs = -22
+trim_silence = true
+
+[[layers]]
+name = "first buzz"
+source = "square"
+volume = 0.5
+envelope = { attack = 0.004, hold = 0.06, decay = 0.03 }
+pitch = { start = 147 }
+filter = { kind = "lowpass", cutoff = 700, resonance = 0.8 }
+
+[[layers]]
+name = "second buzz"
+source = "square"
+offset = 0.12
+volume = 0.5
+envelope = { attack = 0.004, hold = 0.07, decay = 0.05 }
+pitch = { start = 123.5, end = 116.5, curve = "exponential" }
+filter = { kind = "lowpass", cutoff = 600, resonance = 0.8 }
+
+[[layers]]
+name = "body"
+source = "sine"
+volume = 0.4
+envelope = { attack = 0.004, hold = 0.18, decay = 0.06 }
+pitch = { start = 73.5 }

@@ -6,6 +6,8 @@ mod brain_panel;
 mod diplo_screen;
 mod econ_screen;
 mod map_screen;
+pub mod shell;
+pub mod tutorial;
 mod war_screen;
 
 use duckforge::prelude::*;
@@ -34,11 +36,18 @@ pub enum Screen {
     Rivals,
     /// The 3D world map.
     Map,
+    /// The main menu, and its pages.
+    Menu,
+    Load,
+    Settings,
+    Help,
+    /// Victory or defeat, with the story.
+    Outcome,
 }
 
-const TITLE_SPIN: Button = Button::new(230.0, 572.0, "SPIN THE WHEELS", "SPACE", ButtonKind::Gold);
-const TITLE_SKIP: Button = Button::new(510.0, 572.0, "SKIP SPIN", "S: roll all 16 at once", ButtonKind::Blue);
-const TITLE_WATCH: Button = Button::new(790.0, 572.0, "WATCH THE BRAINS", "W: a world of NPCs only", ButtonKind::Blue);
+const TITLE_SPIN: Button = Button::new(230.0, 584.0, "SPIN THE WHEELS", "SPACE", ButtonKind::Gold);
+const TITLE_SKIP: Button = Button::new(510.0, 584.0, "SKIP SPIN", "S: roll all 16 at once", ButtonKind::Blue);
+const TITLE_WATCH: Button = Button::new(790.0, 584.0, "WATCH THE BRAINS", "W: a world of NPCs only", ButtonKind::Blue);
 const WHEEL_GO: Button = Button::new(895.0, 560.0, "SPIN", "SPACE", ButtonKind::Gold);
 const WHEEL_SKIP: Button = Button::new(895.0, 630.0, "SKIP SPIN", "S: roll the rest at once", ButtonKind::Blue);
 const CARD_NEXT: Button = Button::new(510.0, 528.0, "NEXT ROUND", "SPACE", ButtonKind::Gold);
@@ -46,6 +55,43 @@ const CARD_SKIP: Button = Button::new(1000.0, 640.0, "SKIP SPIN", "S", ButtonKin
 const FINAL_GO: Button = Button::new(510.0, 622.0, "MEET YOUR RIVALS", "SPACE", ButtonKind::Gold);
 const RIVALS_GO: Button = Button::new(990.0, 22.0, "BEGIN", "SPACE", ButtonKind::Gold);
 const INSPECT_BACK: Button = Button::new(510.0, 622.0, "BACK", "SPACE or ESC", ButtonKind::Blue);
+
+/// What Phase 7 adds to a game: the settings, the win rules, the help
+/// pages and the tooltips.
+pub struct Extra {
+    pub settings: crate::settings::Settings,
+    pub victory: crate::victory::VictoryData,
+    pub help: Vec<(String, String)>,
+    pub tips: std::collections::BTreeMap<String, String>,
+}
+
+#[derive(serde::Deserialize)]
+struct HelpFile {
+    page: Vec<HelpPage>,
+}
+
+#[derive(serde::Deserialize)]
+struct HelpPage {
+    title: String,
+    body: String,
+}
+
+#[derive(serde::Deserialize)]
+struct TipsFile {
+    tips: std::collections::BTreeMap<String, String>,
+}
+
+impl Extra {
+    pub fn load() -> Result<Extra, String> {
+        let victory = crate::victory::VictoryData::load()?;
+        let help: HelpFile = toml::from_str(&crate::files::read_text("data/help.toml").map_err(|e| e.to_string())?).map_err(|e| format!("data/help.toml: {}", e.message()))?;
+        let tips: TipsFile = toml::from_str(&crate::files::read_text("data/tips.toml").map_err(|e| e.to_string())?).map_err(|e| format!("data/tips.toml: {}", e.message()))?;
+        // Tests (and fuzz runs) never read the player's own settings.
+        // (and don't autosave unless a test asks).
+        let settings = if cfg!(test) { crate::settings::Settings { autosave: false, ..Default::default() } } else { crate::settings::Settings::load().0 };
+        Ok(Extra { settings, victory, help: help.page.into_iter().map(|p| (p.title, p.body.trim().to_string())).collect(), tips: tips.tips })
+    }
+}
 
 /// Results this rare (or rarer) get the RARE! badge and their own sound.
 const RARE: f64 = 0.08;
@@ -110,11 +156,30 @@ pub struct Lucky {
     pub spectate_at_start: bool,
     /// `--spectate-war`: and open with a declared war between the strongest neighbours.
     pub start_war: bool,
+    /// Phase 7: the player's settings, the game's setup and how it's going.
+    pub settings: crate::settings::Settings,
+    pub setup: crate::save::Setup,
+    pub fate: crate::victory::Fate,
+    pub victory: crate::victory::VictoryData,
+    /// The New Game screen's "random world".
+    pub random_map: bool,
+    /// The game began at the main menu (a real start; tests start on the title).
+    pub menu_started: bool,
+    /// The mouse moved this frame (hovering picks a menu row only then).
+    pub mouse_moved: bool,
+    pub shell: shell::Shell,
+    pub notes: shell::Notes,
+    pub music: shell::Music,
+    pub tips: shell::Tips,
+    pub tutorial: Option<tutorial::Tutorial>,
+    /// The help screen's pages and the tooltips' words (data/help.toml, data/tips.toml).
+    pub help: Vec<(String, String)>,
+    pub tip_text: std::collections::BTreeMap<String, String>,
 }
 
 impl Lucky {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(data: Data, atlas: Atlas, assets: Assets, models: Models, econ_data: EconData, ai_data: AiData, war_data: WarData, diplo_data: crate::diplo::DiploData) -> Lucky {
+    pub fn new(data: Data, atlas: Atlas, assets: Assets, models: Models, econ_data: EconData, ai_data: AiData, war_data: WarData, diplo_data: crate::diplo::DiploData, extra: Extra) -> Lucky {
         let mut game = Lucky {
             data,
             assets,
@@ -158,12 +223,33 @@ impl Lucky {
             spectating: false,
             spectate_at_start: false,
             start_war: false,
+            settings: extra.settings,
+            setup: crate::save::Setup::default(),
+            fate: Default::default(),
+            victory: extra.victory,
+            random_map: false,
+            menu_started: false,
+            mouse_moved: false,
+            shell: Default::default(),
+            notes: Default::default(),
+            music: Default::default(),
+            tips: Default::default(),
+            tutorial: None,
+            help: extra.help,
+            tip_text: extra.tips,
         };
+        game.setup.years = game.victory.victory.default_length;
         game.make_title_wheel();
         game
     }
 
-    fn make_title_wheel(&mut self) {
+    /// The settings take effect at the start (volumes, fullscreen).
+    pub fn start_settings(&mut self) {
+        ui::set_effects_volume(self.settings.effects);
+        crate::fullscreen::request(self.settings.fullscreen);
+    }
+
+    pub(super) fn make_title_wheel(&mut self) {
         let odds = fate::odds(&self.data, self.map, 0, &[], &[]);
         self.title_wheel = Some(WheelView::new(odds, self.data.slices, &self.assets.font));
     }
@@ -174,8 +260,8 @@ impl Lucky {
         self.revealed = 0;
     }
 
-    /// Back to the title with nothing spun (F5; for trying the screens).
-    fn restart(&mut self) {
+    /// Back to the title with nothing spun (F5; for trying the screens, and New Game).
+    pub(super) fn restart(&mut self) {
         self.landed.clear();
         self.view = None;
         self.player = None;
@@ -193,6 +279,13 @@ impl Lucky {
         self.inspect = None;
         self.particles.clear();
         self.skipped = false;
+        self.fate = Default::default();
+        self.tutorial = None;
+        self.setup.tutorial = false;
+        self.shell.pause = false;
+        self.shell.autosaved_year = 0;
+        self.notes = Default::default();
+        self.toast = None;
         self.go(Screen::Title);
     }
 
@@ -220,7 +313,7 @@ impl Lucky {
         self.player = Some(player);
         self.view = None;
         self.skipped = true;
-        ctx.play_with(&self.assets.whoosh, 0.9, 0.0);
+        crate::ui::sfx(ctx, &self.assets.whoosh, 0.9, 0.0);
         self.finish(ctx);
     }
 
@@ -236,7 +329,7 @@ impl Lucky {
             self.open_war();
         }
         self.clock.speed = SPECTATOR_SPEED;
-        ctx.play_with(&self.assets.whoosh, 0.9, 0.0);
+        crate::ui::sfx(ctx, &self.assets.whoosh, 0.9, 0.0);
         self.enter_map(ctx);
     }
 
@@ -255,7 +348,7 @@ impl Lucky {
             let player = country::roll_country(&self.data, self.map, self.landed.clone(), &[], true, &mut ctx.rng);
             self.player = Some(player);
         }
-        ctx.play_with(&self.assets.fanfare, 0.9, 0.0);
+        crate::ui::sfx(ctx, &self.assets.fanfare, 0.9, 0.0);
         ui::confetti(&mut self.particles, &mut self.fx, 110);
         self.go(Screen::Final);
     }
@@ -291,17 +384,44 @@ impl Lucky {
             }
         }
         if self.map != before {
-            ctx.play_with(&self.assets.tick, 0.8, 0.0);
+            self.random_map = false;
+            crate::ui::sfx(ctx, &self.assets.tick, 0.8, 0.0);
             self.make_title_wheel();
+        }
+        // The New Game choices: a random world, the difficulty, the length.
+        let click = |r: Rect| ctx.input.was_mouse_pressed(MouseButton::Left) && self.mouse.is_some_and(|m| r.contains(m));
+        let (c_random, c_diff, c_len) = (click(title_chip(0)), click(title_chip(1)), click(title_chip(2)));
+        if ctx.input.was_pressed(Key::Digit4) || ctx.input.was_pressed(Key::R) || c_random {
+            self.random_map = !self.random_map;
+            crate::ui::sfx(ctx, &self.assets.tick, 0.8, 0.0);
+        }
+        if ctx.input.was_pressed(Key::D) || c_diff {
+            let i = DIFFICULTIES.iter().position(|d| *d == self.setup.difficulty).unwrap_or(1);
+            self.setup.difficulty = DIFFICULTIES[(i + 1) % DIFFICULTIES.len()].to_string();
+            crate::ui::sfx(ctx, &self.assets.tick, 0.8, 0.0);
+        }
+        if ctx.input.was_pressed(Key::L) || c_len {
+            let lengths = &self.victory.victory.lengths;
+            let i = lengths.iter().position(|y| *y == self.setup.years).unwrap_or(0);
+            self.setup.years = lengths[(i + 1) % lengths.len()];
+            crate::ui::sfx(ctx, &self.assets.tick, 0.8, 0.0);
         }
         if let Some(w) = &mut self.title_wheel {
             w.angle += 0.15 * ctx.dt();
         }
-        if ctx.input.was_pressed(Key::W) || self.mouse_clicked(ctx, &TITLE_WATCH) {
+        let watch = ctx.input.was_pressed(Key::W) || self.mouse_clicked(ctx, &TITLE_WATCH);
+        let skip = !watch && (ctx.input.was_pressed(Key::S) || self.mouse_clicked(ctx, &TITLE_SKIP));
+        let spin = !watch && !skip && self.confirm(ctx, &TITLE_SPIN);
+        if (watch || skip || spin) && self.random_map {
+            self.map = (ctx.rng.next_u32() as usize) % maps;
+            self.random_map = false;
+            self.make_title_wheel();
+        }
+        if watch {
             self.spectate(ctx);
-        } else if ctx.input.was_pressed(Key::S) || self.mouse_clicked(ctx, &TITLE_SKIP) {
+        } else if skip {
             self.skip(ctx);
-        } else if self.confirm(ctx, &TITLE_SPIN) {
+        } else if spin {
             self.enter_wheel(0, true);
         }
     }
@@ -327,7 +447,7 @@ impl Lucky {
             if confirm || (self.autospin <= 0.0 && self.autospin > -0.5) {
                 self.autospin = -1.0;
                 view.start_spin(&mut ctx.rng);
-                ctx.play_with(&self.assets.whoosh, 0.7, 0.0);
+                crate::ui::sfx(ctx, &self.assets.whoosh, 0.7, 0.0);
             }
         } else {
             ctx.idle_ok();
@@ -336,7 +456,7 @@ impl Lucky {
                 let round = self.data.wheels[index].round;
                 let next = index + 1;
                 if next >= self.data.wheels.len() || self.data.wheels[next].round != round {
-                    ctx.play_with(&self.assets.card_sound, 1.0, 0.0);
+                    crate::ui::sfx(ctx, &self.assets.card_sound, 1.0, 0.0);
                     self.go(Screen::Round(round));
                 } else {
                     self.enter_wheel(next, true);
@@ -352,7 +472,7 @@ impl Lucky {
                     // Quieter while it whirls, crisp as it slows; high and low pegs alternate.
                     let volume = (1.0 - speed / 45.0).clamp(0.22, 1.0);
                     let wav = if view.ticks.is_multiple_of(2) { &self.assets.tick } else { &self.assets.tick_low };
-                    ctx.play_with(wav, volume, 0.35);
+                    crate::ui::sfx(ctx, wav, volume, 0.35);
                 }
                 Event::Landed => {
                     let target = view.target_slice.expect("landed");
@@ -365,10 +485,10 @@ impl Lucky {
                     let l = fate::land(&self.data, &view.odds, option, &mut ctx.rng);
                     self.landed.push(l);
                     self.landed_time = 0.0;
-                    ctx.play_with(&self.assets.land, 1.0, 0.0);
+                    crate::ui::sfx(ctx, &self.assets.land, 1.0, 0.0);
                     let rare = view.odds.chance(option) < RARE;
                     if rare {
-                        ctx.play_with(&self.assets.rare_sound, 0.9, 0.0);
+                        crate::ui::sfx(ctx, &self.assets.rare_sound, 0.9, 0.0);
                     }
                     if let Some((tip, _)) = self.camera.project(wheel::CENTER + vec3(1.0, 0.0, -0.1), &self.projector) {
                         ui::burst(&mut self.particles, &mut self.fx, tip, if rare { 70 } else { 34 }, if rare { 520.0 } else { 360.0 });
@@ -404,9 +524,9 @@ impl Lucky {
         let due = (((self.screen_time - 0.5) / 0.09).max(0.0) as usize).min(rows);
         if due > self.revealed {
             self.revealed = due;
-            ctx.play_with(&self.assets.tick, 0.6, 0.0);
+            crate::ui::sfx(ctx, &self.assets.tick, 0.6, 0.0);
             if due == rows {
-                ctx.play_with(&self.assets.land, 0.8, 0.0);
+                crate::ui::sfx(ctx, &self.assets.land, 0.8, 0.0);
             }
         }
         if self.screen_time > 0.3 && self.confirm(ctx, &FINAL_GO) {
@@ -416,7 +536,7 @@ impl Lucky {
                 return;
             }
             self.build_world(ctx);
-            ctx.play_with(&self.assets.whoosh, 0.8, 0.0);
+            crate::ui::sfx(ctx, &self.assets.whoosh, 0.8, 0.0);
             self.go(Screen::Rivals);
         }
     }
@@ -432,21 +552,29 @@ impl Lucky {
         self.landed = world.nations[0].landed.clone();
         self.rivals = world.nations[1..].to_vec();
         self.map_view = Some(MapView::new(&self.atlas, &world, &self.models));
-        // The economy starts from the wheels (seeded, so a replay is the same).
+        // The economy starts from the wheels (seeded, so a replay is the
+        // same); every nation but the player's gets a brain (all of them
+        // when watching) at the chosen difficulty; armies, navies and air
+        // forces from the wheels; diplomacy and spies (src/sim.rs).
         let seed = ctx.rng.next_u32();
-        let mut economy = Economy::new(&self.data, &self.econ_data, &self.atlas, &world, seed);
-        // Every nation but the player's thinks for itself (all of them when watching).
-        let all = self.spectating;
-        self.brains = Some(Brains::new(self.ai_data.clone(), &self.data, &self.atlas, &world, &mut economy, seed, |i| all || i != 0));
-        // Armies, navies and air forces from the wheels; the NPCs' generals and war brains.
-        let mut wars = Wars::new(self.war_data.clone(), &self.data, &self.atlas, &world, &mut economy, &self.econ_data, seed);
-        wars.set_intel(&self.ai_data);
-        wars.player = if all { None } else { Some(0) };
-        // Diplomacy and spies: every nation's relations, treaties, secret service.
-        self.diplo = Some(crate::diplo::Diplomacy::new(self.diplo_data.clone(), &wars, &economy, &self.ai_data, seed));
-        self.wars = Some(wars);
+        let rules = crate::sim::Rules {
+            data: &self.data,
+            atlas: &self.atlas,
+            econ: &self.econ_data,
+            ai: &self.ai_data,
+            war: &self.war_data,
+            diplo: &self.diplo_data,
+            victory: &self.victory,
+        };
+        let difficulty = if self.spectating { "normal".to_string() } else { self.setup.difficulty.clone() };
+        let sim = crate::sim::Sim::new(&rules, &world, seed, self.spectating, &difficulty);
+        self.brains = Some(sim.brains);
+        self.diplo = Some(sim.diplo);
+        self.wars = Some(sim.wars);
         self.map_ui.war = Default::default();
-        self.economy = Some(economy);
+        self.economy = Some(sim.economy);
+        self.fate = Default::default();
+        self.shell.autosaved_year = 1;
         self.clock = Clock::default();
         self.world = Some(world);
         self.rival_page = 0;
@@ -460,7 +588,7 @@ impl Lucky {
         let due = (((self.screen_time - 0.2) / rival_delay(n)).max(0.0) as usize + 1).min(on_page);
         if due > self.revealed {
             self.revealed = due;
-            ctx.play_with(&self.assets.card_sound, if n > 9 { 0.35 } else { 0.7 }, 0.0);
+            crate::ui::sfx(ctx, &self.assets.card_sound, if n > 9 { 0.35 } else { 0.7 }, 0.0);
         }
         if self.inspect.is_some() {
             if ctx.input.was_pressed(Key::Escape)
@@ -481,7 +609,7 @@ impl Lucky {
                 self.rival_page = (self.rival_page + pages - 1) % pages;
             }
             if self.rival_page != before {
-                ctx.play_with(&self.assets.click, 0.8, 0.0);
+                crate::ui::sfx(ctx, &self.assets.click, 0.8, 0.0);
                 self.screen_time = 10.0;
             }
         }
@@ -510,7 +638,7 @@ impl Lucky {
             }
         }
         if self.inspect.is_some() {
-            ctx.play_with(&self.assets.card_sound, 0.8, 0.0);
+            crate::ui::sfx(ctx, &self.assets.card_sound, 0.8, 0.0);
         } else if self.confirm(ctx, &RIVALS_GO) {
             self.enter_map(ctx);
         }
@@ -545,29 +673,46 @@ impl Game for Lucky {
         let dt = ctx.dt();
         self.time += dt;
         self.screen_time += dt;
-        // Quality: smooth 3D edges (1 = off, 2 = good, up to 4) and a bloom
-        // halo round glowing things (0 = off; costly on the CPU).
-        self.supersample = ctx.tune("supersample", 2.0).clamp(1.0, 4.0) as u32;
-        self.bloom = ctx.tune("bloom", 0.0).max(0.0);
+        // Quality: smooth 3D edges on the wheel screens (1 = off, 2 = good,
+        // up to 4) and a bloom halo (0 = off; costly on the CPU), from the
+        // Settings (the tune file or --set can still override them). The
+        // map is always drawn on the GPU (ISSUES.md item 15).
+        let (ss, bloom) = self.settings.quality.wheel_effects();
+        self.supersample = ctx.tune("supersample", ss as f32).clamp(1.0, 4.0) as u32;
+        self.bloom = ctx.tune("bloom", bloom).max(0.0);
+        let before = self.mouse;
         if let Some(m) = ctx.input.mouse_position() {
             self.mouse = Some(m);
+        }
+        self.mouse_moved = self.mouse != before;
+        if let Some(problem) = crate::fullscreen::apply(ctx.is_headless()) {
+            self.shell.message = Some((format!("Fullscreen: {problem}"), 5.0));
         }
         if std::mem::take(&mut self.spectate_at_start) && self.screen == Screen::Title {
             self.spectate(ctx);
         }
-        if ctx.input.was_pressed(Key::F5) {
-            if let Some(id) = self.map_ui.ambient.take() {
-                ctx.stop_loop(id);
-            }
-            if let Some(id) = self.map_ui.war.drums.take() {
-                ctx.stop_loop(id);
-            }
+        if ctx.input.was_pressed(Key::F5) && !matches!(self.screen, Screen::Menu | Screen::Load | Screen::Settings | Screen::Help) {
+            self.stop_game_sounds(ctx);
             self.restart();
         }
-        // Esc steps back out of a card or a selection on the map; elsewhere it quits.
-        let map_busy = self.screen == Screen::Map && self.map_ui.wants_escape();
-        if ctx.input.was_pressed(Key::Escape) && self.inspect.is_none() && !map_busy {
-            ctx.quit();
+        // Esc steps back: out of a card or a selection on the map (then the
+        // pause menu), from the wheels to the menu. The menus handle their own.
+        let map_busy = self.screen == Screen::Map && (self.map_ui.wants_escape() || self.shell.pause || self.notes.log_open);
+        let own_esc = matches!(self.screen, Screen::Menu | Screen::Load | Screen::Settings | Screen::Help | Screen::Outcome | Screen::Map);
+        if ctx.input.was_pressed(Key::Escape) && self.inspect.is_none() && !map_busy && !own_esc {
+            if self.screen == Screen::Map {
+                if self.spectating && !self.menu_started {
+                    ctx.quit();
+                } else {
+                    self.open_pause(ctx);
+                }
+            } else if self.menu_started {
+                self.stop_game_sounds(ctx);
+                self.open_menu();
+                return;
+            } else {
+                ctx.quit();
+            }
         }
         let push_in = match self.screen {
             Screen::Wheel if self.view.as_ref().is_some_and(|v| v.landed) => ui::ease_out(self.landed_time / 0.6),
@@ -575,6 +720,7 @@ impl Game for Lucky {
         };
         self.camera = camera_at(self.time, push_in);
 
+        self.update_tips(ctx);
         match self.screen {
             Screen::Title => self.update_title(ctx),
             Screen::Wheel => self.update_wheel(ctx),
@@ -582,7 +728,34 @@ impl Game for Lucky {
             Screen::Final => self.update_final(ctx),
             Screen::Rivals => self.update_rivals(ctx),
             Screen::Map => self.update_map(ctx),
+            Screen::Menu => self.update_menu(ctx),
+            Screen::Load => self.update_load(ctx),
+            Screen::Settings => self.update_settings(ctx),
+            Screen::Help => self.update_help(ctx),
+            Screen::Outcome => self.update_outcome(ctx),
         }
+        // The music: the menu's theme off the map; war or peace on it (the
+        // spinning screens keep whatever played last, or the menu's).
+        match self.screen {
+            Screen::Menu | Screen::Title => self.want_music(ctx, shell::Track::Menu),
+            Screen::Map if !self.shell.pause => {
+                let viewer = if self.spectating { None } else { Some(0) };
+                let at_war = self.wars.as_ref().is_some_and(|w| match viewer {
+                    Some(v) => w.level_of(v) >= 2,
+                    None => w.wars.iter().any(|x| x.active() && x.level >= 3),
+                });
+                self.map_ui.war.drums_quiet = if at_war { 0.0 } else { self.map_ui.war.drums_quiet + dt };
+                if at_war {
+                    self.want_music(ctx, shell::Track::War);
+                } else if self.map_ui.war.drums_quiet > 4.0 || self.music.track != Some(shell::Track::War) {
+                    self.want_music(ctx, shell::Track::Peace);
+                }
+            }
+            _ => {}
+        }
+        self.update_music(ctx);
+        self.update_tutorial(ctx);
+        self.update_notes(ctx);
         ui::update_particles(&mut self.particles, dt);
         if let Some((_, t)) = &mut self.toast {
             *t -= dt;
@@ -597,9 +770,15 @@ impl Game for Lucky {
     fn draw(&self, canvas: &mut Canvas) {
         // clear() also resets the 3D depth buffer: without it, last frame's
         // depths hide this frame's wheel (see ISSUES.md).
-        canvas.clear(if self.screen == Screen::Map { Color::from_hex(0x1c3c7a) } else { ui::INK });
-        if self.screen != Screen::Map {
+        self.tips.areas.borrow_mut().clear();
+        // Settings, Help and Load opened from the pause menu keep the map behind them.
+        let over_map = self.screen == Screen::Map || (matches!(self.screen, Screen::Load | Screen::Settings | Screen::Help | Screen::Outcome) && self.shell.back.is_none_or(|b| b == Screen::Map) && self.map_view.is_some() && self.screen != Screen::Load || self.screen == Screen::Outcome);
+        canvas.clear(if over_map { Color::from_hex(0x1c3c7a) } else { ui::INK });
+        if !over_map {
             canvas.blit_sprite(&self.assets.backdrop, Vec2::ZERO, Blit::default());
+        } else if self.screen != Screen::Map {
+            self.draw_map(canvas);
+            ui::dim(canvas, 0.72);
         }
         match self.screen {
             Screen::Title => self.draw_title(canvas),
@@ -617,14 +796,38 @@ impl Game for Lucky {
                 FINAL_GO.draw(canvas, &self.assets, self.mouse, self.time, self.revealed >= self.data.wheels.len());
             }
             Screen::Rivals => self.draw_rivals(canvas),
-            Screen::Map => self.draw_map(canvas),
+            Screen::Map => {
+                self.draw_map(canvas);
+                if self.shell.pause {
+                    self.draw_pause(canvas);
+                }
+                self.draw_log(canvas);
+            }
+            Screen::Menu => self.draw_menu(canvas),
+            Screen::Load => self.draw_load(canvas),
+            Screen::Settings => self.draw_settings(canvas),
+            Screen::Help => self.draw_help(canvas),
+            Screen::Outcome => self.draw_outcome(canvas),
         }
         ui::draw_particles(canvas, &self.assets, &self.particles);
         if let Some((words, t)) = &self.toast {
-            let a = t.min(1.0);
-            canvas.fill_rect(Rect::new(240.0, 640.0, 800.0, 50.0), Color::rgba(10, 5, 30, (220.0 * a) as u8));
-            ui::text(canvas, &self.assets.font, words, vec2(640.0, 651.0), 22.0, ui::alpha(GOLD, a), Align::Center, 780.0);
+            if !matches!(self.screen, Screen::Menu | Screen::Load | Screen::Settings | Screen::Help | Screen::Outcome) {
+                let a = t.min(1.0);
+                // Above the map's hint line, and clear of the windows' own last line.
+                let y = if self.screen == Screen::Map { 664.0 } else { 640.0 };
+                let mut style = ui::style(18.0, ui::alpha(GOLD, a));
+                style.align = Align::Center;
+                let w = (self.assets.font.measure(words, &style).x + 40.0).clamp(300.0, 900.0);
+                canvas.fill_rect(Rect::new(640.0 - w / 2.0, y, w, 30.0), Color::rgba(10, 5, 30, (225.0 * a) as u8));
+                canvas.draw_rect(Rect::new(640.0 - w / 2.0, y, w, 30.0), ui::alpha(ui::GOLD, 0.35 * a));
+                ui::text(canvas, &self.assets.font, words, vec2(640.0, y + 5.0), 18.0, ui::alpha(GOLD, a), Align::Center, w - 24.0);
+                if self.notes.queue_len() > 0 {
+                    ui::plain(canvas, &self.assets.font, &format!("+{} more", self.notes.queue_len()), vec2(640.0 + w / 2.0 + 8.0, y + 8.0), 12.0, ui::alpha(ui::MUTED, a), Align::Left);
+                }
+            }
         }
+        self.draw_tutorial(canvas);
+        self.draw_tip(canvas);
     }
 }
 
@@ -637,8 +840,21 @@ fn camera_at(time: f32, push_in: f32) -> Camera3D {
     Camera3D::looking_at(pos, target)
 }
 
+/// The difficulties, easiest first (data/ai/brain.toml has each).
+pub const DIFFICULTIES: [&str; 4] = ["easy", "normal", "hard", "brutal"];
+
+/// The New Game screen's choices: random world, difficulty, length.
+fn title_chip(i: usize) -> Rect {
+    Rect::new(160.0 + i as f32 * 330.0, 504.0, 300.0, 50.0)
+}
+
 fn map_card_rect(i: usize) -> Rect {
-    Rect::new(60.0 + i as f32 * 400.0, 300.0, 360.0, 190.0)
+    Rect::new(60.0 + i as f32 * 400.0, 296.0, 360.0, 190.0)
+}
+
+fn capitalise(s: &str) -> String {
+    let mut c = s.chars();
+    c.next().map_or(String::new(), |f| f.to_uppercase().collect::<String>() + c.as_str())
 }
 
 /// Up to 9 rivals get big cards; more get small ones, 24 to a page.
@@ -741,10 +957,38 @@ impl Lucky {
             ui::plain(canvas, &a.font, &format!("{}", i + 1), vec2(r.x + 26.0, r.y + 22.0), 16.0, SOFT, Align::Left);
             canvas.label(&format!("map {}", m.id), r);
         }
+        if self.random_map {
+            // Every card dimmed, with a question mark: fate picks the world too.
+            for i in 0..self.data.maps.len() {
+                let r = map_card_rect(i);
+                canvas.fill_rect(Rect::new(r.x + 8.0, r.y + 8.0, r.w - 16.0, r.h - 16.0), Color::rgba(12, 6, 30, 170));
+                ui::text(canvas, &a.font, "?", vec2(r.center().x, r.y + 60.0), 64.0, GOLD, Align::Center, 100.0);
+            }
+        }
+        let years = if self.setup.years == 0 { "No time limit".to_string() } else { format!("{} years", self.setup.years) };
+        let chips = [
+            ("WORLD (4 or R)", if self.random_map { "Random: fate decides".to_string() } else { self.data.maps[self.map].name.clone() }, "random"),
+            ("DIFFICULTY (D)", capitalise(&self.setup.difficulty), "difficulty"),
+            ("GAME LENGTH (L)", years, "length"),
+        ];
+        for (i, (title, value, id)) in chips.iter().enumerate() {
+            let r = title_chip(i);
+            let hot = self.mouse.is_some_and(|m| r.contains(m));
+            canvas.fill_rect(r, Color::rgba(18, 10, 44, if hot { 245 } else { 215 }));
+            canvas.draw_rect(r, if hot { GOLD } else { Color::rgba(127, 168, 255, 160) });
+            ui::plain(canvas, &a.font, title, vec2(r.center().x, r.y + 6.0), 11.0, GOLD, Align::Center);
+            ui::text(canvas, &a.font, value, vec2(r.center().x, r.y + 22.0), 18.0, Color::WHITE, Align::Center, r.w - 20.0);
+            canvas.label(&format!("chip {id}"), r);
+        }
+        let d = DIFFICULTIES.iter().position(|d| *d == self.setup.difficulty).unwrap_or(1);
+        let tip = ["Easy: the brains plan poorly, react slowly and misjudge wars", "Normal: the brains as they were built", "Hard: sharper, quicker brains that gang up on you sooner", "Brutal: the best planners, quickest to react; never cheating"][d];
+        self.tip_words(title_chip(1), format!("{tip}. Difficulty never gives the brains more money, soldiers or sight than you have."));
+        self.tip_words(title_chip(2), "The game ends on score after this many years (a conquest, economic or diplomatic win can come sooner). You can play on afterwards.".to_string());
         TITLE_SPIN.draw(canvas, a, self.mouse, self.time, true);
         TITLE_SKIP.draw(canvas, a, self.mouse, self.time, false);
         TITLE_WATCH.draw(canvas, a, self.mouse, self.time, false);
-        ui::plain(canvas, &a.font, "Left / Right or 1-3: choose a world   ·   W: watch a world of NPC brains   ·   F5: start over   ·   Esc: quit", vec2(640.0, 670.0), 15.0, SOFT, Align::Center);
+        let back = if self.menu_started { "Esc: main menu" } else { "Esc: quit" };
+        ui::plain(canvas, &a.font, &format!("Left / Right or 1-3: choose a world   ·   W: watch a world of NPC brains   ·   F5: start over   ·   {back}"), vec2(640.0, 670.0), 15.0, SOFT, Align::Center);
     }
 
     fn draw_panel(&self, canvas: &mut Canvas) {

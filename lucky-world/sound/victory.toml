@@ -1,0 +1,175 @@
+# Victory: a triumphant brass-and-bells fanfare, bigger than fanfare.wav.
+# A triplet pickup into a held C, a quick rising answer, then a full
+# C major chord with bells, a timpani roll and a cymbal swell. About 3.8 s.
+# Every note is given its full length: a song note stops its sound when it
+# ends, and the 1-beat default would cut the final chord and bells short.
+version = 0
+name = "victory"
+description = "Triumphant 3.8 s brass and bells fanfare for winning."
+tags = ["jingle", "win", "victory", "fanfare", "brass"]
+tempo = 120
+beats_per_bar = 4
+bars = 2
+seed = 31
+channels = 2
+
+[master]
+normalize_lufs = -18
+trim_silence = true
+
+[[effects]]
+type = "reverb"
+size = 0.7
+decay = 1.0
+damping = 0.4
+mix = 0.2
+
+# ---- instruments ---------------------------------------------------------
+
+# Bright brass: two saws a hair apart through a low-pass that opens as the
+# note starts, with a slight vibrato once it is held.
+[instruments.brass]
+version = 0
+
+[[instruments.brass.layers]]
+name = "saw a"
+source = "saw"
+volume = 0.4
+envelope = { attack = 0.03, decay = 0.15, sustain = 0.8, release = 0.25 }
+pitch = { start = 261.63, vibrato = { rate = 5.5, depth = 0.12, delay = 0.35 } }
+filter = { kind = "lowpass", cutoff = 900, cutoff_end = 3200, curve = "ease_out", sweep_time = 0.08, resonance = 1.1 }
+
+[[instruments.brass.layers]]
+name = "saw b"
+source = "saw"
+volume = 0.3
+envelope = { attack = 0.04, decay = 0.15, sustain = 0.8, release = 0.25 }
+pitch = { start = 262.5, vibrato = { rate = 5.2, depth = 0.1, delay = 0.4 } }
+filter = { kind = "lowpass", cutoff = 800, cutoff_end = 2600, curve = "ease_out", sweep_time = 0.1 }
+
+[[instruments.brass.layers]]
+name = "body"
+source = "triangle"
+volume = 0.35
+envelope = { attack = 0.02, decay = 0.1, sustain = 0.9, release = 0.25 }
+pitch = { start = 261.63 }
+
+# A bright bell: fundamental, an inharmonic partial and a ping.
+[instruments.bell]
+version = 0
+
+[[instruments.bell.layers]]
+name = "tone"
+source = "sine"
+volume = 0.6
+envelope = { attack = 0.002, decay = 1.5 }
+pitch = { start = "C6" }
+
+[[instruments.bell.layers]]
+name = "partial"
+source = "sine"
+volume = 0.22
+envelope = { attack = 0.001, decay = 0.9 }
+pitch = { start = 2887.0 }
+
+[[instruments.bell.layers]]
+name = "ping"
+source = "triangle"
+volume = 0.12
+envelope = { attack = 0.001, decay = 0.25 }
+pitch = { start = "C7" }
+
+# Timpani: a low sine with a felt-mallet thud.
+[instruments.timpani]
+version = 0
+
+[[instruments.timpani.layers]]
+name = "drum"
+source = "sine"
+volume = 0.9
+envelope = { attack = 0.003, decay = 0.9 }
+pitch = { start = 98 }
+
+[[instruments.timpani.layers]]
+name = "mallet"
+source = "noise"
+volume = 0.25
+envelope = { attack = 0.001, decay = 0.05 }
+filter = { kind = "lowpass", cutoff = 700 }
+
+# A crash cymbal swell for the last chord.
+[instruments.cymbal]
+version = 0
+
+[[instruments.cymbal.layers]]
+name = "wash"
+source = "noise"
+volume = 0.35
+envelope = { attack = 0.004, decay = 1.3 }
+filter = { kind = "highpass", cutoff = 5000 }
+pitch = { start = 440 }
+
+# ---- tracks --------------------------------------------------------------
+
+[[tracks]]
+name = "brass lead"
+instrument = "brass"
+volume = 0.9
+pan = -0.1
+notes = [
+  { beat = 0, note = "G4", length = 0.28 },
+  { beat = 0.333, note = "G4", length = 0.28 },
+  { beat = 0.667, note = "G4", length = 0.28 },
+  { beat = 1, note = "C5", length = 1.3 },
+  { beat = 2.5, note = "D5", length = 0.4, velocity = 0.85 },
+  { beat = 3, note = "E5", length = 0.4, velocity = 0.9 },
+  { beat = 3.5, note = "G5", length = 2.6 },
+]
+
+[[tracks]]
+name = "brass low"
+instrument = "brass"
+volume = 0.7
+pan = 0.15
+notes = [
+  { beat = 1, note = ["E4", "G4"], length = 1.3, velocity = 0.8 },
+  { beat = 2.5, note = ["B3", "G4"], length = 0.4, velocity = 0.7 },
+  { beat = 3, note = ["C4", "G4"], length = 0.4, velocity = 0.75 },
+  { beat = 3.5, note = ["C3", "C4", "E4", "C5"], length = 2.6 },
+]
+
+[[tracks]]
+name = "bells"
+instrument = "bell"
+volume = 0.55
+pan = 0.35
+notes = [
+  { beat = 1, note = "C6", length = 3, velocity = 0.6 },
+  { beat = 3.5, note = "C6", length = 5 },
+  { beat = 3.62, note = "E6", length = 5, velocity = 0.85 },
+  { beat = 3.75, note = "G6", length = 5, velocity = 0.8 },
+  { beat = 4, note = "C7", length = 5, velocity = 0.7 },
+]
+
+[[tracks]]
+name = "timpani"
+instrument = "timpani"
+volume = 0.8
+notes = [
+  { beat = 0.667, note = 98, length = 2, velocity = 0.6 },
+  { beat = 1, note = 65.4, length = 2 },
+  { beat = 3, note = 98, length = 2, velocity = 0.35 },
+  { beat = 3.125, note = 98, length = 2, velocity = 0.45 },
+  { beat = 3.25, note = 98, length = 2, velocity = 0.55 },
+  { beat = 3.375, note = 98, length = 2, velocity = 0.7 },
+  { beat = 3.5, note = 65.4, length = 3 },
+]
+
+[[tracks]]
+name = "cymbal"
+instrument = "cymbal"
+volume = 0.6
+pan = -0.3
+notes = [
+  { beat = 3.5, note = "A4", length = 5 },
+]

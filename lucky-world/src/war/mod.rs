@@ -36,13 +36,13 @@ pub type Faction = usize;
 /// from its capital.
 pub const FRONTS: [&str; 5] = ["Northern", "Eastern", "Southern", "Western", "Home"];
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
     Infantry,
     Armoured,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Style {
     Aggressive,
     Balanced,
@@ -59,7 +59,7 @@ impl Style {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct General {
     pub name: String,
     pub skill: f64,
@@ -69,7 +69,7 @@ pub struct General {
 
 /// What a division has gained and lost, in soldiers (docs/WAR.md, section 3):
 /// `start + joined − released = soldiers + killed + wounded + captured + surrendered + deserted`.
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Default, PartialEq)]
 pub struct Tally {
     pub start: f64,
     pub joined: f64,
@@ -89,7 +89,7 @@ impl Tally {
 }
 
 /// An order from the player (or none: the general decides).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Order {
     Auto,
     Attack(usize),
@@ -99,7 +99,7 @@ pub enum Order {
     Reinforce(usize),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct Division {
     pub id: u32,
     pub faction: Faction,
@@ -136,7 +136,7 @@ pub struct Division {
 }
 
 /// One side of a battle, for its report.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Default, PartialEq)]
 pub struct SideReport {
     pub factions: Vec<Faction>,
     pub divisions: Vec<String>,
@@ -163,7 +163,7 @@ pub struct SideReport {
     pub fuel_used: f64,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct BattleReport {
     pub province: usize,
     pub province_name: String,
@@ -179,7 +179,7 @@ pub struct BattleReport {
     pub winner: usize,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct Battle {
     pub id: usize,
     pub province: usize,
@@ -195,7 +195,7 @@ pub struct Battle {
 /// The escalation ladder (docs/WAR.md, section 8).
 pub const LEVELS: [&str; 5] = ["Cold war", "Border skirmish", "Military operation", "Declared war", "Total war"];
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub enum Goal {
     /// Take these provinces.
     Provinces(Vec<usize>),
@@ -225,7 +225,7 @@ impl Goal {
 }
 
 /// Totals for one side of a war.
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Default, PartialEq)]
 pub struct Losses {
     pub killed: f64,
     pub wounded: f64,
@@ -239,7 +239,7 @@ pub struct Losses {
     pub battles_won: u32,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct War {
     pub id: usize,
     pub sides: [Vec<Faction>; 2],
@@ -276,7 +276,7 @@ impl War {
 }
 
 /// A general's request to the quartermaster (the player's job, section 5).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct Request {
     pub front: usize,
     pub day: u32,
@@ -309,7 +309,7 @@ impl Request {
 }
 
 /// Weapons in and out, by good (for the "every shell is accounted for" test).
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Default, PartialEq)]
 pub struct Flows {
     /// From the stockpile (or the rebels' stores) to the divisions.
     pub issued: Vec<f64>,
@@ -337,7 +337,7 @@ impl Flows {
 }
 
 /// A faction's war machine: everything that isn't a division.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct Force {
     pub exhaustion: f64,
     /// Wounded soldiers in hospital.
@@ -407,7 +407,7 @@ impl Force {
 }
 
 /// The map as war sees it.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Geo {
     pub neighbours: Vec<Vec<usize>>,
     pub terrain: Vec<data::Terrain>,
@@ -429,7 +429,7 @@ pub struct Geo {
 }
 
 /// Something that happened, for the news and the screen.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct WarNews {
     pub day: u32,
     pub factions: Vec<Faction>,
@@ -437,7 +437,7 @@ pub struct WarNews {
 }
 
 /// Every army, war and battle in a world.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Wars {
     pub data: WarData,
     pub nations: usize,
@@ -462,10 +462,14 @@ pub struct Wars {
     pub secret_service: Vec<String>,
     pub army_option: Vec<String>,
     pub news: Vec<WarNews>,
+    #[serde(with = "crate::save_codec::rng")]
     pub rng: Rng,
     next_division: u32,
     /// Factions at war with each other: [a][b] → war index.
     rel: Vec<Vec<Option<usize>>>,
+    /// The wars still on (rebuilt with `rel`), so a long history isn't
+    /// searched every hour.
+    live_wars: Vec<usize>,
     /// The day's weather in each province: 0 clear, 1 rain, 2 snow, 3 storm.
     pub weather: Vec<u8>,
     /// How wrong each faction's scouts and spies are (AI.md, section 2).
@@ -508,6 +512,7 @@ pub struct Wars {
     pub borders_changed: bool,
     pub day: u32,
     /// Counters for the reports (where prisoners came from, how wars ended...).
+    #[serde(with = "crate::save_codec::static_keys")]
     pub stats: std::collections::BTreeMap<&'static str, f64>,
     /// During an hour of battles: each battle's divisions that may be in it
     /// (so a battle doesn't look through every division in the world).
@@ -594,6 +599,7 @@ impl Wars {
             rng: Rng::new(seed ^ 0x5741_5221),
             next_division: 1,
             rel: vec![vec![None; 2 * n]; 2 * n],
+            live_wars: Vec::new(),
             weather: vec![0; map.provinces.len()],
             intel_error: vec![0.15; 2 * n],
             diplo_cost: Vec::new(),
@@ -688,13 +694,13 @@ impl Wars {
 
     /// The highest level of any war `f` is in.
     pub fn level_of(&self, f: Faction) -> usize {
-        self.wars.iter().filter(|w| w.active() && w.side_of(f).is_some()).map(|w| w.level).max().unwrap_or(0)
+        self.live_wars.iter().map(|&k| &self.wars[k]).filter(|w| w.active() && w.side_of(f).is_some()).map(|w| w.level).max().unwrap_or(0)
     }
 
     /// Friends: on the same side as `f` in some war (and itself).
     pub fn friends(&self, f: Faction) -> Vec<Faction> {
         let mut out = vec![f];
-        for w in self.wars.iter().filter(|w| w.active()) {
+        for w in self.live_wars.iter().map(|&k| &self.wars[k]).filter(|w| w.active()) {
             if let Some(s) = w.side_of(f) {
                 for &g in &w.sides[s] {
                     if !out.contains(&g) {
@@ -722,6 +728,7 @@ impl Wars {
         for row in self.rel.iter_mut() {
             row.iter_mut().for_each(|x| *x = None);
         }
+        self.live_wars = (0..self.wars.len()).filter(|&k| self.wars[k].active()).collect();
         for (k, w) in self.wars.iter().enumerate() {
             if !w.active() || w.level == 0 {
                 continue;

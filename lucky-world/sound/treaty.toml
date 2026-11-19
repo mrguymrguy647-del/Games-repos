@@ -1,0 +1,64 @@
+# Treaty signed: a quill scratching across paper (three quick strokes),
+# then a wax seal stamped down with a soft thump. About 0.8 s.
+version = 0
+name = "treaty"
+description = "Quill scratch then a stamp thump, for a signed treaty."
+tags = ["ui", "diplomacy", "treaty", "paper", "stamp"]
+seed = 47
+channels = 2
+
+[master]
+normalize_lufs = -20
+trim_silence = true
+
+# The pen: band-passed hiss broken into strokes by a square LFO, moving
+# left to right like a signature.
+[[layers]]
+name = "scratch left"
+source = "noise"
+volume = 0.45
+pan = -0.35
+envelope = { attack = 0.01, hold = 0.12, decay = 0.04 }
+filter = { kind = "bandpass", cutoff = 4200, cutoff_end = 3000, resonance = 1.4 }
+lfo = { target = "volume", rate = 22, depth = 0.85, shape = "triangle" }
+
+[[layers]]
+name = "scratch right"
+source = "noise"
+offset = 0.17
+volume = 0.4
+pan = 0.3
+envelope = { attack = 0.01, hold = 0.14, decay = 0.06 }
+filter = { kind = "bandpass", cutoff = 3600, cutoff_end = 5000, resonance = 1.4 }
+lfo = { target = "volume", rate = 18, depth = 0.85, shape = "triangle" }
+
+# The stamp.
+[[layers]]
+name = "thump"
+source = "sine"
+offset = 0.48
+volume = 1.0
+envelope = { attack = 0.002, decay = 0.22 }
+pitch = { start = 150, end = 55, curve = "exponential", sweep_time = 0.12 }
+
+[[layers]]
+name = "knock"
+source = "triangle"
+offset = 0.48
+volume = 0.35
+envelope = { attack = 0.001, decay = 0.05 }
+pitch = { start = 320, end = 220, curve = "exponential" }
+
+[[layers]]
+name = "contact"
+source = "noise"
+offset = 0.48
+volume = 0.35
+envelope = { attack = 0.0005, decay = 0.03 }
+filter = { kind = "lowpass", cutoff = 1600 }
+
+[[effects]]
+type = "reverb"
+size = 0.25
+decay = 0.25
+mix = 0.12

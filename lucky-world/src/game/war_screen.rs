@@ -85,7 +85,7 @@ pub struct WarUi {
     borders_dirty: bool,
     borders_time: f32,
     pub drums: Option<LoopId>,
-    drums_quiet: f32,
+    pub drums_quiet: f32,
     last_shot: f32,
     /// Show every army, even in peace (the war overlay).
     pub all_armies: bool,
@@ -166,6 +166,18 @@ impl Lucky {
     }
 
     /// A day (or many) of war went by: news, sounds, borders, reports.
+    /// A loaded game's battles, reports, news and offers are old news.
+    pub(super) fn war_seen_all(&mut self) {
+        let Some(w) = self.wars.as_ref() else { return };
+        let ui = &mut self.map_ui.war;
+        ui.news_seen = w.news.len();
+        ui.battles_seen = w.battles.len();
+        ui.reports_seen = w.reports.len();
+        ui.offers_seen = w.day;
+        ui.scene_dirty = true;
+        ui.borders_dirty = true;
+    }
+
     pub(super) fn after_war_days(&mut self, ctx: &mut Context) {
         let Some(w) = self.wars.as_mut() else { return };
         let ui = &mut self.map_ui.war;
@@ -204,16 +216,20 @@ impl Lucky {
             .map(|n| n.text.clone())
             .collect();
         ui.news_seen = w.news.len();
-        if let Some(words) = fresh.last() {
-            self.toast = Some((words.clone(), 4.0));
-            ctx.play_with(&self.assets.news, 0.6, 0.0);
+        // A declaration is a horn, a peace a bell; the player's own war news is critical.
+        let mut notes: Vec<(String, u8, Option<&'static str>)> = Vec::new();
+        for words in fresh.iter().rev().take(3).rev() {
+            // A war starting: "<level>: X against Y (why)", or a civil war.
+            let war = crate::war::LEVELS.iter().skip(1).any(|l| words.starts_with(&format!("{l}:"))) || words.contains("Civil war");
+            let peace = words.starts_with("Peace");
+            let level = if viewer.is_some() && (war || peace) { super::shell::CRITICAL } else { super::shell::IMPORTANT };
+            notes.push((words.clone(), level, if war { Some("declare") } else if peace { Some("peace") } else { None }));
         }
         // A new peace offer for the player: say so (it waits in the war room).
         if let Some(o) = w.offers.iter().filter(|o| o.3 >= ui.offers_seen).max_by_key(|o| o.3) {
             if viewer.is_some() {
                 let from = w.names[w.wars[o.0].sides[o.1][0]].clone();
-                self.toast = Some((format!("{from} offers peace: {}. K: the war room to answer", o.2.words(w)), 6.0));
-                ctx.play_with(&self.assets.news, 0.7, 0.0);
+                notes.push((format!("{from} offers peace: {}. K: the war room to answer", o.2.words(w)), super::shell::CRITICAL, None));
             }
             ui.offers_seen = o.3 + 1;
         }
@@ -228,7 +244,7 @@ impl Lucky {
         ui.battles_seen = w.battles.len();
         if started > 0 && mine_started && self.time - ui.last_shot > 0.6 {
             ui.last_shot = self.time;
-            ctx.play_with(&self.assets.gunfire, 0.55, 0.0);
+            crate::ui::sfx(ctx, &self.assets.gunfire, 0.55, 0.0);
         }
         // A battle ends: an explosion, and (the player's) its report.
         let mut ended_mine = None;
@@ -241,31 +257,23 @@ impl Lucky {
         }
         ui.reports_seen = w.reports.len();
         if let Some(k) = ended_mine {
-            ctx.play_with(&self.assets.explosion, 0.5, 0.0);
+            crate::ui::sfx(ctx, &self.assets.explosion, 0.5, 0.0);
             if viewer.is_some() {
                 ui.card = Some((k, 9.0));
             }
         }
-        // The drums while the player (or, watching, the world) is at war.
-        let at_war = match viewer {
-            Some(v) => w.level_of(v) >= 2,
-            None => w.wars.iter().any(|x| x.active() && x.level >= 3),
-        };
-        // (They stop only after 4 quiet seconds, so they don't stutter.)
-        ui.drums_quiet = if at_war { 0.0 } else { ui.drums_quiet + ctx.dt() };
-        match (at_war, ui.drums) {
-            (true, None) => ui.drums = Some(ctx.play_loop(&self.assets.war_drums, 0.28)),
-            (false, Some(id)) if ui.drums_quiet > 4.0 => {
-                ctx.stop_loop(id);
-                ui.drums = None;
-            }
-            _ => {}
-        }
+        // The music follows war and peace (shell.rs, `want_music`).
         // A watched battle that ended closes.
         if let Some(b) = ui.watching {
             if b >= w.battles.len() {
                 ui.watching = None;
             }
+        }
+        for (words, level, sound) in notes {
+            if let Some(s) = sound {
+                self.sound_named(ctx, s);
+            }
+            self.notify(ctx, words, level);
         }
     }
 
@@ -319,11 +327,12 @@ impl Lucky {
         let p = w.battles[b].province;
         if let Some(view) = self.map_view.as_mut() {
             let at = view.province_point(&self.atlas, world, p, 0.0);
-            view.orbit.target = vec2(at.x, at.z);
+            self.map_ui.glide = Some(vec2(at.x, at.z));
+            let _ = &view;
             view.orbit.distance = view.orbit.distance.min(9.0);
         }
         self.map_ui.war.watching = Some(b);
-        ctx.play_with(&self.assets.gunfire, 0.5, 0.0);
+        crate::ui::sfx(ctx, &self.assets.gunfire, 0.5, 0.0);
     }
 
     /// J: the biggest battle going on.
@@ -344,10 +353,10 @@ impl Lucky {
     /// The war room's keys (K closes it).
     pub(super) fn update_war_room(&mut self, ctx: &mut Context) {
         let Some(page) = self.map_ui.war.open else { return };
-        let mouse = self.mouse;
+        let mouse = self.ui_mouse();
         if ctx.input.was_pressed(Key::Escape) || ctx.input.was_pressed(Key::K) {
             self.map_ui.war.open = None;
-            ctx.play_with(&self.assets.click, 0.7, 0.0);
+            crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
             return;
         }
         let mut next = None;
@@ -367,18 +376,18 @@ impl Lucky {
         if let Some(p) = next {
             self.map_ui.war.open = Some(p);
             self.map_ui.war.row = 0;
-            ctx.play_with(&self.assets.click, 0.7, 0.0);
+            crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
             return;
         }
         let rows = self.war_rows(page);
         let ui = &mut self.map_ui.war;
         if ctx.input.was_pressed(Key::Down) && rows > 0 {
             ui.row = (ui.row + 1) % rows;
-            ctx.play_with(&self.assets.pan_tick, 0.5, 0.0);
+            crate::ui::sfx(ctx, &self.assets.pan_tick, 0.5, 0.0);
         }
         if ctx.input.was_pressed(Key::Up) && rows > 0 {
             ui.row = (ui.row + rows - 1) % rows;
-            ctx.play_with(&self.assets.pan_tick, 0.5, 0.0);
+            crate::ui::sfx(ctx, &self.assets.pan_tick, 0.5, 0.0);
         }
         ui.row = ui.row.min(rows.saturating_sub(1));
         let row = ui.row;
@@ -386,7 +395,7 @@ impl Lucky {
             if ctx.input.was_pressed(Key::Enter) {
                 if let Some(&k) = self.report_list().get(row) {
                     self.map_ui.war.full = Some(k);
-                    ctx.play_with(&self.assets.card_sound, 0.7, 0.0);
+                    crate::ui::sfx(ctx, &self.assets.card_sound, 0.7, 0.0);
                 }
             }
             return;
@@ -490,7 +499,7 @@ impl Lucky {
         }
         if did {
             self.map_ui.war.refresh();
-            ctx.play_with(&self.assets.select, 0.7, 0.0);
+            crate::ui::sfx(ctx, &self.assets.select, 0.7, 0.0);
         }
     }
 
@@ -564,7 +573,8 @@ impl Lucky {
             canvas.blit_sprite(&a.icon_swords, at - vec2(s / 2.0, s / 2.0), Blit { scale: s / 32.0, ..Blit::default() });
             canvas.label(&format!("battle {}", w.battles[k].report.province_name), Rect::new(at.x - s / 2.0, at.y - s / 2.0, s, s));
         }
-        if let Some(b) = self.map_ui.war.watching {
+        let window = self.map_ui.econ.open.is_some() || self.map_ui.war.open.is_some() || self.map_ui.diplo.wants_escape();
+        if let Some(b) = self.map_ui.war.watching.filter(|_| !window) {
             self.draw_battle_panel(canvas, w, b);
         }
     }
@@ -713,7 +723,7 @@ impl Lucky {
         for (k, p) in Page::ALL.iter().enumerate() {
             let r = Page::tab_rect(k);
             let on = *p == page;
-            let hot = self.mouse.is_some_and(|m| r.contains(m));
+            let hot = self.ui_mouse().is_some_and(|m| r.contains(m));
             canvas.fill_rect(r, if on { Color::rgba(240, 106, 106, 80) } else if hot { Color::rgba(255, 255, 255, 30) } else { Color::rgba(255, 255, 255, 12) });
             canvas.blit_sprite(icons[k], vec2(r.x + 10.0, r.y + 8.0), Blit { scale: if k == 0 { 0.75 } else { 1.0 }, ..Blit::default() });
             plain(canvas, &a.font, p.name(), vec2(r.x + 42.0, r.y + 11.0), 15.0, if on { GOLD } else { Color::WHITE });
@@ -780,6 +790,7 @@ impl Lucky {
             fit(canvas, &a.font, &format!("Since year {:.1} ({} days) · {} battles{}", year(wr.start), wr.end.unwrap_or(w.day) - wr.start, wr.battles, if wr.civil { " · civil war" } else { "" }), vec2(dx, dy), 13.0, SOFT, 470.0);
             dy += 24.0;
             // The ladder.
+            self.tip(Rect::new(dx, dy, 470.0, 34.0), "level");
             for l in 0..5 {
                 let r = Rect::new(dx + l as f32 * 94.0, dy, 90.0, 34.0);
                 let on = l == wr.level && wr.active();
@@ -801,6 +812,7 @@ impl Lucky {
             let mine = player::side(w, k).unwrap_or(0);
             let s = if mine == 0 { score } else { -score };
             plain(canvas, &a.font, &format!("WAR SCORE ({} view): {:+}", w.names[wr.sides[mine][0]], s.round() as i64), vec2(dx, dy), 12.0, GOLD);
+            self.tip(Rect::new(dx, dy, 470.0, 30.0), "war_score");
             let bar = Rect::new(dx, dy + 18.0, 470.0, 10.0);
             canvas.fill_rect(bar, Color::rgba(255, 255, 255, 25));
             let mid = bar.x + bar.w / 2.0;
@@ -810,6 +822,7 @@ impl Lucky {
             let l = &wr.losses;
             let cols = [dx + 140.0, dx + 300.0];
             plain(canvas, &a.font, "LOSSES", vec2(dx, dy), 12.0, GOLD);
+            self.tip_words(Rect::new(dx, dy, 470.0, 170.0), "Losses on each side of this war: the dead, wounded, captured and deserted, and the tanks, jets and ships destroyed or captured. Your own are counted; the enemy's are your service's count.".to_string());
             for (c, name) in cols.iter().zip([names(0), names(1)]) {
                 fit(canvas, &a.font, &name, vec2(*c, dy), 12.0, Color::WHITE, 150.0);
             }

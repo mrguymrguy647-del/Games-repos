@@ -1,0 +1,130 @@
+Every option of every wheel, landed on nation 0 with all its other results the same (seeds [1, 2, 3], all maps):
+each option is compared with the wheel's other options on day one; a part counts if the option changes it.
+
+Continent (14 options)
+    Aurel                        diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    Coral Chain                  diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    Eastern Steppe               diplomacy, economy, war              e.g. border_provinces, buildings, capital, cpi, cpi_ring, export_rate, fleets
+    Ember Atolls                 diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    Green South                  diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    The Heartland                diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, export_rate
+    Jade Islands                 diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    Kesh Isles                   diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    Northern Wilds               diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, export_rate
+    Norvane                      diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    Sahrun                       diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    Storm Isles                  diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    Sunward Coast                diplomacy, economy, war              e.g. border_provinces, buildings, capital, cpi, cpi_ring, export_rate, fleets
+    Verdane                      diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, export_rate
+Country Size (6 options)
+    Tiny                         diplomacy, economy, war              e.g. border_provinces, buildings, capital, cpi, cpi_ring, debt, export_rate
+    Small                        diplomacy, economy, war              e.g. border_provinces, buildings, capital, cpi, cpi_ring, debt, export_rate
+    Medium                       diplomacy, economy, war              e.g. border_provinces, buildings, capital, cpi, cpi_ring, debt, export_rate
+    Large                        diplomacy, economy, war              e.g. border_provinces, buildings, capital, cpi, cpi_ring, debt, export_rate
+    Huge                         diplomacy, economy, war              e.g. border_provinces, buildings, capital, cpi, cpi_ring, debt, export_rate
+    Colossal                     diplomacy, economy, war              e.g. border_provinces, buildings, capital, cpi, cpi_ring, debt, export_rate
+Landlocked or Coastal (4 options)
+    Landlocked                   diplomacy, economy, war              e.g. ammo, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    Coastal                      diplomacy, economy, war              e.g. ammo, base_effects, border_provinces, buildings, capital, cpi, cpi_ring
+    Peninsula                    diplomacy, economy, war              e.g. ammo, base_effects, border_provinces, buildings, capital, cpi, cpi_ring
+    Island Nation                diplomacy, economy, war              e.g. ammo, base_effects, border_provinces, buildings, capital, cpi, cpi_ring
+Land Type (8 options)
+    Plains                       diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    Forest                       diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    Mountains                    diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    Desert                       diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    Jungle                       diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    Tundra                       diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    Steppe                       diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+    Marshland                    diplomacy, economy, war              e.g. base_effects, border_provinces, buildings, capital, cpi, cpi_ring, debt
+Population (7 options)
+    Under 1 million              economy, war                         e.g. (value), army, buildings, cpi, cpi_ring, divisions_raised, export_rate
+    1 - 5 million                economy, war                         e.g. (value), army, buildings, cpi, cpi_ring, debt, divisions_raised
+    5 - 20 million               economy, war                         e.g. (value), army, buildings, cpi, cpi_ring, debt, divisions_raised
+    20 - 60 million              economy, war                         e.g. (value), army, buildings, cpi, cpi_ring, debt, divisions_raised
+    60 - 150 million             economy, war                         e.g. (value), army, buildings, cpi, cpi_ring, debt, divisions_raised
+    150 - 400 million            economy, war                         e.g. (value), army, buildings, cpi, cpi_ring, debt, divisions_raised
+    400M - 1.5 billion           economy, war                         e.g. (value), army, buildings, cpi, cpi_ring, debt, divisions_raised
+Human Development (5 options)
+    Very Low                     economy, war                         e.g. ammo_faulty, buildings, cpi, cpi_ring, debt, export_rate, gdp
+    Low                          economy, war                         e.g. ammo_faulty, buildings, cpi, cpi_ring, debt, export_rate, gdp
+    Medium                       economy, war                         e.g. ammo, ammo_faulty, buildings, cpi, cpi_ring, export_rate, flows
+    High                         economy, war                         e.g. ammo, ammo_faulty, buildings, cpi, cpi_ring, debt, export_rate
+    Very High                    economy, war                         e.g. ammo, ammo_faulty, buildings, cpi, cpi_ring, debt, export_rate
+Ideology (9 options)
+    Military Rule                brain, diplomacy, economy, war       e.g. ammo, ammo_faulty, base_effects, bond_rate, buildings, corporate_tax, corruption
+    Democracy                    brain, diplomacy, economy, war       e.g. ammo, ammo_faulty, base_effects, bond_rate, buildings, corporate_tax, corruption
+    Monarchy                     brain, diplomacy, economy, war       e.g. ammo, ammo_faulty, base_effects, bond_rate, buildings, cpi, cpi_ring
+    Communism                    brain, diplomacy, economy, war       e.g. ammo, ammo_faulty, base_effects, buildings, corporate_tax, corruption, cpi
+    Theocracy                    brain, diplomacy, economy, war       e.g. ammo, ammo_faulty, base_effects, bond_rate, buildings, cpi, cpi_ring
+    Imperialism                  brain, diplomacy, economy, war       e.g. ammo, ammo_faulty, base_effects, bond_rate, buildings, cpi, cpi_ring
+    Authoritarianism             brain, diplomacy, economy, war       e.g. ammo, ammo_faulty, base_effects, bond_rate, buildings, corruption, cpi
+    Tribalism                    brain, diplomacy, economy, war       e.g. ammo, ammo_faulty, base_effects, bond_rate, buildings, corruption, cpi
+    Colony                       brain, diplomacy, economy, war       e.g. ammo, ammo_faulty, base_effects, buildings, corporate_tax, corruption, cpi
+History (7 options)
+    Former Empire                brain, economy                       e.g. base_effects, buildings, cpi, cpi_ring, debt, export_rate, gdp
+    Ex-Colony                    brain, economy                       e.g. base_effects, buildings, cpi, cpi_ring, debt, export_rate, gdp
+    Post-War                     brain, economy                       e.g. base_effects, buildings, cpi, cpi_ring, debt, export_rate, gdp
+    New Nation                   brain, economy                       e.g. base_effects, bond_rate, buildings, cpi, cpi_ring, debt, export_rate
+    Ancient Realm                brain, economy                       e.g. base_effects, buildings, cpi, cpi_ring, debt, export_rate, gdp
+    Born in Revolution           brain, economy                       e.g. base_effects, buildings, cpi, cpi_ring, debt, export_rate, gdp
+    Breakaway State              brain, economy                       e.g. base_effects, bond_rate, buildings, cpi, cpi_ring, debt, export_rate
+GDP (6 options)
+    $1 - 10B                     economy, war                         e.g. ammo, buildings, cpi, cpi_ring, debt, export_rate, flows
+    $10 - 50B                    economy, war                         e.g. ammo, buildings, cpi, cpi_ring, debt, export_rate, fleets
+    $50 - 200B                   economy, war                         e.g. ammo, buildings, cpi, cpi_ring, debt, export_rate, fleets
+    $200B - 1T                   economy, war                         e.g. ammo, buildings, cpi, cpi_ring, debt, export_rate, fleets
+    $1 - 3T                      economy, war                         e.g. buildings, debt, export_rate, fleets, gdp, gdp_local, gdp_start
+    Tiny but Rich!               economy, war                         e.g. ammo, buildings, cpi, cpi_ring, debt, export_rate, flows
+Main Resource (6 options)
+    Grain                        economy                              e.g. buildings, cpi, cpi_ring, debt, export_rate, gdp, gdp_local
+    Iron                         economy                              e.g. buildings, cpi, cpi_ring, debt, export_rate, gdp, gdp_local
+    Coal                         economy                              e.g. buildings, cpi, cpi_ring, debt, export_rate, gdp, gdp_local
+    Oil                          economy                              e.g. buildings, cpi, cpi_ring, debt, export_rate, gdp, gdp_local
+    Timber                       economy                              e.g. buildings, cpi, cpi_ring, debt, export_rate, gdp, gdp_local
+    Bauxite                      economy                              e.g. buildings, cpi, cpi_ring, debt, export_rate, gdp, gdp_local
+Army Strength (8 options)
+    No Army                      economy, war                         e.g. ammo, buildings, cpi, cpi_ring, debt, export_rate, flows
+    Token Force                  economy, war                         e.g. ammo, buildings, cpi, cpi_ring, export_rate, flows, gdp
+    Weak                         economy, war                         e.g. ammo, buildings, cpi, cpi_ring, debt, export_rate, flows
+    Modest                       economy, war                         e.g. ammo, buildings, cpi, cpi_ring, debt, export_rate, flows
+    Capable                      economy, war                         e.g. ammo, buildings, cpi, cpi_ring, debt, export_rate, fleets
+    Strong                       economy, war                         e.g. ammo, buildings, cpi, cpi_ring, export_rate, fleets, flows
+    Major Power                  economy, war                         e.g. ammo, buildings, cpi, cpi_ring, debt, export_rate, fleets
+    World's Strongest            economy, war                         e.g. buildings, cpi, cpi_ring, export_rate, fleets, gdp_local, morale
+Active Duty (6 options)
+    0%                           never on the wheel with these seeds (see the notes)
+    0.1 - 0.3%                   economy, war                         e.g. (value), army, buildings, cpi, cpi_ring, debt, divisions_raised
+    0.3 - 0.6%                   economy, war                         e.g. (value), army, buildings, cpi, cpi_ring, debt, divisions_raised
+    0.6 - 1.2%                   economy, war                         e.g. (value), army, buildings, cpi, cpi_ring, debt, divisions_raised
+    1.2 - 2.5%                   economy, war                         e.g. (value), army, buildings, cpi, cpi_ring, divisions_raised, duty
+    2.5 - 5%                     economy, war                         e.g. (value), army, buildings, cpi, cpi_ring, debt, divisions_raised
+Secret Service (5 options)
+    None                         brain, diplomacy, economy, war       e.g. (value), base_effects, corruption, mods
+    Amateurs                     brain, diplomacy, economy, war       e.g. (value), base_effects, corruption, mods
+    Competent                    brain, diplomacy, economy, war       e.g. (value), base_effects, corruption, mods
+    Feared                       brain, diplomacy, economy, war       e.g. (value), base_effects, corruption, mods, stability
+    Legendary                    brain, diplomacy, economy, war       e.g. (value), base_effects, corruption, mods
+Leader (5 options)
+    Warlord                      brain, diplomacy, economy, war       e.g. ammo, ammo_faulty, base_effects, buildings, cpi, cpi_ring, export_rate
+    Genius                       brain, diplomacy, economy, war       e.g. ammo, ammo_faulty, base_effects, buildings, cpi, cpi_ring, export_rate
+    Builder                      brain, diplomacy, economy, war       e.g. ammo, base_effects, buildings, cpi, cpi_ring, debt, export_rate
+    Diplomat                     brain, diplomacy, economy, war       e.g. ammo, base_effects, bond_rate, buildings, cpi, cpi_ring, debt
+    Coward                       brain, diplomacy, economy, war       e.g. ammo, base_effects, buildings, corruption, cpi, cpi_ring, debt
+Regional Impact (3 options)
+    Isolated                     brain, economy                       e.g. cpi, cpi_ring, gdp, gdp_local, gdp_start, goods_cpi, goods_ring
+    Minor Player                 brain, economy                       e.g. base_effects, bond_rate, buildings, cpi, cpi_ring, export_rate, gdp
+    Regional Power               brain, economy                       e.g. base_effects, bond_rate, buildings, cpi, cpi_ring, export_rate, gdp
+Blessing or Curse (10 options)
+    Fertile Lands                brain, economy, war                  e.g. ammo_faulty, base_effects, buildings, cpi, cpi_ring, debt, export_rate
+    Hidden Gold                  brain, economy, war                  e.g. ammo_faulty, base_effects, buildings, cpi, cpi_ring, debt, export_rate
+    Great Harbor                 brain, economy, war                  e.g. ammo_faulty, base_effects, buildings, cpi, cpi_ring, debt, export_rate
+    Golden Generation            brain, economy, war                  e.g. ammo_faulty, base_effects, buildings, cpi, cpi_ring, debt, export_rate
+    Loyal Army                   brain, economy, war                  e.g. ammo_faulty, base_effects, buildings, cpi, cpi_ring, debt, export_rate
+    Plague Years                 brain, economy, war                  e.g. ammo_faulty, base_effects, buildings, cpi, cpi_ring, debt, export_rate
+    Earthquakes                  brain, economy, war                  e.g. ammo_faulty, base_effects, buildings, cpi, cpi_ring, debt, export_rate
+    Corrupt Court                brain, economy, war                  e.g. ammo_faulty, base_effects, buildings, corruption, cpi, cpi_ring, debt
+    Rebel Province               brain, economy, war                  e.g. ammo_faulty, base_effects, buildings, cpi, cpi_ring, debt, export_rate
+    Endless Drought              brain, economy, war                  e.g. ammo_faulty, base_effects, buildings, cpi, cpi_ring, debt, export_rate
+
+0 options change nothing on day one.

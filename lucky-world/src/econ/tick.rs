@@ -36,6 +36,7 @@ impl Economy {
             for i in 0..self.nations.len() {
                 self.monthly(ed, i);
             }
+            self.underdog_month(ed);
         }
     }
 

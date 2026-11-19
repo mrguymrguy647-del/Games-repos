@@ -1,0 +1,45 @@
+# Game saved: a soft two-note confirmation chime, G5 then C6, about 0.4 s.
+version = 0
+name = "save"
+description = "Soft two-note rising chime confirming a save."
+tags = ["ui", "confirm", "save", "chime"]
+seed = 41
+channels = 2
+
+[master]
+normalize_lufs = -22
+trim_silence = true
+
+[[layers]]
+name = "first"
+source = "sine"
+volume = 0.6
+pan = -0.15
+envelope = { attack = 0.003, decay = 0.22 }
+pitch = { start = "G5" }
+
+[[layers]]
+name = "first shine"
+source = "triangle"
+volume = 0.12
+pan = -0.15
+envelope = { attack = 0.002, decay = 0.08 }
+pitch = { start = "G6" }
+
+[[layers]]
+name = "second"
+source = "sine"
+offset = 0.09
+volume = 0.7
+pan = 0.15
+envelope = { attack = 0.003, decay = 0.3 }
+pitch = { start = "C6" }
+
+[[layers]]
+name = "second shine"
+source = "triangle"
+offset = 0.09
+volume = 0.12
+pan = 0.15
+envelope = { attack = 0.002, decay = 0.1 }
+pitch = { start = "C7" }

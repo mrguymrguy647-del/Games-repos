@@ -7,7 +7,7 @@ use super::{AiData, Brain};
 use crate::econ::{EconData, Economy};
 
 /// What happened between two nations.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MemoryKind {
     EmbargoedUs,
     LiftedEmbargo,
@@ -35,14 +35,14 @@ impl MemoryKind {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq)]
 pub struct MemoryEvent {
     pub day: u32,
     pub kind: MemoryKind,
 }
 
 /// One nation's standing with another.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Default, PartialEq)]
 pub struct Relation {
     /// From -1 (hates) to +1 (trusts).
     pub regard: f64,
@@ -51,7 +51,7 @@ pub struct Relation {
 }
 
 /// What the brain saw last time, to notice changes.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Watch {
     month: u32,
     embargoed_by: Vec<bool>,

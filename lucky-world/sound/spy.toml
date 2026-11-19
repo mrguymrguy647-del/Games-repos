@@ -1,0 +1,46 @@
+# Spy mission sent: a soft, secretive whoosh sliding left to right, with
+# two tiny ticks like a watch, about 0.4 s. Quiet on purpose.
+version = 0
+name = "spy"
+description = "Soft secretive tick and whoosh for sending a spy mission."
+tags = ["ui", "spy", "whoosh", "tick", "soft"]
+seed = 67
+channels = 2
+
+[master]
+normalize_lufs = -24
+trim_silence = true
+
+[[layers]]
+name = "whoosh left"
+source = "noise"
+volume = 0.35
+pan = -0.5
+envelope = { attack = 0.12, decay = 0.12 }
+filter = { kind = "bandpass", cutoff = 700, cutoff_end = 2600, curve = "ease_in", resonance = 1.6 }
+
+[[layers]]
+name = "whoosh right"
+source = "noise"
+offset = 0.1
+volume = 0.35
+pan = 0.5
+envelope = { attack = 0.1, decay = 0.17 }
+filter = { kind = "bandpass", cutoff = 1500, cutoff_end = 3600, curve = "ease_in", resonance = 1.6 }
+
+[[layers]]
+name = "tick"
+source = "triangle"
+volume = 0.25
+pan = -0.3
+envelope = { attack = 0.0005, decay = 0.015 }
+pitch = { start = 2600 }
+
+[[layers]]
+name = "tock"
+source = "triangle"
+offset = 0.29
+volume = 0.22
+pan = 0.4
+envelope = { attack = 0.0005, decay = 0.02 }
+pitch = { start = 2100 }

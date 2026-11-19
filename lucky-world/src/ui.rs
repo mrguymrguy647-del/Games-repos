@@ -81,6 +81,31 @@ pub struct Assets {
     pub gunfire: Wav,
     pub explosion: Wav,
     pub war_drums: Wav,
+    // Phase 7: menus, results, tooltips.
+    pub menu_panel: Sprite,
+    pub banner_victory: Sprite,
+    pub banner_defeat: Sprite,
+    pub icon_play: Sprite,
+    pub icon_save: Sprite,
+    pub icon_load: Sprite,
+    pub icon_gear: Sprite,
+    pub icon_help: Sprite,
+    pub icon_quit: Sprite,
+    pub icon_book: Sprite,
+    pub icon_bell: Sprite,
+    pub icon_trophy: Sprite,
+    pub menu_theme: Wav,
+    pub peace_theme: Wav,
+    pub victory: Wav,
+    pub defeat: Wav,
+    pub save_sound: Wav,
+    pub denied: Wav,
+    pub treaty: Wav,
+    pub declare: Wav,
+    pub peace: Wav,
+    pub build: Wav,
+    pub spy: Wav,
+    pub menu_move: Wav,
 }
 
 impl Assets {
@@ -152,6 +177,30 @@ impl Assets {
             gunfire: sound("gunfire")?,
             explosion: sound("explosion")?,
             war_drums: sound("war_drums")?,
+            menu_panel: art("menu_panel")?,
+            banner_victory: art("banner_victory")?,
+            banner_defeat: art("banner_defeat")?,
+            icon_play: art("icon_play")?,
+            icon_save: art("icon_save")?,
+            icon_load: art("icon_load")?,
+            icon_gear: art("icon_gear")?,
+            icon_help: art("icon_help")?,
+            icon_quit: art("icon_quit")?,
+            icon_book: art("icon_book")?,
+            icon_bell: art("icon_bell")?,
+            icon_trophy: art("icon_trophy")?,
+            menu_theme: sound("menu_theme")?,
+            peace_theme: sound("peace_theme")?,
+            victory: sound("victory")?,
+            defeat: sound("defeat")?,
+            save_sound: sound("save")?,
+            denied: sound("denied")?,
+            treaty: sound("treaty")?,
+            declare: sound("declare")?,
+            peace: sound("peace")?,
+            build: sound("build")?,
+            spy: sound("spy")?,
+            menu_move: sound("menu_move")?,
         })
     }
 }
@@ -385,4 +434,23 @@ pub fn ease_out_back(u: f32) -> f32 {
 pub fn ease_out(u: f32) -> f32 {
     let u = u.clamp(0.0, 1.0);
     1.0 - (1.0 - u).powi(3)
+}
+
+/// The effects volume (0-1) from the settings, as f32 bits.
+static EFFECTS: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0x3F80_0000);
+
+pub fn set_effects_volume(v: f32) {
+    EFFECTS.store(v.clamp(0.0, 1.0).to_bits(), std::sync::atomic::Ordering::Relaxed);
+}
+
+pub fn effects_volume() -> f32 {
+    f32::from_bits(EFFECTS.load(std::sync::atomic::Ordering::Relaxed))
+}
+
+/// Plays a sound effect at the settings' effects volume.
+pub fn sfx(ctx: &mut Context, wav: &Wav, volume: f32, pan: f32) {
+    let v = volume * effects_volume();
+    if v > 0.001 {
+        ctx.play_with(wav, v, pan);
+    }
 }

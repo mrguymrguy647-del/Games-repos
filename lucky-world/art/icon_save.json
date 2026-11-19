@@ -1,0 +1,104 @@
+{
+  "format": "duckquill-script",
+  "version": 1,
+  "title": "Save: a floppy disk",
+  "seed": 1,
+  "palette": {
+    "ink": "#1A1030",
+    "gold": "#F5C542",
+    "white": "#FFFFFF",
+    "accent": "#7FA8FF",
+    "lavender": "#B7A9E0",
+    "silver": "#C9C4D8",
+    "blue_dark": "#3E5AA8"
+  },
+  "commands": [
+    {
+      "cmd": "canvas",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "cmd": "layer",
+      "name": "Art"
+    },
+    {
+      "cmd": "ellipse",
+      "center": [
+        12,
+        12
+      ],
+      "radius": 11,
+      "fill": "ink",
+      "outline": "gold",
+      "outline_size": 1.5
+    },
+    {
+      "cmd": "polygon",
+      "points": [
+        [
+          6.5,
+          6.5
+        ],
+        [
+          15.8,
+          6.5
+        ],
+        [
+          17.5,
+          8.2
+        ],
+        [
+          17.5,
+          17.5
+        ],
+        [
+          6.5,
+          17.5
+        ]
+      ],
+      "fill": "accent",
+      "outline": "blue_dark",
+      "outline_size": 0.8
+    },
+    {
+      "cmd": "rect",
+      "x": 9,
+      "y": 6.5,
+      "width": 5.5,
+      "height": 3.8,
+      "fill": "silver"
+    },
+    {
+      "cmd": "rect",
+      "x": 12.4,
+      "y": 7.1,
+      "width": 1.3,
+      "height": 2.6,
+      "fill": "blue_dark"
+    },
+    {
+      "cmd": "rect",
+      "x": 8.5,
+      "y": 12.3,
+      "width": 7,
+      "height": 5.2,
+      "radius": 0.6,
+      "fill": "white"
+    },
+    {
+      "cmd": "line",
+      "from": [
+        9.7,
+        14.3
+      ],
+      "to": [
+        14.3,
+        14.3
+      ],
+      "color": "lavender",
+      "size": 0.8,
+      "taper": 0
+    }
+  ]
+}

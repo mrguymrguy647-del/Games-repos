@@ -1,0 +1,72 @@
+# Tooltips: what each number on the screens is, and what changes it.
+# The game looks a tip up by its key; a key that's missing shows as itself.
+
+[tips]
+# The top bar.
+gdp = "GDP: everything your nation makes in a year, in world dollars (W$). Grows with workers, skills, technology, factories and trade; falls with shortages, war damage, strikes and a falling currency."
+inflation = "Inflation: how fast your prices rise, a year. Printing money, shortages and a falling currency push it up; the central bank's interest rate (Budget page) pulls it down."
+jobless = "Jobless: the share of workers without work. Falls when factories hire and the state spends (public works); rises in slumps, wars and closures. Over 15% hurts stability."
+treasury = "Treasury: the state's money, in W$. Taxes, tariffs, tribute and aid fill it; the army, welfare, building and interest empty it. Below zero is debt."
+date = "The date: one tick of the clock is one day; a year is 360 days. Space pauses, 1-5 set the speed."
+speed = "Clock speed: days a second. Space pauses; 1 to 5 choose 1, 3, 7, 15 or 30 days a second."
+provinces = "Provinces: your land on this map. Wars and peace deals move them; conquest victory needs half the map."
+score = "Score: your share of the world's GDP (450 points), land (300), people (150) and technology (100), plus stability (up to 100). A vassal's score counts half. The best score when the game's length runs out wins."
+rank = "Rank: your place among all nations by score."
+victory = "How you're doing towards each victory. Conquest: half the map. Economic: 2.5 times the next economy for 10 years. Diplomatic: an alliance you lead holding 60% of the map for 5 years."
+
+# The budget.
+income_tax = "Income tax: a share of wages. More money now, but people have less to spend (slower growth, lower happiness)."
+corporate_tax = "Corporate tax: a share of profits. Raises money from industry; too high and fewer factories are built."
+sales_tax = "Sales tax: a share of what households buy. Steady money; raises prices a little."
+tariffs = "Tariffs: tax on imports. Protects home industry, raises money, but makes imports dearer and partners less friendly."
+tribute_in = "Tribute in: what your vassals and losers of wars (reparations) pay you."
+aid_in = "Development aid: the world fund's help for a very weak start (the underdog rule), for its first 12 years, fading in the last third."
+army = "Army: soldiers' pay and upkeep. Set by the size of your army (active duty) and the arms budget."
+welfare = "Welfare: help for the poor and jobless. Raises happiness and stability; costs money."
+government = "Government: running the state. Grows with the population."
+interest = "Interest: paid on the state's debt. A worse credit rating means a higher rate."
+infrastructure = "Infrastructure: roads, rail and ports. Lets goods move between provinces (and armies be supplied)."
+construction = "Building: new factories, mines and farms being built."
+procurement = "Weapons: buying ammunition, rifles, tanks, jets and ships for the stockpile."
+research = "Research: speeds up technology, which makes every worker produce more."
+corruption = "Lost to corruption: money that never arrives. Worse with low HDI and some leaders."
+tribute_out = "Tribute out: what you pay an overlord or as reparations."
+revenue = "Revenue: all the state's income this month, as a year."
+spending = "Spending: all the state's outgoings this month, as a year. More than revenue is a deficit, added to the debt."
+debt = "Debt: what the state owes, as a share of GDP. Past the credit rating's ceiling, lenders stop and money is printed."
+rating = "Credit rating: how much lenders trust you (AAA best). Falls with debt and defaults; sets the interest you pay."
+stability = "Stability: whether people accept the government (0-100). Falls with shortages, joblessness, war weariness and lost wars; below 20 for long, a civil war can start."
+happiness = "Happiness: how people feel about food, goods, luxuries, power and work."
+population = "Population: your people. Grows slowly; wars, famine and lost provinces shrink it."
+hdi = "Human development: health, schooling and income (0-1). More skilled workers and better technology."
+wage = "The wage, in W$ a year: what a worker earns. Follows what factories can pay."
+exchange = "Exchange rate: your currency in W$. Falls with printed money and deficits (imports dearer, exports cheaper)."
+rate = "Interest rate: the central bank's rate. Higher cools inflation and the economy; lower speeds both."
+price = "Price: what a unit costs at home, in W$. Set by supply and demand; world prices pull it through trade."
+stock = "In store: goods held at home. Shortages slow every building that needs them."
+stockpile = "Stockpile: weapons put away for war, from your factories (with their defect rate) and arms deals."
+
+# War.
+war_score = "War score: who is winning (-100 to 100, your view). Battles, provinces held and losses move it; peace deals follow it."
+soldiers = "Soldiers: men and women in your divisions now."
+tanks = "Tanks: in your armoured divisions. Without fuel they're abandoned."
+jets = "Jets: fight for the sky; air superiority helps every battle below it."
+morale = "Morale: the will to fight. Falls with losses, shortages, bad generals and defeats; past the breaking point divisions retreat or surrender."
+equipped = "Equipped: the share of rifles, ammunition, food (and for tanks, fuel) a division has. Supply raises it."
+exhaustion = "War exhaustion: how tired the people are of war. Lowers stability; democracies feel it most."
+killed = "Killed in this war (both sides as your service counts them)."
+level = "The escalation ladder: 1 border skirmish, 2 military operation, 3 declared war, 4 total war."
+
+# Diplomacy and spies.
+relation = "Relations: how a nation sees you (-100 to 100), from the reasons listed: trade, borders, ideology, treaties, reputation and old wars."
+reputation = "Reputation: how far the world trusts your word (0-100). Breaking treaties lowers it with everyone; keeping them slowly raises it."
+loyalty = "Loyalty: a vassal's (0-100). Protection raises it, neglect ruins it; under 25 an independence movement grows."
+agents = "Agents: trained spies. Each costs money and can be caught."
+chance = "Chance: your own service's estimate of success; the real odds depend on skill against their counter-intelligence, plus luck."
+caught = "Caught: the chance an agent is caught (a diplomatic incident)."
+counter = "Counter-intelligence: the share of agents hunting foreign spies at home."
+
+# A province.
+people = "People living in this province."
+roads = "Roads, rail and port: how much this province can move. Too little and goods get stuck (R builds a road on the Chains page)."
+deposits = "Deposits: what's under the ground (1 is a good mine). Mines here dig faster."

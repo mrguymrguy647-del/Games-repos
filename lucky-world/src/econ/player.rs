@@ -11,7 +11,7 @@ use super::{Construction, EconData, Economy, TradePolicy};
 const EPS: f64 = 1e-9;
 
 /// The levers on the budget screen.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Lever {
     IncomeTax,
     CorporateTax,

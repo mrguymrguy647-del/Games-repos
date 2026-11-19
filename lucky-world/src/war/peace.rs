@@ -6,7 +6,7 @@ use super::{Faction, Goal, Wars};
 use crate::econ::{EconData, Economy};
 
 /// What a peace deal says.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct PeaceTerms {
     /// The side that gets its way, or none (white peace).
     pub winner: Option<usize>,
@@ -56,6 +56,7 @@ pub trait PeaceTable {
 }
 
 /// Phase 5's answer: accept when the terms cost less than fighting on.
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct ByExhaustion;
 
 impl PeaceTable for ByExhaustion {

@@ -1,0 +1,54 @@
+== The Grand Continent (seed 1), a 100-year game: the player on autopilot, 24 brains ==
+ year   ms/year    ms/day  worst day  x speed    memory     save divisions  reports treaties
+    1      2741      7.61      20.0ms     4.4x      19MB    3.7MB      3061      228       87
+   10       510      1.42       2.6ms    23.5x      22MB    5.8MB      3535      263      163
+   20       772      2.15       5.1ms    15.5x      28MB    7.8MB      3748      655      247
+   30       605      1.68       4.0ms    19.8x      28MB    9.3MB      3847      684      289
+   40       607      1.69       5.9ms    19.8x      33MB   10.6MB      3871      715      333
+   50       648      1.80       3.7ms    18.5x      33MB   12.6MB      4263      756      390
+   60       680      1.89       3.8ms    17.7x      34MB   13.9MB      4697      770      455
+   70       728      2.02       9.5ms    16.5x      35MB   15.7MB      5369      841      558
+   80       718      1.99       7.7ms    16.7x      42MB   17.4MB      5388      922      667
+   90       557      1.55       3.3ms    21.5x      43MB   18.8MB      5388      922      764
+  100       726      2.02       5.3ms    16.5x      43MB   20.3MB      5388      941      850
+The save after 100 years: 12.6 MB on disk (20.3 MB before compression); made in 147 ms (12 ms on the game's thread for the yearly autosave, the rest on another), read in 25 ms (plus unpacking).
+Five more years: 817 ms a year with all its history, 826 ms with its old reports and news cleared (-1%).
+At the end: 1 wars on, 5417 divisions.
+100 years in 91 s. Years 1-10: 863 ms a year; the last 10: 1162 ms (+35%). Worst single day 44.9 ms (top speed allows 33.3 ms a day on average).
+
+== The Thousand Isles (seed 1), a 100-year game: the player on autopilot, 24 brains ==
+ year   ms/year    ms/day  worst day  x speed    memory     save divisions  reports treaties
+    1       424      1.18       2.6ms    28.3x     109MB    1.4MB       774        4       80
+   10       766      2.13       3.5ms    15.7x     109MB    3.7MB      1151      120      263
+   20       811      2.25       3.1ms    14.8x     109MB    5.4MB      1217      457      444
+   30       772      2.14       4.5ms    15.5x     112MB    7.3MB      1262      872      639
+   40      1040      2.89       4.5ms    11.5x     112MB    8.9MB      1275     1005      910
+   50       864      2.40       4.1ms    13.9x     115MB   10.2MB      1284     1011     1152
+   60       797      2.21       7.7ms    15.1x     115MB   11.8MB      1320     1062     1461
+   70       900      2.50       4.7ms    13.3x     115MB   13.3MB      1727     1079     1722
+   80      1601      4.45       8.9ms     7.5x     115MB   15.4MB      1985     1128     2043
+   90       765      2.13       3.4ms    15.7x     115MB   16.9MB      1985     1171     2333
+  100       668      1.85       5.5ms    18.0x     115MB   18.3MB      1984     1182     2609
+The save after 100 years: 12.6 MB on disk (18.3 MB before compression); made in 106 ms (11 ms on the game's thread for the yearly autosave, the rest on another), read in 11 ms (plus unpacking).
+Five more years: 996 ms a year with all its history, 923 ms with its old reports and news cleared (+8%).
+At the end: 1 wars on, 1739 divisions.
+100 years in 94 s. Years 1-10: 643 ms a year; the last 10: 813 ms (+26%). Worst single day 15.1 ms (top speed allows 33.3 ms a day on average).
+
+== Five Shores (seed 1), a 100-year game: the player on autopilot, 24 brains ==
+ year   ms/year    ms/day  worst day  x speed    memory     save divisions  reports treaties
+    1       308      0.86       1.4ms    38.9x     116MB    1.5MB       994        0       49
+   10       508      1.41       2.7ms    23.6x     116MB    3.2MB      1197       22       96
+   20       599      1.66       3.3ms    20.0x     116MB    4.8MB      1278       73      161
+   30       485      1.35       3.3ms    24.7x     116MB    6.4MB      1422      189      229
+   40       455      1.26       2.2ms    26.4x     116MB    8.6MB      2128      277      330
+   50       655      1.82       3.2ms    18.3x     116MB    9.9MB      2186      323      450
+   60       916      2.55       5.0ms    13.1x     116MB   12.4MB      2369      606      569
+   70       740      2.06       4.3ms    16.2x     116MB   13.9MB      2472      614      708
+   80       916      2.55       4.9ms    13.1x     116MB   15.9MB      2327      742      878
+   90      1114      3.10      10.1ms    10.8x     116MB   19.8MB      2449     1247     1039
+  100       752      2.09       3.8ms    16.0x     116MB   21.9MB      2478     1393     1219
+The save after 100 years: 13.5 MB on disk (21.9 MB before compression); made in 111 ms (12 ms on the game's thread for the yearly autosave, the rest on another), read in 19 ms (plus unpacking).
+Five more years: 782 ms a year with all its history, 839 ms with its old reports and news cleared (-7%).
+At the end: 0 wars on, 2548 divisions.
+100 years in 85 s. Years 1-10: 515 ms a year; the last 10: 1001 ms (+95%). Worst single day 68.1 ms (top speed allows 33.3 ms a day on average).
+

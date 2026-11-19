@@ -24,7 +24,7 @@ use crate::war::Wars;
 pub use data::DiploData;
 
 /// A kind of treaty (docs/DIPLOMACY.md, section 3).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Kind {
     Trade,
     NonAggression,
@@ -82,7 +82,7 @@ impl Kind {
 }
 
 /// Where a treaty stands.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub enum State {
     Active,
     /// It ran its course (or a loan was repaid).
@@ -93,7 +93,7 @@ pub enum State {
 }
 
 /// A treaty and its terms.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct Treaty {
     pub id: usize,
     pub kind: Kind,
@@ -166,7 +166,7 @@ pub fn money(w: f64) -> String {
 }
 
 /// Something a nation remembers about another (docs/DIPLOMACY.md, section 1).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EventKind {
     InvadedUs,
     FoughtUs,
@@ -233,14 +233,14 @@ impl EventKind {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq)]
 pub struct Event {
     pub day: u32,
     pub kind: EventKind,
 }
 
 /// A deal offered (to the player, in the inbox; or the terms of any proposal).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct Proposal {
     pub from: usize,
     pub to: usize,
@@ -254,7 +254,7 @@ pub struct Proposal {
 }
 
 /// Something waiting for the player's answer.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub enum Inbox {
     Proposal(Proposal),
     /// An ally calls the player to war: (the ally, the war, the side, the treaty kind, the deadline).
@@ -262,7 +262,7 @@ pub enum Inbox {
 }
 
 /// An answer to a proposal, with its reason (the log).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct Answer {
     pub day: u32,
     pub from: usize,
@@ -273,7 +273,7 @@ pub struct Answer {
 }
 
 /// News from diplomacy (for the toasts and the report).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub struct News {
     pub day: u32,
     pub nations: Vec<usize>,
@@ -281,7 +281,7 @@ pub struct News {
 }
 
 /// The whole diplomatic world.
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Diplomacy {
     pub data: DiploData,
     pub n: usize,
@@ -295,7 +295,7 @@ pub struct Diplomacy {
     /// The active treaties' ids (kept in step by `reindex`).
     pub active: Vec<usize>,
     /// The last refusal of each (from, to, kind): no asking again for a year.
-    pub refusals: std::collections::HashMap<(usize, usize, Kind), u32>,
+    pub refusals: std::collections::BTreeMap<(usize, usize, Kind), u32>,
     /// Every broken treaty: (who broke it, the day).
     pub broken: Vec<(usize, u32)>,
     /// Each nation's soldiers and tanks, counted once a day (the deals and
@@ -318,6 +318,7 @@ pub struct Diplomacy {
     pub player: Option<usize>,
     /// NPCs decide (false in tests that drive it by hand).
     pub ai: bool,
+    #[serde(with = "crate::save_codec::rng")]
     pub rng: Rng,
     pub day: u32,
     seen_wars: usize,
@@ -343,7 +344,7 @@ impl Diplomacy {
             intel_error,
             treaties: Vec::new(),
             active: Vec::new(),
-            refusals: std::collections::HashMap::new(),
+            refusals: std::collections::BTreeMap::new(),
             broken: Vec::new(),
             armies: (0..n).map(|i| w.strength(i)).collect(),
             memory: vec![vec![Vec::new(); n]; n],
@@ -423,9 +424,8 @@ impl Diplomacy {
     /// guarantors, and its overlord.
     pub fn defenders(&self, e: &Economy, j: usize) -> Vec<usize> {
         let mut out: Vec<usize> = self
-            .treaties
-            .iter()
-            .filter(|t| t.active() && t.involves(j))
+            .live()
+            .filter(|t| t.involves(j))
             .filter_map(|t| match t.kind {
                 Kind::Alliance | Kind::Defensive => Some(t.other(j)),
                 Kind::Guarantee if t.b == j => Some(t.a),

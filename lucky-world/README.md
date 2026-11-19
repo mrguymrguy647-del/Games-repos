@@ -20,10 +20,24 @@ from border skirmish to total war, and peace deals. And **diplomacy and
 spies** (phase 6): relations you can read the reasons for, treaties with
 terms that can be broken, a reputation everyone sees, allies called to war,
 negotiated peace, loyal or restless vassals, and secret services whose
-missions succeed or fail by real odds. It is built with Duck Forge (engine), Duck Quill
+missions succeed or fail by real odds. And **phase 7 makes it a finished
+game**: a main menu, saving and loading (everything, down to every random
+number), four ways to win and three to lose with a victory or defeat
+screen that tells your nation's story, settings, a tutorial, tooltips on
+every number, a help screen, difficulty levels, and music that follows
+war and peace. It is built with Duck Forge (engine), Duck Quill
 (art), Duck Echo (sound) and Duck Mold (3D models).
 
 <p>
+<img src="docs/menu.png" width="49%" alt="The main menu: New Game, Tutorial, Load, Settings, Help, Quit, over the slowly turning Continent wheel">
+<img src="docs/victory.png" width="49%" alt="An economic victory: the gold banner, the nation's sixteen wheels, its wars, its score year by year, and its best and worst moments">
+<img src="docs/tutorial.png" width="49%" alt="The tutorial's ninth step over the economy window: raise income tax">
+<img src="docs/new_game.png" width="49%" alt="New Game: the three worlds, a random world, the difficulty (with its tooltip) and the game's length">
+<img src="docs/settings.png" width="32%" alt="Settings: quality, window size, fullscreen, music and effects volumes, UI scale, autosave, notifications, tooltips, keys">
+<img src="docs/pause.png" width="32%" alt="The pause menu on the map">
+<img src="docs/tooltip.png" width="32%" alt="A tooltip on GDP in the top bar">
+<img src="docs/defeat.png" width="49%" alt="Time's up: a defeat on score after 25 years">
+<img src="docs/help.png" width="49%" alt="The help screen">
 <img src="docs/wheel.png" width="49%" alt="A wheel spinning on its stage, with the odds panel">
 <img src="docs/map_closeup.png" width="49%" alt="The 3D map up close: provinces, borders, rivers, capitals with flags, a province panel and the minimap">
 <img src="docs/map_grand.png" width="32%" alt="The Grand Continent with 25 nations">
@@ -67,6 +81,38 @@ listed in `lucky-world-notes.txt`. If it still can't start, it writes why in
 zip lists the keys. To rebuild both zips: `tools/package.sh` (Windows is
 cross-built from Linux with mingw-w64). There is no macOS build yet.
 
+## How to play
+
+Start the game and choose **Tutorial** on the main menu: a short guided
+game (about ten minutes) that waits for you to do each thing it teaches.
+Or **New Game**: choose one of the three worlds (or a random one), the
+difficulty and how long the game lasts, then spin.
+
+1. **Spin your nation.** Sixteen wheels decide where you live, how many
+   you are, how rich and armed, who leads you and what luck follows you.
+   Each slice's size is its chance. A very weak start gets the
+   *underdog's luck* (aid, and a few years in which no brain attacks it).
+2. **Rule it.** On the 3D world map the clock runs a day at a time while
+   24 nations run by NPC brains do the same. Run your economy (O), your
+   wars and their supply (K), your diplomacy (P) and your spies (I), or
+   leave any of it on autopilot. Hover any number to read what it is and
+   what changes it; F2 is the help.
+3. **Win** by conquest (own half the map), economic power (an economy 2.5
+   times the next biggest for 10 years), diplomacy (lead an alliance that
+   owns 60% of the map for 5 years) or the best score when the game's
+   length runs out.
+   **Lose** if you're conquered, overthrown in a civil war or made a vassal;
+   a vassal can play on and fight for its independence.
+4. **Save** any time: Esc opens the pause menu (six save slots), F6
+   quick-saves, F9 quick-loads, and the game saves itself every game year
+   and when you leave. Continue on the main menu loads your newest save.
+
+**Difficulty** (easy, normal, hard, brutal) only changes how well the
+brains plan and react: how noisy their plans are, how far ahead they look,
+how many moves a week they make, how quickly they rethink, how soon they
+gang up on a rising power (you) and how well they judge a war's odds. It
+never gives them more money, soldiers or sight than you have.
+
 ## Run it from the source
 
 You need [Rust](https://rustup.rs) 1.87 or newer. From this folder:
@@ -81,25 +127,23 @@ folder (started from anywhere else, it looks beside its executable).
 
 ### If it runs slowly
 
-The world map is drawn by your graphics card (it uses no CPU-only
-effects). The wheel screen's smooth edges are worked out on the CPU. `lucky_world.tune.json`
-sets the picture quality. A running game re-reads it when you save it:
+The world map is always drawn by your graphics card (it uses no CPU-only
+effects). The wheel screens' smooth edges are worked out on the CPU:
+**Settings → Graphics quality** Low or Medium turns that smoothing off
+(everything on the graphics card), High smooths the wheels 2× (the
+default), Ultra 3× with a glow. `lucky_world.tune.json` can still override
+the quality for testing (a running game re-reads it):
 
 ```json
-{"supersample": 2, "bloom": 0}
+{"supersample": 1, "bloom": 0}
 ```
-
-- `supersample` 1 turns smoothing off and lets the graphics card draw the
-  3D: fastest.
-- `supersample` 2 is the default; 3 or 4 is smoother still.
-- `bloom` 1 adds a real glow halo round the bulbs and the winning slice:
-  pretty, but costly.
 
 ### Controls
 
 | Screen | Keys | Mouse |
 |---|---|---|
-| Title | Left / Right or 1-3 choose a world, **Space** spin, **S** Skip Spin, **W** watch a world of NPC brains | click a world, click the buttons |
+| Main menu | Up / Down choose, **Enter** go, **N** new game, Esc quit | click a row |
+| New Game (title) | Left / Right or 1-3 choose a world, **4** or **R** a random world, **D** difficulty, **L** game length, **Space** spin, **S** Skip Spin, **W** watch a world of NPC brains, Esc the menu | click a world, the three choices, the buttons |
 | A wheel | **Space** spin (while spinning: faster), Space again for the next wheel, **S** Skip Spin | buttons |
 | Round card | **Space** next round, **S** Skip Spin | buttons |
 | Country card | **Space** meet your rivals | button |
@@ -112,7 +156,13 @@ sets the picture quality. A running game re-reads it when you save it:
 | Diplomacy (map) | **P** open / close, **Tab** next page, Up / Down choose; Nations: **Enter** propose to the chosen nation; Treaties: **B** break ours; Propose: Up / Down the nation, Left / Right the treaty, **Enter** propose; Inbox: **Y** / **N**; Talks: Left / Right our demand, **Enter** send it | click the pages |
 | Spies (map) | **I** open / close, **Tab** next page; Agents: **T** train one, Left / Right the share on counter-intelligence; Missions: Left / Right the target, Up / Down the mission, **Enter** send | click the pages |
 | War room | **Tab** next page, Up / Down choose; Wars: **E** escalate, **M** match, **B** back down, **P** offer peace, **Y** / **N** answer their offer, **D** declare on the selected nation, **L** the level; Army: **A** attack, **H** hold, **G** dig in, **R** retreat, **F** reinforce the selected province, **U** back to the general; Supply: Left / Right a front's priority, **Y** / **N** a request, **T** Auto; Reports: **Enter** the full report | click the pages |
-| Anywhere | **F5** start over (for trying it out), **Esc** quit, F12 screenshot, F10 record | |
+| The map, anywhere | **Esc** the pause menu (resume, save, load, settings, help, main menu, quit), **F6** quick save, **F9** quick load, **F2** help, **L** every notification | hover any number for its tooltip |
+| Settings | Up / Down choose, Left / Right change, Enter on Keys: the key list (Enter, then press the new key; Backspace resets them all), Esc back (saved) | click left or right of a row's middle to lower or raise it |
+| Load | Up / Down choose, **Enter** load, **X** delete, Esc back | click a save |
+| Victory or defeat | **Enter** play on, **Esc** or **M** the main menu | the buttons |
+| Anywhere | **F5** start over (for trying it out), F12 screenshot, F10 record | |
+
+Every map key above can be changed in **Settings → Keys**.
 
 ### What happens
 
@@ -449,6 +499,117 @@ full game with diplomacy and spies against the same worlds without them:
 cargo run --release --no-default-features -- --diplomacy-report 50 1 2 3 4 5 6 --compare
 ```
 
+### A finished game (phase 7)
+
+The full design is [docs/PHASE7.md](docs/PHASE7.md).
+
+- **Saving**: everything is saved (the wheels, the map, the economy, every
+  brain and its memory, the wars, treaties, spies, and every random
+  number generator's exact state), compressed, with a version number up
+  front: a save from another version is listed with the reason it can't be
+  loaded, never a crash. A test runs each map to day 400, saves, loads,
+  and runs 500 more days: byte for byte the same world as one that never
+  saved.
+- **Winning and losing**: `data/victory.toml` (the shares, the lead, the
+  years, the score's weights, the game lengths and the underdog rule).
+  The result screen tells the story: your wheels, your wars, your score
+  year by year, your best and worst moments.
+- **Learning**: a 15-step tutorial, tooltips (`data/tips.toml`) on the top
+  bar, the budget, the market, the stockpile, the war room, diplomacy,
+  the spies and the province panel, a help screen (`data/help.toml`), and
+  notifications that queue instead of piling up (the same news twice in
+  30 seconds is dropped; Settings choose how much pops up).
+- **Settings**: graphics quality, window size, fullscreen, music and
+  effects volumes, UI scale, autosave, notifications, tooltips, and every
+  map key.
+- **Sound**: a menu theme, a peace theme and the war drums that crossfade
+  with war and peace, and a sound for saving, refusals, treaties, war,
+  peace, building, spies and menu moves.
+- **Difficulty**: easy, normal, hard, brutal (`[difficulty.*]` in
+  `data/ai/brain.toml`): planning noise, how far ahead, moves a week, how
+  quickly the brains rethink, how soon they gang up on a rising power, how
+  well they judge a war's odds, and how often they look for one. Normal is
+  the brains of phases 4-6 unchanged.
+
+**The player test** (`src/player_test.rs`, with the bot in `src/bot.rs`)
+plays a whole game headless by its keys, as a person would: the menu and
+the settings, a new game on hard, spinning, a tax raised, a building
+ordered, trade policy, a trade agreement and an alliance proposed, war
+declared on a neighbour and peace made, the help, the notification log, a
+save and a load, then on to the game's end (a win or a loss), playing on,
+the main menu and Continue, checking each step and that nothing failed. A
+second test walks the whole tutorial. The same bot takes these screenshots
+(`--tour`).
+
+**Balance** (`--balance 30 20`: 90 worlds, every one of their 2,250
+nations a start, run by brains for 20 years, with and without the underdog
+rule; the full output is [docs/phase7_balance.txt](docs/phase7_balance.txt)):
+
+| Start (share of the median nation's GDP and soldiers) | Starts | Still free after 20 years | Rank then → now | Won within 20 years |
+|---|---|---|---|---|
+| terrible (under 0.25) | 697 | 90% (89% without the underdog rule) | 15.0 → 14.8 | 0% |
+| poor (0.25-0.5) | 180 | 91% | 18.2 → 17.8 | 0% |
+| below the median | 203 | 95% | 17.3 → 17.3 | 0% |
+| above the median | 313 | 94% | 15.9 → 16.2 | 0% |
+| strong (2-5×) | 247 | 96% | 13.1 → 13.2 | 0% |
+| giant (5× and more) | 610 | 100% | 6.2 → 6.4 | 3% |
+
+- **A terrible spin is playable**: none of the 697 was wiped out in 20
+  years, 90% were still free (not vassals), and 46% climbed the ranking
+  (44% without the underdog rule: its help is real but modest).
+- **A perfect spin isn't an automatic win**: of the 90 nations that were
+  the strongest in their world on day one, 72% were still first after 20
+  years and 18% had won. Before this pass it was 41%: the diplomatic win
+  counted defensive pacts as an alliance and came too easily (55 wins in
+  90 worlds); now it needs real alliances held for 5 years, and the
+  economic win 2.5× the next economy (it was 2×).
+
+**Every wheel result does something** (`--wheel-effects`, in
+[docs/phase7_wheel_effects.txt](docs/phase7_wheel_effects.txt)): every
+option of every wheel was landed on one nation with everything else the
+same, on all three maps, and compared with the wheel's other options on
+day one. All 108 results that came up change the economy, the war,
+diplomacy or the brain's personality, through modifiers, divisions,
+relations and traits, not just their labels. **None does nothing.** The
+109th, "0% active duty", never came up in the test: it only comes with
+"No Army" (the wheels are linked), and its effect is No Army's.
+
+**Long games** (`--long-game 100 1`: a 100-year game on each map, the
+player on autopilot among 24 brains, one core;
+[docs/phase7_long_game.txt](docs/phase7_long_game.txt)). Top speed is 30
+days a second, so a day may take 33 ms on average:
+
+| | Grand Continent | Thousand Isles | Five Shores |
+|---|---|---|---|
+| A game year, years 1-10 → the last 10 | 863 → 1,162 ms | 643 → 813 ms | 515 → 1,001 ms |
+| Slowest year (headroom at top speed) | 7.6 ms a day (4.4×, year 1) | 4.5 ms a day (7.5×) | 3.1 ms a day (10.8×) |
+| Worst single day | 45 ms | 15 ms | 68 ms |
+| Memory (the whole program) | 19 → 43 MB | 109 → 115 MB | 116 MB |
+| Save after 100 years (on disk) | 12.6 MB | 12.6 MB | 13.5 MB |
+| Five more years with / without the old history | 817 / 826 ms | 996 / 923 ms | 782 / 839 ms |
+
+- **Fast at top speed for all 100 years**: never under 4× the speed it
+  needs, never a crash.
+- **It doesn't slow down as history grows**: the last row runs the same
+  world on with and without its old battle reports, spy reports and news,
+  and the time is the same (within ±8%). The last decades cost more because
+  the armies grew with the economies (Five Shores went from 994 to 2,548
+  divisions), not because of the past. Two fixes on the way: the war's
+  hourly checks no longer search every war ever fought, and diplomacy's
+  defender search uses only live treaties.
+- **The autosave** costs about 12 ms on the game's thread; compressing and
+  writing the ~13 MB happen on another thread. Loading takes well under a
+  second.
+- One day in a few thousand takes longer than 33 ms (a big battle day);
+  at top speed that's a stutter of a frame or two, not a slowdown.
+
+```sh
+cargo run --release --no-default-features -- --balance 30 20       # thousands of starts
+cargo run --release --no-default-features -- --wheel-effects 1 2 3  # what every wheel result changes
+cargo run --release --no-default-features -- --long-game 100 1      # 100 years on each map, year by year
+cargo run --release --no-default-features -- --tour out/tour 25     # the bot plays and takes screenshots
+```
+
 ## Tune the wheels
 
 Everything about the wheels is in plain text files. Edit them and run the
@@ -496,8 +657,8 @@ cargo test --release odds_report -- --ignored --nocapture
 
 | Source | Tool | Becomes |
 |---|---|---|
-| `art/*.json` | Duck Quill scripts | `assets/art/*.png` (pointer, hub, glow, sparkle, cards, buttons, logo, backdrop, RARE! badge; map: top bar, province panel, minimap frame, small cards, flag cloth and pole, capital, town, landmark and river icons; economy: the window and its six page icons; war: crossed swords, plane and army icons, the battle report's paper; diplomacy: handshake, spy and treaty icons) |
-| `sound/*.toml` | Duck Echo recipes | `assets/sound/*.wav` (two ticks, land chime, whoosh, rare sting, card swoosh, fanfare; map: a seamless sea-and-wind ambience loop, click, select, open-map swell, zoom tick; economy: coin, month chime, news sting; war: gunfire, an explosion, a 12-second war-drum loop) |
+| `art/*.json` | Duck Quill scripts | `assets/art/*.png` (pointer, hub, glow, sparkle, cards, buttons, logo, backdrop, RARE! badge; map: top bar, province panel, minimap frame, small cards, flag cloth and pole, capital, town, landmark and river icons; economy: the window and its six page icons; war: crossed swords, plane and army icons, the battle report's paper; diplomacy: handshake, spy and treaty icons; phase 7: the menu panel, victory and defeat banners, play, save, load, gear, help, quit, book, bell and trophy icons) |
+| `sound/*.toml` | Duck Echo recipes | `assets/sound/*.wav` (two ticks, land chime, whoosh, rare sting, card swoosh, fanfare; map: a seamless sea-and-wind ambience loop, click, select, open-map swell, zoom tick; economy: coin, month chime, news sting; war: gunfire, an explosion, a 12-second war-drum loop; phase 7: a 16-second menu theme and a 20-second peace theme (both seamless loops), victory and defeat jingles, and save, denied, treaty, declare, peace, build, spy and menu-move sounds) |
 | `models/*.toml` | Duck Mold recipes | `assets/models/*.glb` (the wheel's stand; capital, town, tree, pine, palm, cactus, peak, hill, reeds; landmarks: lighthouse, pyramid, great tower, temple, arch, colossus; war: soldier, tank, jet, warship and transport, each with one part in the nation's colour) |
 
 The wheel itself is built in code from triangles, because its slices change
@@ -576,4 +737,15 @@ economy's and spectator mode's own keys:
 | `src/map_view.rs` | The 3D map's meshes (terrain, sea, borders, rivers, trees, cities), the orbit camera, picking |
 | `src/ui.rs` | Loading assets, text, buttons, sparkles and confetti |
 | `src/tests.rs` | Data checks, linking rules over many countries, map and placement rules, play tests |
+| `src/game/shell.rs` | Phase 7: the main menu, the pause menu, Load, Settings, Help, the victory and defeat screens, notifications, music, tooltips, the UI scale, saving and loading from the game |
+| `src/game/tutorial.rs` | The tutorial's 15 steps |
+| `src/save.rs`, `src/save_codec.rs` | The save file (version, summary, the game), autosaves, slots; how `Rng` and colours are saved; the save tests |
+| `src/sim.rs` | The running world (economy, brains, war, diplomacy) made and stepped one day at a time, for the game, the tests and the tools |
+| `src/victory.rs` | Wins, losses, the score, and the story (`Fate`) |
+| `src/econ/underdog.rs` | The underdog rule |
+| `src/settings.rs`, `src/fullscreen.rs` | The settings file and the map's keys; fullscreen through the window system |
+| `src/bot.rs`, `src/player_test.rs` | The bot that plays by its keys, the player test, the tutorial test, `--tour` |
+| `src/balance.rs` | `--balance`, `--wheel-effects`, `--long-game` |
+| `data/victory.toml`, `data/help.toml`, `data/tips.toml` | How to win and lose and the underdog rule; the help pages; the tooltips |
+| `docs/PHASE7.md` | Phase 7's design |
 | `ISSUES.md` | Problems and missing features found in the four Duck tools |

@@ -6,7 +6,7 @@
 
 /// What a brain may see of a war: its own fronts, and others' armies as its
 /// secret service estimates them. Empty until the war phase.
-#[derive(Debug, Clone, Default)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Default)]
 pub struct BattleView {
     pub nation: usize,
     /// (front province, own strength there, estimated enemy strength there).
@@ -14,7 +14,7 @@ pub struct BattleView {
 }
 
 /// An order for an army.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 pub enum BattleOrder {
     Hold { province: usize },
     Attack { from: usize, to: usize },
@@ -27,6 +27,7 @@ pub trait BattlePlanner {
 }
 
 /// The planner until the war phase: no orders.
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct NoBattles;
 
 impl BattlePlanner for NoBattles {

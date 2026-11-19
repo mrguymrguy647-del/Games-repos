@@ -1,0 +1,57 @@
+# War declared: one long war-horn blast, D3 with a low D2 under it. The
+# horn bends up into the note and its tone opens as it swells. About 1.5 s.
+version = 0
+name = "declare"
+description = "A 1.5 s war horn blast for declaring war."
+tags = ["alert", "war", "horn", "declare"]
+seed = 53
+channels = 2
+
+[master]
+normalize_lufs = -18
+trim_silence = true
+
+[[layers]]
+name = "horn"
+source = "saw"
+volume = 0.5
+pan = -0.1
+envelope = { attack = 0.12, hold = 0.75, decay = 0.4 }
+pitch = { start = 132, end = 147, curve = "ease_out", sweep_time = 0.18, vibrato = { rate = 5, depth = 0.15, delay = 0.4 } }
+filter = { kind = "lowpass", cutoff = 450, cutoff_end = 1500, curve = "ease_out", sweep_time = 0.35, resonance = 1.3 }
+
+[[layers]]
+name = "horn double"
+source = "saw"
+volume = 0.35
+pan = 0.15
+envelope = { attack = 0.15, hold = 0.72, decay = 0.4 }
+pitch = { start = 131, end = 147.8, curve = "ease_out", sweep_time = 0.2 }
+filter = { kind = "lowpass", cutoff = 400, cutoff_end = 1200, curve = "ease_out", sweep_time = 0.4 }
+
+[[layers]]
+name = "low drone"
+source = "triangle"
+volume = 0.6
+envelope = { attack = 0.15, hold = 0.75, decay = 0.4 }
+pitch = { start = 66, end = 73.5, curve = "ease_out", sweep_time = 0.2 }
+
+[[layers]]
+name = "breath"
+source = "noise"
+volume = 0.08
+envelope = { attack = 0.08, hold = 0.6, decay = 0.4 }
+filter = { kind = "bandpass", cutoff = 900, resonance = 0.9 }
+
+[[effects]]
+type = "distortion"
+drive = 1.8
+kind = "soft"
+mix = 0.3
+
+[[effects]]
+type = "reverb"
+size = 0.8
+decay = 0.6
+damping = 0.5
+mix = 0.2

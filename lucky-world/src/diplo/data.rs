@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Relations {
     pub same_ideology: f64,
@@ -24,7 +24,7 @@ pub struct Relations {
     pub treaty: BTreeMap<String, f64>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Events {
     pub invaded_us: f64,
@@ -46,7 +46,7 @@ pub struct Events {
     pub neglected: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Reputation {
     pub start: f64,
@@ -57,7 +57,7 @@ pub struct Reputation {
     pub incident: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Treaties {
     pub years: BTreeMap<String, f64>,
@@ -71,7 +71,7 @@ pub struct Treaties {
     pub default_months: u32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Answers {
     pub relations_weight: f64,
@@ -91,7 +91,7 @@ pub struct Answers {
     pub sanction_hate: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct War {
     pub honour_threshold: f64,
@@ -104,7 +104,7 @@ pub struct War {
     pub alliance_years: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Talks {
     pub concession: f64,
@@ -114,7 +114,7 @@ pub struct Talks {
     pub ally_reparations: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Vassals {
     pub base: f64,
@@ -127,7 +127,7 @@ pub struct Vassals {
     pub movement_stability: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Spies {
     pub agents: BTreeMap<String, u32>,
@@ -162,7 +162,7 @@ pub struct Spies {
     pub bribe_days: u32,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Copy, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Mission {
     pub ease: f64,
@@ -170,7 +170,7 @@ pub struct Mission {
     pub days: u32,
 }
 
-#[derive(Debug, Clone, Copy, Default, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Copy, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Trait {
     #[serde(default)]
@@ -184,7 +184,7 @@ pub struct Trait {
 }
 
 /// Everything in `data/diplomacy/diplomacy.toml`.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(serde::Serialize, Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DiploData {
     pub relations: Relations,

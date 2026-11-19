@@ -21,7 +21,7 @@ use crate::data::Data;
 use crate::fate::Landed;
 use crate::mapdata::{Atlas, WorldMap};
 
-#[derive(Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct World {
     /// Index into `data.maps` (and `atlas.maps`).
     pub map: usize,
@@ -33,6 +33,7 @@ pub struct World {
     /// Each nation's capital province.
     pub capital: Vec<usize>,
     /// Each nation's border colour.
+    #[serde(with = "crate::save_codec::colors")]
     pub color: Vec<Color>,
     /// Why a nation isn't quite where its wheels said, if it isn't.
     pub notes: Vec<Option<String>>,
@@ -41,7 +42,7 @@ pub struct World {
 }
 
 /// The four border kinds of the Landlocked or Coastal wheel.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Coast {
     Landlocked,
     Coastal,
