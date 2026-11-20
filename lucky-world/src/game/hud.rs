@@ -442,6 +442,29 @@ impl Lucky {
     }
 
     /// The camera glides to a nation's capital.
+    /// Where a piece of news happened: the province it names (the longest
+    /// name found, so "New Ostara" beats "Ostara"), else the capital of the
+    /// nation it names first. A ground point for the camera.
+    pub(super) fn place_in(&self, words: &str) -> Option<Vec2> {
+        let (world, view) = (self.world.as_ref()?, self.map_view.as_ref()?);
+        let map = self.atlas.map(world.map);
+        let named = |name: &str| -> Option<usize> {
+            let at = words.find(name)?;
+            let before = words[..at].chars().next_back();
+            let after = words[at + name.len()..].chars().next();
+            let edge = |c: Option<char>| c.is_none_or(|c| !c.is_alphanumeric());
+            (edge(before) && edge(after)).then_some(at)
+        };
+        let province = map.provinces.iter().enumerate().filter(|(_, p)| p.name.len() > 2 && named(&p.name).is_some()).max_by_key(|(_, p)| p.name.len()).map(|(k, _)| k);
+        let province = province.or_else(|| {
+            let nation = world.nations.iter().enumerate().filter_map(|(k, n)| named(&n.name).map(|at| (at, k))).min().map(|(_, k)| k)?;
+            world.capital.get(nation).copied()
+        })?;
+        let (x, y) = map.provinces[province].middle;
+        let p = view.world(x, y, 0.0);
+        Some(vec2(p.x, p.z))
+    }
+
     pub(super) fn centre_on(&mut self, nation: usize) {
         let (Some(world), Some(view)) = (self.world.as_ref(), self.map_view.as_ref()) else { return };
         let Some(&capital) = world.capital.get(nation) else { return };

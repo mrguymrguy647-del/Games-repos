@@ -100,6 +100,10 @@ impl Lucky {
         self.inspect = None;
         // The rival reveal's confetti stays behind.
         self.particles.clear();
+        // My nation's border in gold (watching: nobody's).
+        if let (Some(view), Some(world)) = (self.map_view.as_mut(), self.world.as_ref()) {
+            view.set_highlight(&self.atlas, world, &self.models, if self.spectating { None } else { Some(0) });
+        }
         // The game starts over the player's own nation, near enough to see it whole.
         if !self.spectating {
             self.frame_nation(0);

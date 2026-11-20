@@ -1182,6 +1182,8 @@ impl Lucky {
         let now = self.time;
         let date = self.economy.as_ref().map_or(String::new(), |e| e.date(&self.econ_data));
         self.notes.log.push((date, words.clone(), level));
+        // The news strip's Show button goes where it happened.
+        self.map_ui.news_at = self.place_in(&words);
         if self.notes.log.len() > 300 {
             self.notes.log.remove(0);
         }
