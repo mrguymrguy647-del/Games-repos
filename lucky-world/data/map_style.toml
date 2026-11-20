@@ -1,0 +1,156 @@
+# LUCKY WORLD: how the 3D world map is painted (read by src/map_view.rs each
+# time a map is built: change a number, start a new game, look).
+#
+# Colours are "#rrggbb". Sizes and heights are in hexes (a hex is 1 wide). A
+# mistake here is said once on the terminal, and the copy built into the game is used.
+
+[land]
+tint = 0.42          # Nations view: how much of a nation's colour lies over its land (0-1)
+tint_dark = 0.82     # the nation's colour times this, before it goes on
+tint_light = 0.6     # how much dark land (forest) darkens the tint and pale land lightens it (0-1)
+minimap_tint = 0.66  # the same on the minimap, where it has to be stronger to read
+unowned = 0.45       # how grey land nobody owns turns
+overlay_relief = 0.6 # economy and war overlays: how much of the hill shading is kept (0-1)
+sun = [-0.55, 0.62, 0.56]  # where the light comes from: east, up, north (north-west, above)
+relief = 1.0         # how strongly slopes are lit and shaded (0: flat)
+blend = 0.5          # how far a hex's colour runs into its neighbours' at the edges (0-1)
+sand = "#d6c48e"     # the shore where land meets water
+sand_width = 0.08    # how far in from the water the sand reaches (at most 0.2)
+snow = "#f1f4f8"
+
+[water]
+deep = "#15305f"     # open sea
+mid = "#1f4c8a"      # where the shelf starts
+shelf = "#2d79ad"    # shallow sea
+coast = "#58a6bc"    # right at the shore
+lake = "#3c88bd"
+lake_shore = "#74bcd0"
+swell = 0.07         # how much the sea's colour drifts from place to place (0: one flat colour)
+river = "#4f9bdc"
+river_bank = "#2a5f96"
+river_source = 0.06  # a river's width where it starts...
+river_mouth = 0.17   # ...and where it ends
+
+[borders]
+nation = 0.075       # width of a nation's border, on its own side of the line (at most 0.25)
+nation_dark = 0.86   # the nation's colour times this
+coast = 0.035        # width of a nation's edge along the sea
+edge = "#16101f"     # the hairline between two nations
+gold = "#e2b84a"     # the highlighted nation's border...
+gold_light = "#fbe9a6" # ...and the bright line inside it
+gold_widths = [0.12, 0.17, 0.235]  # near, mid-way, far (at [lines] switch): wider zoomed out (at most 0.25)
+selected = "#ffffff"
+
+[lines]              # province lines: faint and wide from far away, sharp and dark up close
+color = "#1a1522"
+near = 0.7           # how solid they are zoomed right in (0-1)...
+far = 0.3            # ...and zoomed right out
+near_distance = 7.0  # the camera distances those two apply at
+far_distance = 40.0
+widths = [0.012, 0.022, 0.04]    # three widths (on each side of the line), thinnest first
+switch = [11.0, 24.0]            # the camera distances where the width changes
+
+# One table per terrain letter of data/terrain.toml (a letter without one is
+# painted plainly in its terrain.toml colour):
+#
+# tone     the terrain.toml colour times this (or `color = "#rrggbb"` instead)
+# patch    a second colour that comes and goes in soft patches, `patches` strong at most
+# grain    how much each small facet's brightness differs (texture)
+# rough    how far the ground moves up and down
+# relief   how strongly its slopes are shaded
+# ridge    extra height where this terrain meets itself (mountain chains)
+# dunes    height of long ripples (desert)
+# snow     the height above which it is snowy (leave out: never)
+# shore    its shore's colour, if not sand
+# bushes   small bushes per hex, in `bush` colour (forests look thick from far away)
+
+[terrain.P]
+tone = 0.80
+patch = "#8fae58"
+patches = 0.55
+grain = 0.05
+rough = 0.010
+relief = 3.0
+
+[terrain.F]
+tone = 0.62
+patch = "#2f6a3c"
+patches = 0.6
+grain = 0.16
+rough = 0.014
+relief = 3.0
+bushes = 3
+bush = "#2f6b37"
+
+[terrain.J]
+tone = 0.66
+patch = "#1f5c3e"
+patches = 0.6
+grain = 0.15
+rough = 0.014
+relief = 3.0
+bushes = 3
+bush = "#1f6340"
+
+[terrain.D]
+tone = 0.88
+patch = "#c79a62"
+patches = 0.6
+grain = 0.04
+rough = 0.006
+relief = 4.0
+dunes = 0.012
+
+[terrain.S]
+tone = 0.80
+patch = "#b39a5c"
+patches = 0.5
+grain = 0.06
+rough = 0.010
+relief = 3.0
+
+[terrain.T]
+tone = 0.84
+patch = "#c9d2d2"
+patches = 0.6
+grain = 0.06
+rough = 0.012
+relief = 3.0
+shore = "#aab4b4"
+
+[terrain.H]
+tone = 0.78
+patch = "#7f8a52"
+patches = 0.5
+grain = 0.07
+rough = 0.034
+relief = 2.6
+
+[terrain.M]
+tone = 0.84
+patch = "#5d5348"
+patches = 0.6
+grain = 0.10
+rough = 0.075
+relief = 2.2
+ridge = 0.05
+snow = 0.32
+shore = "#8d857a"
+
+[terrain.W]
+color = "#4c6a3f"    # dark olive green...
+patch = "#61542f"    # ...with peaty brown patches
+patches = 0.65
+grain = 0.12
+rough = 0.004
+relief = 3.0
+shore = "#6f7a5c"
+
+[terrain.I]
+tone = 0.93
+patch = "#b9d0e4"
+patches = 0.6
+grain = 0.05
+rough = 0.022
+relief = 2.0
+shore = "#c5d6e2"
