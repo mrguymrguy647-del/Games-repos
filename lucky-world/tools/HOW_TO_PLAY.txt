@@ -17,28 +17,41 @@ How to play
   The main menu: New Game (choose a world or a random one, the difficulty
   and the game's length), Continue (your newest save), Tutorial (a short
   guided game: start here), Load, Settings, Help, Quit.
-  You spin 16 wheels for your nation, then rule it on a 3D world map among
-  up to 24 rivals who spun the same wheels.
+  You spin the wheels for your nation, then rule it on a 3D world map
+  among up to 24 rivals who spun the same wheels.
   Win by conquest (hold half the map), economic power (2.5 times the next
   economy for 10 years), diplomacy (lead an alliance holding 60% of the
-  map for 5 years) or the best score when the game's length runs out. Lose if you're
-  conquered, overthrown in a civil war or made a vassal (a vassal can play
-  on and fight for independence).
-  Hover any number for what it is and what changes it. F2: help.
+  map for 5 years) or the best score when the game's length runs out. Lose
+  if you're conquered, overthrown in a civil war or made a vassal (a vassal
+  can play on and fight for independence).
+  Hover any number or button for what it is (and its shortcut key).
 
-Keys
-  Menus:        Up/Down choose · Enter go · Esc back
-  New Game:     1-3 a world · 4 or R random world · D difficulty · L length
-                Space spin · S skip spin · W watch NPC brains
-  World map:    drag or WASD pan · right-drag or Q/E turn · wheel or R/F zoom
-                click a province · C country card · V map overlays · M terrain
+The mouse does everything
+  Wheels:   click Spin, or the wheel itself; Skip spin rolls the rest.
+  Map:      left-drag moves it, the mouse wheel zooms, right-drag turns
+            and tilts it; double-click a nation to centre on it;
+            right-click a nation for its country card, diplomacy, a treaty,
+            trade, spies or war.
+  Windows:  the buttons on the right (Economy, War room, Battles,
+            Diplomacy, Spies, News log); tabs, rows, sliders and buttons
+            inside; the X or a click outside closes them.
+  Menu:     the Menu button (top right): save, load, settings, help,
+            main menu, quit.
+
+Esc never throws you out
+  Esc closes what is open; with nothing open it opens the pause menu.
+  Leaving to the main menu or the desktop always asks first and saves
+  your game.
+
+Shortcut keys (all optional)
+  Wheels:       Space spin · S skip spin
+  Map:          WASD pan · Q/E turn · R/F zoom · T/G tilt · H home
   Clock:        Space pause · 1-5 speed
-  Economy:      O      War room: K      Biggest battle: J
-  Diplomacy:    P      Spies: I         Notifications: L
-  Saving:       Esc the pause menu (save, load, settings, help, menu)
-                F6 quick save · F9 quick load · the game saves itself every year
-  Help:         F2
-  Settings can change every map key, the picture quality, fullscreen, the
+  Windows:      O economy · K war room · J biggest battle · P diplomacy
+                I spies · L news log
+  Saving:       F6 quick save · F9 quick load (the game also saves every year)
+  Full screen:  Alt+Enter (full screen is the default)
+  Settings can change every map key, the picture quality, full screen, the
   window size, the music and effects volumes and the size of the menus.
   Saves are in the "saves" folder beside the game; settings in
   lucky_world.settings.toml.

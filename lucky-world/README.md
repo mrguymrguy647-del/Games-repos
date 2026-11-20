@@ -78,7 +78,7 @@ Windows or antivirus blocks a file ("Access is denied"), a read is retried
 for about a second and then the built-in copy is used, and the file is
 listed in `lucky-world-notes.txt`. If it still can't start, it writes why in
 `lucky-world-error.txt` beside it. `HOW_TO_PLAY.txt` in the
-zip lists the keys. To rebuild both zips: `tools/package.sh` (Windows is
+zip explains the controls. To rebuild both zips: `tools/package.sh` (Windows is
 cross-built from Linux with mingw-w64). There is no macOS build yet.
 
 ## How to play
@@ -93,19 +93,20 @@ difficulty and how long the game lasts, then spin.
    Each slice's size is its chance. A very weak start gets the
    *underdog's luck* (aid, and a few years in which no brain attacks it).
 2. **Rule it.** On the 3D world map the clock runs a day at a time while
-   24 nations run by NPC brains do the same. Run your economy (O), your
-   wars and their supply (K), your diplomacy (P) and your spies (I), or
-   leave any of it on autopilot. Hover any number to read what it is and
-   what changes it; F2 is the help.
+   24 nations run by NPC brains do the same. Run your economy, your wars
+   and their supply, your diplomacy and your spies from the buttons on the
+   right, or leave any of it on autopilot. Right-click any nation for what
+   you can do with it. Hover any number to read what it is and what
+   changes it; **Menu → How to play** is the help.
 3. **Win** by conquest (own half the map), economic power (an economy 2.5
    times the next biggest for 10 years), diplomacy (lead an alliance that
    owns 60% of the map for 5 years) or the best score when the game's
    length runs out.
    **Lose** if you're conquered, overthrown in a civil war or made a vassal;
    a vassal can play on and fight for its independence.
-4. **Save** any time: Esc opens the pause menu (six save slots), F6
-   quick-saves, F9 quick-loads, and the game saves itself every game year
-   and when you leave. Continue on the main menu loads your newest save.
+4. **Save** any time: **Menu** (or Esc) opens the pause menu (six save
+   slots), and the game saves itself every game year and whenever you
+   leave. Continue on the main menu loads your newest save.
 
 **Difficulty** (easy, normal, hard, brutal) only changes how well the
 brains plan and react: how noisy their plans are, how far ahead they look,
@@ -140,29 +141,28 @@ the quality for testing (a running game re-reads it):
 
 ### Controls
 
-| Screen | Keys | Mouse |
-|---|---|---|
-| Main menu | Up / Down choose, **Enter** go, **N** new game, Esc quit | click a row |
-| New Game (title) | Left / Right or 1-3 choose a world, **4** or **R** a random world, **D** difficulty, **L** game length, **Space** spin, **S** Skip Spin, **W** watch a world of NPC brains, Esc the menu | click a world, the three choices, the buttons |
-| A wheel | **Space** spin (while spinning: faster), Space again for the next wheel, **S** Skip Spin | buttons |
-| Round card | **Space** next round, **S** Skip Spin | buttons |
-| Country card | **Space** meet your rivals | button |
-| Rivals | 1-9 or click a nation for its full card, Esc or Space back, Left / Right turn pages, **Space** Begin | click a card |
-| World map | WASD / arrows pan, Q / E turn, R / F zoom, T / G tilt, Tab next nation, H home, M terrain / nations view, **V** resources / industry overlay, C country card, Esc deselect | drag pans, right-drag turns, wheel zooms, click a province, click a name or flag for its country card, click the minimap to jump |
-| The clock (map) | **Space** pause, **1-5** speed (1, 3, 7, 15 or 30 days a second); watching, **6** (90) | |
-| Economy window (map) | **O** open / close, **Tab** next page, Up / Down choose a row; Budget: Left / Right lower / raise (taxes, welfare, tariff, rate, research, arms, public works), **A** back to autopilot; Chains: **B** build, **X** close, **R** a road where goods are stuck, **P** a port; Market: **T** trade policy; Trade: **X** embargo | click the ECONOMY button, the pages, rows, −/+ and the buttons |
-| Watching (map) | click a nation's name or a province, or **Tab**: its brain panel; Esc closes it | |
-| War (map) | **K** the war room, **J** jump to the biggest battle, **V** (third press) the war overlay, Enter: the last battle's full report, Esc closes a battle panel | click the crossed swords on a battle to watch it, the WAR ROOM button |
-| Diplomacy (map) | **P** open / close, **Tab** next page, Up / Down choose; Nations: **Enter** propose to the chosen nation; Treaties: **B** break ours; Propose: Up / Down the nation, Left / Right the treaty, **Enter** propose; Inbox: **Y** / **N**; Talks: Left / Right our demand, **Enter** send it | click the pages |
-| Spies (map) | **I** open / close, **Tab** next page; Agents: **T** train one, Left / Right the share on counter-intelligence; Missions: Left / Right the target, Up / Down the mission, **Enter** send | click the pages |
-| War room | **Tab** next page, Up / Down choose; Wars: **E** escalate, **M** match, **B** back down, **P** offer peace, **Y** / **N** answer their offer, **D** declare on the selected nation, **L** the level; Army: **A** attack, **H** hold, **G** dig in, **R** retreat, **F** reinforce the selected province, **U** back to the general; Supply: Left / Right a front's priority, **Y** / **N** a request, **T** Auto; Reports: **Enter** the full report | click the pages |
-| The map, anywhere | **Esc** the pause menu (resume, save, load, settings, help, main menu, quit), **F6** quick save, **F9** quick load, **F2** help, **L** every notification | hover any number for its tooltip |
-| Settings | Up / Down choose, Left / Right change, Enter on Keys: the key list (Enter, then press the new key; Backspace resets them all), Esc back (saved) | click left or right of a row's middle to lower or raise it |
-| Load | Up / Down choose, **Enter** load, **X** delete, Esc back | click a save |
-| Victory or defeat | **Enter** play on, **Esc** or **M** the main menu | the buttons |
-| Anywhere | **F5** start over (for trying it out), F12 screenshot, F10 record | |
+Everything is done with the mouse. Keys are only shortcuts: hover a
+button and its tooltip names its key.
 
-Every map key above can be changed in **Settings → Keys**.
+**Esc never throws you out.** It closes whatever is open on top (a window,
+a card, the right-click menu, the province you chose). With nothing open it
+opens the pause menu, on every screen of a game, the wheels included.
+Leaving to the main menu or the desktop always asks "are you sure?" first,
+and saves your game before it leaves.
+
+| Where | Mouse | Shortcuts |
+|---|---|---|
+| The wheels | **Spin** (or click the wheel itself); click again to hurry it; **Next wheel**; **Skip spin** rolls the rest at once. Scroll the list of every slice; hover a slice for its odds, or a greyed one for why it can't come up | Space, S |
+| The map | **left-drag** moves the map, the **mouse wheel** zooms towards the pointer, **right- or middle-drag** turns and tilts it; the screen's edges scroll it in full screen; click or drag the **minimap**; **double-click** a nation to centre on it; **right-click** a nation or province: country card, diplomacy, propose a treaty, trade, send spies, declare war (asks first) | WASD or arrows, Q / E, R / F, T / G, H home, Tab next nation |
+| Top bar | your nation (its country card), the five numbers (each opens its page), pause / play, speeds 1-5, **Menu** | Space, 1-5, Esc |
+| Left cards | Your nation (Country card, Go home); the selected province (Build here, Details); **Needs you**: each row opens the right page | |
+| Right rail | Economy, War room, Battles, Diplomacy, Spies, News log (a gold badge counts what waits) | O, K, J, P, I, L |
+| Bottom | the views (Nations, Terrain, Resources, Industry, Alliances); the news strip (**Show** goes there); zoom and home by the minimap | M, V |
+| Windows | tabs, rows, buttons and sliders (taxes, rates, counter-intelligence: drag them); the mouse wheel scrolls lists; the **X** or a click outside closes | Tab, Up / Down, Left / Right, Enter, Esc |
+| Pause menu | Resume, Save game, Load game, Settings, How to play, Main menu, Quit to desktop | Esc, F6 quick save, F9 quick load, F2 help |
+| Full screen | Settings → Fullscreen (on by default, borderless over the whole screen) | Alt+Enter |
+
+Every map shortcut can be changed in **Settings → Shortcut keys**.
 
 ### What happens
 

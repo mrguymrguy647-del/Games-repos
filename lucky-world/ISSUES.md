@@ -771,6 +771,91 @@ Worth keeping: the error for a note past the song's end ("the note starts
 at beat 4 of the song, after its end (1 bars of 4 beats = 4 beats)") said
 exactly what to change (though "1 bars" should be "1 bar").
 
+## Found in Phase 8 (Esc and the mouse, the new map screen, the wheels)
+
+Against the same Duck Forge commit (`9ebb6ca`) and Duck Quill 0.5.0
+(`e3a1eea`). Numbering carries on. Everything was worked round in the game.
+
+### Duck Forge (engine)
+
+73. **No clipping in 2D.** There is no `push_clip(rect)` / scissor, so a
+    scrolling list can't cut a row in half at its edge, and the wheel's
+    lens (the slices under the pointer, magnified) clips every slice to
+    its strip by hand. Lists scroll by whole rows instead.
+    - Fix: `canvas.push_clip(rect)` / `pop_clip()`, honoured by text too.
+74. **A click is seen by everything under it.** There is no way to say a
+    click was used, so a button over the map also selected the province
+    under it, and a window's button also closed the window ("click
+    outside"). The game now builds each layer's buttons as a list
+    (`src/game/gui.rs`), asks only the top layer, and keeps a
+    `click_used` flag for the screens that still read the mouse directly.
+    - Fix: `ctx.input.take_click()` (or UI layers in the engine).
+75. **No double-click, drag or hover-time events.** Double-click to centre
+    a nation, drag to pan, drag a slider and "hovered long enough for a
+    tooltip" are each timed and tracked by the game (`gui::Pointer`).
+    - Fix: `ctx.input.double_clicked(button)`, `drag_delta(button)`.
+76. **A fixed canvas can't be tested at other window sizes.**
+    `Simulation::resize` changes the canvas (what a `resizable` game
+    gets); a game with a fixed 1280 x 720 canvas, shown scaled and
+    letterboxed in a bigger window, has no way to see in a test what the
+    player sees at 1920 x 1080 or on a 16:10 screen. The layout test checks
+    the UI scales instead (0.9 to 1.15), which is what changes the layout.
+    - Fix: `sim.picture_in_window(w, h)` with the window's scaling.
+77. **Fullscreen, again (item 46), and a Windows trap.** A window that is
+    maximized when it is made borderless keeps the taskbar in front:
+    Windows holds a maximized window to the work area. `src/fullscreen.rs`
+    now restores it first, removes every frame style and takes the
+    foreground; there was no way to test that here (no Windows machine).
+78. **Alt+Enter is two keys to the game.** Enter arrives as pressed on the
+    frame Alt+Enter toggles full screen, so every screen that reads Enter
+    would also act on it; `gui::pressed` filters it out.
+    - Fix: key events with modifiers, or `ctx.input.chord(Alt, Enter)`.
+79. **A missing glyph draws nothing, silently.** Marcellus and Barlow have
+    no `→`, `←`, `↑`, `↓`, `✓` or `★`; text with them simply loses the
+    character. The game avoids them.
+    - Fix: a fallback font list per `Font`, or a warning the first time a
+      glyph is missing.
+80. **The GPU cache re-hashes every mesh every frame** (`gpu.rs` clears
+    `seen` at lines 574 and 922): it fingerprints every vertex, triangle
+    and texture entry of every mesh, so the CPU cost per frame grows with
+    the triangles on screen (about 200,000 on the new map).
+81. **`Mesh::merge` adds a texture entry per triangle** even when neither
+    mesh has a texture. Joining thousands of trees and towns into one mesh
+    wrote megabytes, then hashed them every frame (item 80). The map joins
+    them itself (`add_model` in `src/map_view.rs`).
+82. **Smooth shading exists only in the CPU renderer.** On the graphics
+    card every triangle is one flat colour, so the sea shelf's gradient and
+    the snow line need many small triangles (and show as facets).
+83. **Two map views need two copies of the land.** A mesh can't share
+    vertices with another or carry a second colour set, so the Nations
+    view (tinted) and the Terrain view each keep a full land mesh.
+
+Worth keeping: `Simulation::recording()` made the mouse-only playthrough
+provable. The test plays a whole game with clicks and then checks that the
+recording holds not one key event (`src/mouse_test.rs`).
+
+### Duck Quill (art)
+
+84. **Half-transparent colours come back one step off.** `#0d1722` at 85%
+    (as `opacity`, a layer's opacity or `#0d1722d9`) is saved as `#0d1822`
+    at alpha 217. At 95% it is exact. It looks like 8-bit premultiplied
+    storage divided back out on export.
+85. **`check` exits 0 with warnings, with no strict mode**, so a script
+    has to read the text (and "warning" also matches `ic_warning.json`).
+86. **No way to read back the pixels of a normal canvas** (`--pixels` is
+    for pixel canvases only); the panel corners, which must tile exactly,
+    were checked with another tool.
+87. **A group `outline` in `"transparent"` does nothing, silently.** A
+    see-through gap round a shape in front (crossed swords, overlapping
+    people) had to be cut with hand-made `"erase"` polygons.
+88. **The docs' polygon fill rule is wrong**: "everything enclosed is
+    filled", but a ring written as one polygon keeps its hole (the rule is
+    winding or even-odd). Name the rule and show a ring.
+89. **No palette override for a set of scripts.** Restyling the game in
+    navy and bronze meant editing colours inside 38 scripts with a script.
+    Items 2/56 (no arc, wedge or star: a third of the 36 new icons were
+    computed outside Quill), 5/13/57 (no 9-slice), 62 and 64 came up again.
+
 ## The game's known weak spots after Phase 7 (game, not tools)
 
 - **Small nations can be overrun in weeks.** A three-province nation on

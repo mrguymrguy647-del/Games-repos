@@ -54,6 +54,64 @@ pub enum Screen {
 const TITLE_SPIN: Button = Button::new(230.0, 584.0, "Spin the wheels", "Spin your nation, wheel by wheel (shortcut: Space)", ButtonKind::Gold);
 const TITLE_SKIP: Button = Button::new(510.0, 584.0, "Skip spin", "Roll every wheel at once, with the same odds (shortcut: S)", ButtonKind::Blue);
 const TITLE_WATCH: Button = Button::new(790.0, 584.0, "Watch the brains", "Watch a world run by the computer alone (shortcut: W)", ButtonKind::Blue);
+/// The odds list beside the wheel, and one row's height.
+const LIST: Rect = Rect { x: 812.0, y: 214.0, w: 436.0, h: 312.0 };
+const LIST_ROW: f32 = 24.0;
+/// The lens by the pointer: the slices under it, big enough to read.
+const LENS: Rect = Rect { x: 628.0, y: 92.0, w: 156.0, h: 212.0 };
+/// The result, big, under the wheel.
+const RESULT: Rect = Rect { x: 150.0, y: 600.0, w: 540.0, h: 96.0 };
+
+/// A chance as a player reads it: 25%, 2.5%, 0.25%, 0.05%.
+fn percent(chance: f64) -> String {
+    let p = chance * 100.0;
+    if p >= 10.0 {
+        format!("{p:.0}%")
+    } else if p >= 1.0 {
+        format!("{p:.1}%")
+    } else if p >= 0.1 {
+        format!("{p:.2}%")
+    } else {
+        let t = format!("{p:.3}");
+        format!("{}%", t.trim_end_matches('0').trim_end_matches('.'))
+    }
+}
+
+/// "1 in 40" for a chance.
+fn one_in(chance: f64) -> String {
+    let n = (1.0 / chance.max(1e-9)).round() as u64;
+    if n <= 1 {
+        "every time".to_string()
+    } else {
+        let digits = n.to_string();
+        let mut out = String::new();
+        for (i, c) in digits.chars().enumerate() {
+            if i > 0 && (digits.len() - i) % 3 == 0 {
+                out.push(',');
+            }
+            out.push(c);
+        }
+        format!("1 in {out}")
+    }
+}
+
+/// Words cut to fit a width, with "...".
+fn ellipsis(font: &Font, words: &str, width: f32, style: &TextStyle) -> String {
+    let mut out: String = words.to_string();
+    while !out.is_empty() && font.measure(&format!("{out}..."), style).x > width {
+        out.pop();
+    }
+    format!("{}...", out.trim_end())
+}
+
+/// Why an option is greyed out on this wheel (none: it can come up).
+fn blocked_reason(odds: &fate::Odds, option: usize) -> Option<String> {
+    if odds.chance(option) > 0.0 {
+        return None;
+    }
+    Some("Not possible for this nation".to_string())
+}
+
 /// The wheel itself on its stage: a click on it spins it.
 const WHEEL_AREA: Rect = Rect { x: 180.0, y: 100.0, w: 480.0, h: 470.0 };
 const WHEEL_GO: Button = Button::new(895.0, 560.0, "Spin", "Spin this wheel; a click on the wheel spins it too (shortcut: Space)", ButtonKind::Gold);
@@ -114,6 +172,10 @@ pub struct Lucky {
     pub landed: Vec<Landed>,
     pub view: Option<WheelView>,
     landed_time: f32,
+    /// The odds list beside the wheel: how far it is scrolled (pixels), and
+    /// whether it follows the pointer (until the player scrolls it).
+    wheel_scroll: f32,
+    wheel_follow: bool,
     pub player: Option<Country>,
     pub rivals: Vec<Country>,
     pub inspect: Option<usize>,
@@ -207,6 +269,8 @@ impl Lucky {
             landed: Vec::new(),
             view: None,
             landed_time: 0.0,
+            wheel_scroll: 0.0,
+            wheel_follow: true,
             player: None,
             rivals: Vec::new(),
             inspect: None,
@@ -316,6 +380,8 @@ impl Lucky {
         let odds = fate::odds(&self.data, self.map, index, &self.landed, &[]);
         self.view = Some(WheelView::new(odds, self.data.slices, &self.assets.font));
         self.landed_time = 0.0;
+        self.wheel_scroll = 0.0;
+        self.wheel_follow = true;
         self.go(Screen::Wheel);
     }
 
@@ -483,6 +549,28 @@ impl Lucky {
                 }
                 return;
             }
+        }
+
+        // The odds list: the mouse wheel scrolls it; while the wheel spins it
+        // follows the slice under the pointer (until the player scrolls).
+        let view = self.view.as_ref().expect("still here");
+        let rows = view.odds.options.len();
+        let most = (rows as f32 * LIST_ROW - LIST.h).max(0.0);
+        let scroll = ctx.input.scroll();
+        if scroll != 0.0 && self.mouse.is_some_and(|m| LIST.contains(m)) {
+            self.wheel_scroll -= scroll * LIST_ROW * 3.0;
+            self.wheel_follow = false;
+        }
+        if self.wheel_follow {
+            let row = if view.landed { view.result() } else { Some(view.slices[view.slice_under()].option) };
+            if let Some(row) = row.filter(|_| view.spinning() || view.landed) {
+                let goal = row as f32 * LIST_ROW - LIST.h / 2.0 + LIST_ROW / 2.0;
+                self.wheel_scroll += (goal - self.wheel_scroll) * (1.0 - (-12.0 * dt).exp());
+            }
+        }
+        self.wheel_scroll = self.wheel_scroll.clamp(0.0, most);
+        if confirm && !self.view.as_ref().is_some_and(|v| v.landed) {
+            self.wheel_follow = true;
         }
 
         let view = self.view.as_mut().expect("still here");
@@ -820,6 +908,8 @@ impl Game for Lucky {
             Screen::Title => self.draw_title(canvas),
             Screen::Wheel => {
                 self.draw_stage(canvas);
+                self.draw_lens(canvas);
+                self.draw_result(canvas);
                 self.draw_panel(canvas);
             }
             Screen::Round(r) => {
@@ -1051,25 +1141,28 @@ impl Lucky {
         ui::plain(canvas, &a.font, &format!("ROUND {} OF 4  ·  {}", def.round, round.title.to_uppercase()), vec2(cx, 40.0), 20.0, GOLD, Align::Center);
         ui::plain(canvas, &a.font, &round.tagline, vec2(cx, 66.0), 15.0, MUTED, Align::Center);
 
-        // Sixteen pips in four groups: done, now, still to come.
-        let mut px = cx - (16.0 * 20.0 + 3.0 * 14.0) / 2.0 + 8.0;
-        for w in 0..self.data.wheels.len() {
+        // A pip per wheel, in its round's group: done, now, still to come.
+        let n = self.data.wheels.len();
+        let rounds = self.data.wheels.iter().map(|w| w.round).collect::<std::collections::BTreeSet<_>>().len();
+        let step = if n > 16 { 19.0 } else { 20.0 };
+        let mut px = cx - (n as f32 * step + (rounds.max(1) - 1) as f32 * 12.0) / 2.0 + step / 2.0;
+        for w in 0..n {
             if w > 0 && self.data.wheels[w].round != self.data.wheels[w - 1].round {
-                px += 14.0;
+                px += 12.0;
             }
             let c = vec2(px, 100.0);
             if w < self.landed.len() {
                 canvas.fill_circle(c, 6.0, GOLD);
             } else if w == index {
-                canvas.fill_circle(c, 7.0 + (self.time * 6.0).sin(), Color::WHITE);
+                canvas.fill_circle(c, 7.0 + (self.time * 6.0).sin(), gui::IVORY);
             } else {
                 canvas.fill_circle(c, 5.0, Color::rgba(255, 255, 255, 50));
             }
-            px += 20.0;
+            px += step;
         }
 
-        ui::plain(canvas, &a.font, &format!("WHEEL {} OF 16", index + 1), vec2(cx, 120.0 - slide), 14.0, SOFT, Align::Center);
-        ui::text(canvas, &a.font, &def.title.to_uppercase(), vec2(cx, 138.0 - slide), 40.0, Color::WHITE, Align::Center, 410.0);
+        ui::plain(canvas, &a.font, &format!("WHEEL {} OF {n}", index + 1), vec2(cx, 120.0 - slide), 14.0, SOFT, Align::Center);
+        ui::text(canvas, &a.font, &def.title.to_uppercase(), vec2(cx, 138.0 - slide), 40.0, gui::IVORY, Align::Center, 410.0);
 
         // What shaped these odds.
         let because: Vec<String> = view
@@ -1079,80 +1172,197 @@ impl Lucky {
             .map(|&w| format!("{}: {}", self.data.wheels[w].title, country::result_text(&self.data, self.map, w, &self.landed[w])))
             .collect();
         let linked = if because.is_empty() { "Odds: as they come".to_string() } else { format!("Linked to {}", because.join(" · ")) };
-        let mut s = ui::style(14.0, ui::BLUE);
-        s.outline = 0.0;
-        s.shadow = None;
-        s.align = Align::Center;
-        s.wrap = Some(410.0);
-        let shown: String = if linked.chars().count() > 150 { format!("{}...", linked.chars().take(147).collect::<String>()) } else { linked };
-        canvas.draw_font_text(&a.font, &shown, vec2(cx, 188.0), &s);
-
-        // The odds, exactly as the slices show them.
-        let result = view.result();
-        let rows: Vec<(usize, f64)> = view.odds.on_wheel().collect();
-        let row_h = if rows.len() > 8 { 21.0 } else { 25.0 };
-        let mut y = 232.0;
-        for (option, chance) in rows {
-            let o = &view.odds.options[option];
-            let win = result == Some(option);
-            if win {
-                canvas.fill_rect(Rect::new(x0 + 22.0, y - 3.0, 426.0, row_h), ui::alpha(GOLD, 0.25));
-            }
-            canvas.fill_circle(vec2(x0 + 40.0, y + row_h / 2.0 - 2.0), 7.0, o.color);
-            let color = if win { ui::GOLD_HI } else if result.is_some() { SOFT } else { Color::WHITE };
-            ui::plain(canvas, &a.font, &o.label, vec2(x0 + 56.0, y), 17.0, color, Align::Left);
-            let pct = if chance < 0.01 { format!("{:.1}%", chance * 100.0) } else { format!("{:.0}%", chance * 100.0) };
-            ui::plain(canvas, &a.font, &pct, vec2(x0 + 440.0, y), 17.0, color, Align::Right);
-            y += row_h;
+        let shown: String = if linked.chars().count() > 80 { format!("{}...", linked.chars().take(77).collect::<String>()) } else { linked.clone() };
+        gui::fit(canvas, &a.font, &shown, vec2(cx, 186.0), 13.0, ui::BLUE, Align::Center, 420.0);
+        if shown != linked {
+            self.tip_words(Rect::new(x0 + 20.0, 182.0, 430.0, 22.0), linked);
         }
 
-        // The result, glowing.
-        if let Some(option) = result {
-            let t = self.landed_time;
-            let l = &self.landed[index];
-            let o = &view.odds.options[option];
-            let pop = ui::ease_out_back(t / 0.45);
-            ui::glow(canvas, a, vec2(cx, 500.0), 420.0 * pop, 0.55 + 0.15 * (self.time * 5.0).sin());
-            ui::plain(canvas, &a.font, "YOU GOT", vec2(cx, 458.0), 14.0, MUTED, Align::Center);
-            let words = country::result_text(&self.data, self.map, index, l);
-            ui::text(canvas, &a.font, &words, vec2(cx, 476.0), 36.0 * pop.max(0.1), ui::GOLD_HI, Align::Center, 420.0);
-            let detail = match (&o.detail, def.kind) {
-                (Some(d), _) => d.clone(),
-                (None, crate::data::Kind::Number) if !words.contains(&o.label) => o.label.clone(),
-                _ => String::new(),
-            };
-            ui::plain(canvas, &a.font, &detail, vec2(cx, 522.0), 15.0, MUTED, Align::Center);
-            if view.odds.chance(option) < RARE {
-                let k = ui::ease_out_back((t - 0.2) / 0.4);
-                canvas.draw_placed(
-                    &a.rare,
-                    vec2(1180.0, 470.0),
-                    Placed {
-                        pivot: vec2(80.0, 80.0),
-                        scale: vec2(0.75 * k, 0.75 * k),
-                        turn: (self.time * 2.0).sin() * 6.0,
-                        ..Placed::default()
-                    },
-                );
-                canvas.label("rare", Rect::from_center(vec2(1180.0, 470.0), 120.0, 120.0));
-            }
-            canvas.label("result", Rect::new(x0 + 20.0, 456.0, 430.0, 90.0));
+        // Every slice and its luck, the impossible ones greyed with the reason.
+        self.draw_odds_list(canvas, view);
+
+        let status = if view.result().is_some() {
+            ""
         } else if view.spinning() {
-            ui::plain(canvas, &a.font, "Spinning... (click again to hurry it)", vec2(cx, 492.0), 17.0, MUTED, Align::Center);
+            "Spinning: click again to hurry it"
         } else {
-            ui::plain(canvas, &a.font, "Each slice is its real chance.", vec2(cx, 480.0), 16.0, MUTED, Align::Center);
-            ui::plain(canvas, &a.font, "Ready when you are!", vec2(cx, 504.0), 16.0, MUTED, Align::Center);
-        }
+            "Click Spin, or the wheel itself"
+        };
+        ui::plain(canvas, &a.font, status, vec2(cx, LIST.bottom() + 10.0), 13.0, MUTED, Align::Center);
 
         let mut go = WHEEL_GO;
         if view.landed {
             let last_of_round = index + 1 >= self.data.wheels.len() || self.data.wheels[index + 1].round != def.round;
-            go.label = if last_of_round { "ROUND SUMMARY" } else { "NEXT WHEEL" };
+            go.label = if last_of_round { "Round summary" } else { "Next wheel" };
+            go.key = "On to the next wheel (shortcut: Space)";
         } else if view.spinning() {
-            go.label = "FASTER";
+            go.label = "Faster";
+            go.key = "Hurry the wheel (shortcut: Space)";
         }
         self.button(canvas, &go, !view.spinning());
         self.button(canvas, &WHEEL_SKIP, false);
+    }
+
+    /// The list beside the wheel: every option with its luck, the one under
+    /// the pointer lit while it turns, the result gold, the impossible grey.
+    fn draw_odds_list(&self, canvas: &mut Canvas, view: &WheelView) {
+        let a = &self.assets;
+        let result = view.result();
+        let under = view.slices[view.slice_under()].option;
+        let rows = view.odds.options.len();
+        let first = (self.wheel_scroll / LIST_ROW).floor() as usize;
+        let shown = (LIST.h / LIST_ROW).ceil() as usize + 1;
+        let small = TextStyle { size: 14.0, ..TextStyle::default() };
+        let label_style = TextStyle { size: 15.0, ..TextStyle::default() };
+        for i in first..rows.min(first + shown) {
+            let y = LIST.y + i as f32 * LIST_ROW - self.wheel_scroll;
+            if y < LIST.y - 0.5 || y + LIST_ROW > LIST.bottom() + 0.5 {
+                continue;
+            }
+            let o = &view.odds.options[i];
+            let r = Rect::new(LIST.x, y, LIST.w - 10.0, LIST_ROW - 2.0);
+            let chance = view.odds.chance(i);
+            let why = blocked_reason(&view.odds, i);
+            let win = result == Some(i);
+            if win {
+                canvas.fill_rect(r, ui::alpha(GOLD, 0.28));
+            } else if under == i && view.spinning() {
+                canvas.fill_rect(r, Color::rgba(255, 255, 255, 26));
+            }
+            let grey = Color::rgba(120, 128, 138, 255);
+            let (chip, ink) = if why.is_some() {
+                (Color::rgba(90, 98, 108, 255), grey)
+            } else if win {
+                (o.color, ui::GOLD_HI)
+            } else if result.is_some() {
+                (o.color, SOFT)
+            } else {
+                (o.color, gui::IVORY)
+            };
+            canvas.fill_circle(vec2(r.x + 12.0, r.y + r.h / 2.0), 6.0, chip);
+            let luck = if why.is_some() { "not possible".to_string() } else { percent(chance) };
+            let lw = a.font.measure(&luck, &small).x;
+            let room = r.w - 40.0 - lw;
+            gui::fit(canvas, &a.font, &o.label, vec2(r.x + 26.0, r.y + 3.0), 15.0, ink, Align::Left, room);
+            ui::plain(canvas, &a.font, &luck, vec2(r.right() - 6.0, r.y + 4.0), 14.0, ink, Align::Right);
+            if why.is_some() {
+                let w = a.font.measure(&o.label, &label_style).x.min(room);
+                canvas.fill_rect(Rect::new(r.x + 26.0, r.y + r.h / 2.0, w, 1.0), grey);
+            }
+            let tip = match &why {
+                Some(w) => format!("{}: {w}", o.label),
+                None => format!("{}: {} luck ({})", o.label, percent(chance), one_in(chance)),
+            };
+            self.tip_words(r, tip);
+        }
+        // The scroll bar, when there's more than fits.
+        let total = rows as f32 * LIST_ROW;
+        if total > LIST.h {
+            let bar = Rect::new(LIST.right() - 4.0, LIST.y, 3.0, LIST.h);
+            canvas.fill_rect(bar, Color::rgba(255, 255, 255, 24));
+            let h = (LIST.h * LIST.h / total).max(18.0);
+            let y = LIST.y + (LIST.h - h) * (self.wheel_scroll / (total - LIST.h)).clamp(0.0, 1.0);
+            canvas.fill_rect(Rect::new(bar.x, y, 3.0, h), gui::BRONZE);
+        }
+        canvas.label("odds list", LIST);
+    }
+
+    /// The lens by the pointer: the slices passing under it, magnified,
+    /// so even a sliver of 0.05% can be read as it goes by.
+    fn draw_lens(&self, canvas: &mut Canvas) {
+        let Some(view) = self.view.as_ref() else { return };
+        let a = &self.assets;
+        let tau = std::f32::consts::TAU;
+        gui::panel(canvas, a, LENS);
+        ui::plain(canvas, &a.font, "UNDER THE POINTER", vec2(LENS.center().x, LENS.y + 8.0), 11.0, gui::LABEL, Align::Center);
+        let strip = Rect::new(LENS.x + 10.0, LENS.y + 26.0, LENS.w - 20.0, LENS.h - 36.0);
+        canvas.fill_rect(strip, Color::rgba(0, 0, 0, 90));
+        // Pixels per radian: about six typical slices fill the lens, so a
+        // wheel of a hundred slivers is magnified far more than one of five.
+        let mut widths: Vec<f32> = view.slices.iter().map(|s| s.width()).collect();
+        widths.sort_by(|a, b| a.total_cmp(b));
+        let typical = widths.get(widths.len() / 2).copied().unwrap_or(0.5);
+        let k = (strip.h / (6.0 * typical)).clamp(120.0, 1800.0);
+        let mid = strip.center().y;
+        let a0 = (-view.angle).rem_euclid(tau);
+        let result = view.result();
+        let mut st = ui::style(13.0, Color::WHITE);
+        st.outline = 2.0;
+        st.outline_color = Color::rgba(10, 14, 22, 230);
+        st.shadow = None;
+        for s in &view.slices {
+            // Where the slice is, relative to the pointer (up: further round).
+            let mut d = (s.start - a0).rem_euclid(tau);
+            if d > std::f32::consts::PI {
+                d -= tau;
+            }
+            for shift in [0.0, -tau, tau] {
+                let (lo, hi) = (d + shift, d + shift + s.width());
+                let (top, bottom) = ((mid - hi * k).max(strip.y), (mid - lo * k).min(strip.bottom()));
+                if bottom <= top {
+                    continue;
+                }
+                let dim = result.is_some_and(|w| w != s.option);
+                let color = if dim { s.color.lerp(Color::from_hex(0x101820), 0.6) } else { s.color };
+                canvas.fill_rect(Rect::new(strip.x, top, strip.w, bottom - top), color);
+                canvas.fill_rect(Rect::new(strip.x, top, strip.w, 1.0), Color::rgba(0, 0, 0, 120));
+                if bottom - top >= 15.0 {
+                    let words = &view.odds.options[s.option].label;
+                    let shown = if a.font.measure(words, &st).x > strip.w - 8.0 { ellipsis(&a.font, words, strip.w - 8.0, &st) } else { words.clone() };
+                    // Off the pointer's line: the slice under it is named just above it.
+                    let mut cy = (top + bottom) / 2.0 - 8.0;
+                    if (cy - (mid - 8.0)).abs() < 10.0 {
+                        cy = if top < mid - 20.0 { mid - 22.0 } else { mid + 5.0 };
+                    }
+                    canvas.draw_font_text(&a.font, &shown, vec2(strip.x + 4.0, cy), &st);
+                }
+            }
+        }
+        // The pointer's line across the lens, and its notch.
+        canvas.fill_rect(Rect::new(strip.x - 4.0, mid - 1.0, strip.w + 8.0, 2.0), GOLD);
+        canvas.fill_triangle(vec2(strip.right() + 8.0, mid - 7.0), vec2(strip.right() + 8.0, mid + 7.0), vec2(strip.right() - 2.0, mid), GOLD);
+        canvas.label("lens", LENS);
+    }
+
+    /// The result, big, under the wheel.
+    fn draw_result(&self, canvas: &mut Canvas) {
+        let Some(view) = self.view.as_ref() else { return };
+        let Some(option) = view.result() else { return };
+        let a = &self.assets;
+        let index = view.odds.wheel;
+        let def = &self.data.wheels[index];
+        let Some(l) = self.landed.get(index) else { return };
+        let o = &view.odds.options[option];
+        let t = self.landed_time;
+        let pop = ui::ease_out_back(t / 0.45).max(0.05);
+        let r = Rect::from_center(RESULT.center(), RESULT.w * (0.85 + 0.15 * pop.min(1.0)), RESULT.h);
+        ui::glow(canvas, a, r.center(), 520.0 * pop, 0.35 + 0.1 * (self.time * 5.0).sin());
+        gui::panel_gold(canvas, a, r);
+        ui::plain(canvas, &a.font, "YOU GOT", vec2(r.center().x, r.y + 8.0), 12.0, gui::LABEL, Align::Center);
+        let words = country::result_text(&self.data, self.map, index, l);
+        gui::fit(canvas, &a.serif, &words, vec2(r.center().x, r.y + 24.0), (38.0 * pop).clamp(4.0, 40.0), ui::GOLD_HI, Align::Center, r.w - 40.0);
+        let detail = match (&o.detail, def.kind) {
+            (Some(d), _) => d.clone(),
+            (None, crate::data::Kind::Number) if !words.contains(&o.label) => o.label.clone(),
+            _ => format!("{} luck ({})", percent(view.odds.chance(option)), one_in(view.odds.chance(option))),
+        };
+        gui::fit(canvas, &a.font, &detail, vec2(r.center().x, r.y + 70.0), 14.0, MUTED, Align::Center, r.w - 40.0);
+        canvas.label("result", r);
+        if view.odds.chance(option) < RARE {
+            let k = ui::ease_out_back((t - 0.2) / 0.4);
+            let at = vec2(r.right() - 6.0, r.y - 4.0);
+            canvas.draw_placed(
+                &a.rare,
+                at,
+                Placed {
+                    pivot: vec2(80.0, 80.0),
+                    scale: vec2(0.55 * k, 0.55 * k),
+                    turn: (self.time * 2.0).sin() * 6.0,
+                    ..Placed::default()
+                },
+            );
+            canvas.label("rare", Rect::from_center(at, 90.0, 90.0));
+        }
     }
 
     fn draw_round_card(&self, canvas: &mut Canvas, round: usize) {
