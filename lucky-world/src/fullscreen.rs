@@ -50,14 +50,18 @@ mod platform {
     use windows_sys::Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST};
     use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
-    /// The window's style and place before going fullscreen.
-    static SAVED: std::sync::Mutex<Option<(isize, [i32; 4])>> = std::sync::Mutex::new(None);
+    /// The window's style, extended style, place and whether it was
+    /// maximized, before going full screen.
+    static SAVED: std::sync::Mutex<Option<(isize, isize, [i32; 4], bool)>> = std::sync::Mutex::new(None);
 
     fn window() -> HWND {
         let title: Vec<u16> = "LUCKY WORLD\0".encode_utf16().collect();
         unsafe { FindWindowW(std::ptr::null(), title.as_ptr()) }
     }
 
+    /// Full screen as a borderless window over the whole monitor (the
+    /// taskbar included). A maximized window is restored first: Windows
+    /// keeps a maximized window inside the work area, above the taskbar.
     pub fn set(on: bool) -> Result<bool, String> {
         let hwnd = window();
         if hwnd.is_null() {
@@ -65,11 +69,18 @@ mod platform {
         }
         unsafe {
             if on {
+                let zoomed = IsZoomed(hwnd) != 0;
+                if zoomed {
+                    ShowWindow(hwnd, SW_RESTORE);
+                }
                 let mut r: RECT = std::mem::zeroed();
                 GetWindowRect(hwnd, &mut r);
                 let style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+                let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
                 if let Ok(mut s) = SAVED.lock() {
-                    *s = Some((style, [r.left, r.top, r.right, r.bottom]));
+                    if s.is_none() {
+                        *s = Some((style, ex, [r.left, r.top, r.right, r.bottom], zoomed));
+                    }
                 }
                 let mut mi: MONITORINFO = std::mem::zeroed();
                 mi.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
@@ -78,11 +89,19 @@ mod platform {
                     return Err("Windows wouldn't say how big the screen is".into());
                 }
                 let m = mi.rcMonitor;
-                SetWindowLongPtrW(hwnd, GWL_STYLE, (style & !(WS_OVERLAPPEDWINDOW as isize)) | WS_POPUP as isize);
-                SetWindowPos(hwnd, HWND_TOP, m.left, m.top, m.right - m.left, m.bottom - m.top, SWP_FRAMECHANGED | SWP_SHOWWINDOW);
-            } else if let Some((style, [l, t, r, b])) = SAVED.lock().ok().and_then(|mut s| s.take()) {
+                let frame = (WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_BORDER | WS_DLGFRAME) as isize;
+                SetWindowLongPtrW(hwnd, GWL_STYLE, (style & !frame) | (WS_POPUP | WS_VISIBLE) as isize);
+                let edges = (WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE) as isize;
+                SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex & !edges);
+                SetWindowPos(hwnd, HWND_TOP, m.left, m.top, m.right - m.left, m.bottom - m.top, SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOOWNERZORDER);
+                SetForegroundWindow(hwnd);
+            } else if let Some((style, ex, [l, t, r, b], zoomed)) = SAVED.lock().ok().and_then(|mut s| s.take()) {
                 SetWindowLongPtrW(hwnd, GWL_STYLE, style);
-                SetWindowPos(hwnd, std::ptr::null_mut(), l, t, r - l, b - t, SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOZORDER);
+                SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex);
+                SetWindowPos(hwnd, std::ptr::null_mut(), l, t, r - l, b - t, SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOZORDER | SWP_NOOWNERZORDER);
+                if zoomed {
+                    ShowWindow(hwnd, SW_MAXIMIZE);
+                }
             }
         }
         Ok(true)

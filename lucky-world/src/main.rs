@@ -36,6 +36,12 @@ mod bot;
 mod tests;
 #[cfg(test)]
 mod player_test;
+#[cfg(test)]
+mod esc_test;
+#[cfg(test)]
+mod layout_test;
+#[cfg(test)]
+mod mouse_test;
 
 use duckforge::prelude::*;
 
@@ -281,6 +287,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     if let Some(at) = args.iter().position(|a| a == "--ai-trace") {
         return ai::report::trace(&args[at + 1..]).map_err(|e| e.to_string().into());
+    }
+    if let Some(at) = args.iter().position(|a| a == "--shots") {
+        return bot::shots(&args[at + 1..]).map_err(|e| e.into());
     }
     if let Some(at) = args.iter().position(|a| a == "--tour") {
         return bot::tour(&args[at + 1..]).map_err(|e| e.into());

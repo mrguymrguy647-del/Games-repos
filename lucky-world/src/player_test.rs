@@ -95,6 +95,8 @@ fn the_player_test_plays_a_whole_game_from_the_menu_to_the_end() {
         let Some(t) = bot.visit_one_of(&neighbours) else { break };
         bot.tap(Key::K);
         bot.tap(Key::D);
+        assert!(bot.g().shell.confirm.as_ref().is_some_and(|c| c.danger), "declaring war asks first");
+        bot.tap(Key::Y);
         let at_war = bot.g().wars.as_ref().unwrap().at_war(0, t).is_some();
         bot.tap(Key::Escape);
         if at_war {
@@ -178,6 +180,8 @@ fn the_player_test_plays_a_whole_game_from_the_menu_to_the_end() {
     assert!(bot.pause());
     bot.taps(Key::Down, 5);
     bot.tap(Key::Enter);
+    assert!(bot.g().shell.confirm.is_some(), "leaving asks first");
+    bot.tap(Key::Enter);
     assert_eq!(bot.screen(), Screen::Menu);
     assert!(matches!(bot.g().shell.slots.first().map(|s| &s.summary), Some(Ok(_))), "the menu lists the save");
     bot.tap(Key::Enter);
@@ -221,9 +225,11 @@ fn the_tutorial_teaches_every_step_and_ends() {
     bot.tap(Key::Space);
     assert!(bot.wait_until(60, |g| g.tutorial.as_ref().is_some_and(|t| t.step == 1)));
     for _ in 0..2 {
-        bot.wait_until(600, |g| g.view.as_ref().is_some_and(|v| v.landed));
+        bot.wait(20);
+        bot.tap(Key::Space); // spin
+        assert!(bot.wait_until(900, |g| g.view.as_ref().is_some_and(|v| v.landed)));
         bot.wait(30);
-        bot.tap(Key::Space);
+        bot.tap(Key::Space); // on
     }
     assert!(bot.wait_until(120, |g| g.tutorial.as_ref().is_some_and(|t| t.step == 2)), "step {}", step(&bot));
     bot.tap(Key::S);
@@ -234,8 +240,10 @@ fn the_tutorial_teaches_every_step_and_ends() {
     bot.wait(30);
     bot.tap(Key::Space);
     assert!(bot.wait_until(60, |g| g.tutorial.as_ref().is_some_and(|t| t.step == 5)));
-    // 6: click a province of ours (H goes home and selects the capital).
-    bot.tap(Key::H);
+    // 6: click a province of ours.
+    bot.wait(30);
+    let (_, at) = bot.g().clickable_province(0).expect("one of my provinces is on screen");
+    bot.click(at);
     assert!(bot.wait_until(60, |g| g.tutorial.as_ref().is_some_and(|t| t.step == 6)), "step {}", step(&bot));
     bot.tap(Key::Digit3);
     assert!(bot.wait_until(60, |g| g.tutorial.as_ref().is_some_and(|t| t.step == 7)));

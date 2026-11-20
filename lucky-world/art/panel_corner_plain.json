@@ -1,0 +1,12 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Chip corner (top left), radius 8: navy 85%, no border",
+ "seed": 1,
+ "palette": {"navy": "#0d1722"},
+ "commands": [
+  {"cmd": "canvas", "width": 10, "height": 10},
+  {"cmd": "layer", "name": "Fill", "opacity": 0.85},
+  {"cmd": "rect", "x": 0.0, "y": 0.0, "width": 40.0, "height": 40.0, "radius": 8.0, "fill": "navy"}
+ ]
+}

@@ -4,12 +4,12 @@
   "title": "Tutorial: an open book",
   "seed": 1,
   "palette": {
-    "ink": "#1A1030",
-    "gold": "#F5C542",
+    "ink": "#0d1722",
     "paper": "#EFE3C4",
     "paper_dark": "#D8C79C",
     "ink_brown": "#4A3420",
-    "blue_dark": "#3E5AA8"
+    "blue_dark": "#3a5a7c",
+    "bronze": "#8a6d2f"
   },
   "commands": [
     {
@@ -29,7 +29,7 @@
       ],
       "radius": 11,
       "fill": "ink",
-      "outline": "gold",
+      "outline": "bronze",
       "outline_size": 1.5
     },
     {

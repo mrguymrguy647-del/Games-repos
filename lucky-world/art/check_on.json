@@ -1,0 +1,19 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Checkbox, ticked: bronze frame, gold tick",
+ "seed": 1,
+ "palette": {"navy": "#0d1722", "bronze": "#8a6d2f", "gold": "#e2b84a"},
+ "commands": [
+  {"cmd": "canvas", "width": 16, "height": 16},
+  {"cmd": "layer", "name": "Box"},
+  {"cmd": "rect", "x": 1.0, "y": 1.0, "width": 14.0, "height": 14.0, "radius": 3.0, "fill": "bronze"},
+  {"cmd": "rect", "x": 2.5, "y": 2.5, "width": 11.0, "height": 11.0, "radius": 1.8, "fill": "navy"},
+  {"cmd": "layer", "name": "Tick"},
+  {"cmd": "polygon", "points": [[3.82, 9.08], [6.32, 11.58], [7.88, 10.02], [5.38, 7.52]], "fill": "gold"},
+  {"cmd": "polygon", "points": [[7.95, 11.5], [12.45, 6.0], [10.75, 4.6], [6.25, 10.1]], "fill": "gold"},
+  {"cmd": "ellipse", "center": [4.6, 8.3], "radius": 1.1, "fill": "gold"},
+  {"cmd": "ellipse", "center": [7.1, 10.8], "radius": 1.1, "fill": "gold"},
+  {"cmd": "ellipse", "center": [11.6, 5.3], "radius": 1.1, "fill": "gold"}
+ ]
+}

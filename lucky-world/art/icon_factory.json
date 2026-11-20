@@ -4,15 +4,9 @@
   "title": "Factory icon (production)",
   "seed": 1,
   "palette": {
-    "ink": "#1A1030",
-    "gold": "#F5C542",
-    "gold_dark": "#A8740E",
-    "gold_hi": "#FFF1B8",
-    "white": "#FFFFFF",
-    "accent": "#7FA8FF",
-    "green": "#6BD48A",
-    "red": "#F06A6A",
-    "blue": "#4aa8ec"
+    "ink": "#0d1722",
+    "accent": "#8fb4d9",
+    "bronze": "#8a6d2f"
   },
   "commands": [
     {
@@ -32,7 +26,7 @@
       ],
       "radius": 11,
       "fill": "ink",
-      "outline": "gold",
+      "outline": "bronze",
       "outline_size": 1.5
     },
     {

@@ -1,0 +1,14 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Slider knob: gold disc, navy rim, small highlight",
+ "seed": 1,
+ "palette": {"navy": "#0d1722", "gold_lo": "#b98f2c"},
+ "commands": [
+  {"cmd": "canvas", "width": 16, "height": 16},
+  {"cmd": "layer", "name": "Knob"},
+  {"cmd": "ellipse", "center": [8.0, 8.0], "radius": 8.0, "fill": "navy"},
+  {"cmd": "ellipse", "center": [8.0, 8.0], "radius": 6.5, "fill": {"gradient": "linear", "from": [0, 1.5], "to": [0, 14.5], "colors": ["#ecc75c", "gold_lo"]}},
+  {"cmd": "ellipse", "center": [6.3, 5.4], "radius": [2.3, 1.5], "rotation": -30, "fill": "#f6e2a0d0"}
+ ]
+}

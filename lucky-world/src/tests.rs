@@ -247,25 +247,68 @@ fn game() -> crate::game::Lucky {
     crate::new_game().unwrap_or_else(|e| panic!("{e}"))
 }
 
+/// Every wheel spun by hand, one by one: a wheel never spins until it is
+/// told to, each lands, and the game goes on to the map.
 #[test]
-fn the_playthrough_spins_all_sixteen_and_goes_onto_the_map() {
-    let played = PlayTest::new(crate::config(), game()).inputs("playthroughs/lucky_world.json").run();
+fn the_playthrough_spins_every_wheel_by_hand_and_goes_onto_the_map() {
+    use duckforge::prelude::Key;
+    let mut g = game();
+    g.menu_started = false;
+    let mut bot = crate::bot::Bot::new(g, 1);
+    // Bot::new starts on the menu; this test starts from the New Game screen.
+    bot.wait(5);
+    assert!(bot.click_on("New Game"), "{:?}", bot.log);
+    let wheels = bot.g().data.wheels.len();
+    bot.tap(Key::Digit2);
+    bot.tap(Key::Space);
+    let mut cards = 0;
+    while bot.g().landed.len() < wheels || matches!(bot.screen(), crate::game::Screen::Round(_)) {
+        match bot.screen() {
+            crate::game::Screen::Wheel => {
+                let before = bot.g().landed.len();
+                bot.wait(60);
+                assert_eq!(bot.g().landed.len(), before, "wheel {} spun by itself", before + 1);
+                assert!(!bot.g().view.as_ref().unwrap().spinning(), "wheel {} spins only when told", before + 1);
+                bot.tap(Key::Space);
+                assert!(bot.wait_until(1200, |g| g.landed.len() == before + 1), "wheel {} never landed", before + 1);
+                bot.wait(30);
+                bot.tap(Key::Space);
+            }
+            crate::game::Screen::Round(_) => {
+                cards += 1;
+                bot.wait(30);
+                bot.tap(Key::Space);
+            }
+            other => panic!("on {other:?} with {} of {wheels} wheels landed", bot.g().landed.len()),
+        }
+        assert!(bot.sim.context().frame() < 60_000, "it took too long");
+    }
+    assert_eq!(cards, 4, "a card after each of the four rounds");
+    assert!(bot.wait_until(60, |g| g.screen == crate::game::Screen::Final));
+    bot.wait(40);
+    bot.tap(Key::Space);
+    bot.wait(10);
+    bot.tap(Key::Space);
+    assert!(bot.wait_until(120, |g| g.screen == crate::game::Screen::Rivals));
+    bot.wait(30);
+    bot.tap(Key::Space);
+    assert!(bot.wait_until(120, |g| g.screen == crate::game::Screen::Map));
+    bot.wait(10);
+    let played = &bot.sim;
     assert_eq!(played.text("screen"), "Map");
-    assert_eq!(played.number("wheels_landed"), 16.0);
-    assert_eq!(played.number("main_nations"), 10.0); // the player and the 9 rivals of the Grand Continent
-    assert!(played.number("nations") > 10.0 && played.number("nations") <= 25.0);
+    assert_eq!(played.number("wheels_landed"), wheels as f64);
+    assert!(played.number("main_nations") >= 6.0);
+    assert!(played.number("nations") > 6.0 && played.number("nations") <= 25.0);
     let g = played.game();
     let player = g.player.as_ref().unwrap();
     assert_eq!(player.landed, g.landed, "the country card shows what the wheels landed on");
     assert!(!g.skipped);
     // Every spin ticked and landed with a sound; the map opened with its own.
     assert!(played.sound_frames("tick").len() > 100);
-    assert_eq!(played.sound_frames("land").len(), 17); // 16 wheels and the full country card
+    assert_eq!(played.sound_frames("land").len(), wheels + 1, "each wheel and the full country card");
     assert_eq!(played.sound_frames("open_map").len(), 1);
-    assert!(!played.sound_frames("select").is_empty(), "clicking the map selected a province");
-    // On the map: a card was opened and closed, and the camera moved.
-    assert_eq!(played.text("card"), "none");
     assert_eq!(played.text("map_mode"), "Political");
+    assert!(played.failed_checks().is_empty(), "{:?}", played.failed_checks());
 }
 
 /// Whether a reported text ever had this value during the run.
@@ -338,14 +381,73 @@ fn the_war_playthrough_watches_a_whole_war_from_first_shot_to_peace() {
 /// screen (Auto off, a request approved), reads a battle report and offers peace.
 #[test]
 fn the_player_war_playthrough_declares_orders_supplies_and_reads_reports() {
-    let played = PlayTest::new(crate::config(), game()).inputs("playthroughs/war_player.json").run();
+    use duckforge::prelude::Key;
+    let mut bot = crate::bot::Bot::new(game(), 1);
+    assert!(bot.new_game(0, "normal"), "{:?}", bot.log);
+    // Choose a neighbour on the map, then declare war on it from the war room.
+    // (The neighbour with the biggest army: a small one may give up before a battle.)
+    let mut neighbours = bot.neighbours();
+    {
+        let w = bot.g().wars.as_ref().unwrap();
+        let army = |n: usize| w.divisions.iter().filter(|d| d.alive && w.nation_of(d.faction) == n).count();
+        neighbours.sort_by_key(|&n| std::cmp::Reverse(army(n)));
+        neighbours.truncate(1);
+    }
+    let target = bot.visit_one_of(&neighbours).unwrap_or_else(|| panic!("no neighbour to choose: {neighbours:?}"));
+    bot.tap(Key::K);
+    assert!(bot.g().map_ui.war.open.is_some(), "the war room opened");
+    bot.tap(Key::L); // a bigger war to begin with
+    bot.tap(Key::D);
+    assert!(bot.g().shell.confirm.as_ref().is_some_and(|c| c.danger), "declaring war asks first, in red");
+    bot.tap(Key::Y);
+    assert!(bot.g().wars.as_ref().unwrap().at_war(0, target).is_some(), "at war with the chosen neighbour");
+    // The army: orders for the first divisions.
+    bot.tap(Key::Tab);
+    for _ in 0..5 {
+        bot.tap(Key::A);
+        bot.tap(Key::Down);
+    }
+    // Supply: the first front up to high priority, Auto off.
+    bot.tap(Key::Tab);
+    bot.tap(Key::Right);
+    bot.tap(Key::T);
+    bot.tap(Key::K);
+    assert!(bot.g().map_ui.war.open.is_none());
+    // Let the war run until a battle has been fought and a request waits.
+    bot.tap(Key::Digit3);
+    let fought = bot.wait_until(6000, |g| g.map_ui.war.card.is_some());
+    {
+        let w = bot.g().wars.as_ref().unwrap();
+        assert!(fought, "no battle in time (day {}, at war {:?}, reports {}, battles {}, wars {:?}, divisions mine {})", bot.g().economy.as_ref().unwrap().day, w.at_war(0, target), w.reports.len(), w.battles.len(), w.wars.iter().map(|x| (x.sides.clone(), x.cause.clone())).collect::<Vec<_>>(), w.divisions.iter().filter(|d| d.alive && d.faction == 0).count());
+    }
+    // The battle's card: Enter opens its report.
+    bot.tap(Key::Enter);
+    assert!(bot.g().map_ui.war.full.is_some(), "the battle report opened");
+    bot.tap(Key::Escape);
+    assert!(bot.g().map_ui.war.full.is_none() && !bot.g().shell.pause);
+    // Supply: approve a request when one comes in.
+    assert!(bot.wait_until(8000, |g| g.wars.as_ref().unwrap().forces[0].requests.iter().any(|r| r.answered.is_none())), "no supply request in time");
+    bot.tap(Key::Space); // the clock stops while we read
+    bot.tap(Key::K);
+    bot.taps(Key::Tab, 2);
+    bot.tap(Key::Y);
+    // Reports, then peace offered from the wars page.
+    bot.tap(Key::Tab);
+    bot.tap(Key::Enter);
+    bot.tap(Key::Escape);
+    bot.tap(Key::Tab);
+    bot.tap(Key::P);
+    bot.tap(Key::K);
+    bot.tap(Key::Space);
+    bot.wait(60);
+    let played = &bot.sim;
+    let most = |name: &str| most(played, name);
     assert_eq!(played.text("screen"), "Map");
     assert!(!played.flag("spectating"));
-    // The player declared war (level 3); the enemy may have climbed to total war since.
-    assert!(most(&played, "player_war_level") >= 3.0, "the player declared war");
-    assert!(most(&played, "divisions_order_not_auto") > 0.0, "no order was given");
+    assert!(most("player_war_level") >= 3.0, "the player declared war");
+    assert!(most("divisions_order_not_auto") > 0.0, "no order was given");
     assert!(played.history("supply_auto").iter().any(|(_, v)| matches!(v, duckforge::prelude::ReportValue::Bool(false))), "Auto was never turned off");
-    assert_eq!(most(&played, "priority_0"), 3.0);
+    assert_eq!(most("priority_0"), 3.0);
     assert!(played.history("report_open").iter().any(|(_, v)| matches!(v, duckforge::prelude::ReportValue::Bool(true))), "no report was read");
     assert!(played.history("report_card").iter().any(|(_, v)| matches!(v, duckforge::prelude::ReportValue::Bool(true))), "no battle report card after a battle");
     let g = played.game();
@@ -387,35 +489,42 @@ fn skip_spin_on_the_title_rolls_every_wheel_at_once() {
         .frames(30)
         .run();
     assert_eq!(played.text("screen"), "Final");
-    assert_eq!(played.number("wheels_landed"), 16.0);
+    assert_eq!(played.number("wheels_landed"), played.game().data.wheels.len() as f64);
     assert!(played.game().skipped);
 }
 
 #[test]
 fn skip_spin_part_way_keeps_the_wheels_already_spun() {
+    use duckforge::prelude::Key;
     let mut sim = Simulation::new(crate::config(), game());
-    sim.run(5);
-    sim.press(duckforge::prelude::Key::Space);
-    sim.step();
-    sim.release(duckforge::prelude::Key::Space);
-    // Land the first wheel, go on to the second and let it land too.
-    for _ in 0..2 {
-        sim.run(420);
-        sim.press(duckforge::prelude::Key::Space);
+    let tap = |sim: &mut Simulation<crate::game::Lucky>, k: Key| {
+        sim.press(k);
         sim.step();
-        sim.release(duckforge::prelude::Key::Space);
+        sim.release(k);
+        sim.step();
+    };
+    sim.run(5);
+    tap(&mut sim, Key::Space); // the title: on to the first wheel
+    // Spin the first wheel and the second, each landing.
+    for n in 1..=2 {
+        sim.run(20);
+        tap(&mut sim, Key::Space); // spin
+        sim.run(700);
+        assert_eq!(sim.game().landed.len(), n);
+        tap(&mut sim, Key::Space); // on to the next wheel
     }
     let before = sim.game().landed.clone();
-    assert_eq!(before.len(), 2);
-    // The third wheel is spinning now: skip.
-    sim.run(150);
+    // The third wheel, spinning now: skip.
+    sim.run(20);
+    tap(&mut sim, Key::Space);
+    sim.run(40);
     assert!(sim.game().view.as_ref().unwrap().spinning());
-    sim.press(duckforge::prelude::Key::S);
+    sim.press(Key::S);
     sim.step();
     let g = sim.game();
     assert_eq!(g.screen, crate::game::Screen::Final);
     assert_eq!(&g.landed[..2], &before[..]);
-    assert_eq!(g.landed.len(), 16);
+    assert_eq!(g.landed.len(), g.data.wheels.len());
     assert!(sim.failed_checks().is_empty(), "{:?}", sim.failed_checks());
 }
 

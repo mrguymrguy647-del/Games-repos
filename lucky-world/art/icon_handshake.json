@@ -4,12 +4,12 @@
  "title": "Diplomacy: two hands shaking",
  "seed": 1,
  "palette": {
-  "ink": "#1A1030",
-  "gold": "#F5C542",
+  "ink": "#0d1722",
   "skin": "#E2B48C",
   "skin_dark": "#B98B62",
-  "blue": "#4E79C8",
-  "red": "#F06A6A"
+  "blue": "#5aa2d8",
+  "red": "#d8574a",
+  "bronze": "#8a6d2f"
  },
  "commands": [
   {
@@ -29,7 +29,7 @@
    ],
    "radius": 11,
    "fill": "ink",
-   "outline": "gold",
+   "outline": "bronze",
    "outline_size": 1.5
   },
   {

@@ -4,12 +4,7 @@
   "title": "Card frame 300x92",
   "seed": 1,
   "palette": {
-    "ink": "#1A1030",
-    "gold": "#F5C542",
-    "gold_dark": "#A8740E",
-    "gold_hi": "#FFF1B8",
-    "white": "#FFFFFF",
-    "accent": "#F5C542"
+    "border": "#e2b84a"
   },
   "commands": [
     {
@@ -39,12 +34,12 @@
           92
         ],
         "colors": [
-          "#2B1C5CEE",
-          "#140C33F2"
+          "#0f1c2aF2",
+          "#0a121bF7"
         ]
       },
-      "outline": "accent",
-      "outline_size": 3
+      "outline": "border",
+      "outline_size": 2
     },
     {
       "cmd": "gradient",
@@ -60,11 +55,11 @@
       "stops": [
         [
           0,
-          "#FFFFFF18"
+          "#e9e2cf0d"
         ],
         [
           1,
-          "#FFFFFF00"
+          "#e9e2cf00"
         ]
       ],
       "area": {

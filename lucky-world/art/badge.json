@@ -1,0 +1,13 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Count badge: gold disc, navy rim (the game writes the number)",
+ "seed": 1,
+ "palette": {"navy": "#0d1722", "gold": "#e2b84a"},
+ "commands": [
+  {"cmd": "canvas", "width": 18, "height": 18},
+  {"cmd": "layer", "name": "Badge"},
+  {"cmd": "ellipse", "center": [9.0, 9.0], "radius": 9.0, "fill": "navy"},
+  {"cmd": "ellipse", "center": [9.0, 9.0], "radius": 7.5, "fill": "gold"}
+ ]
+}

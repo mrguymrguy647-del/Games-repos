@@ -4,12 +4,12 @@
  "title": "A treaty: a scroll with a seal",
  "seed": 1,
  "palette": {
-  "ink": "#1A1030",
-  "gold": "#F5C542",
-  "red": "#F06A6A",
+  "ink": "#0d1722",
+  "red": "#d8574a",
   "paper": "#EFE3C4",
   "paper_dark": "#D8C79C",
-  "ink_brown": "#4A3420"
+  "ink_brown": "#4A3420",
+  "bronze": "#8a6d2f"
  },
  "commands": [
   {
@@ -29,7 +29,7 @@
    ],
    "radius": 11,
    "fill": "ink",
-   "outline": "gold",
+   "outline": "bronze",
    "outline_size": 1.5
   },
   {

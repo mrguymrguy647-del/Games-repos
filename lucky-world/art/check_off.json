@@ -1,0 +1,13 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Checkbox, empty: bronze frame on navy",
+ "seed": 1,
+ "palette": {"navy": "#0d1722", "bronze": "#8a6d2f"},
+ "commands": [
+  {"cmd": "canvas", "width": 16, "height": 16},
+  {"cmd": "layer", "name": "Box"},
+  {"cmd": "rect", "x": 1.0, "y": 1.0, "width": 14.0, "height": 14.0, "radius": 3.0, "fill": "bronze"},
+  {"cmd": "rect", "x": 2.5, "y": 2.5, "width": 11.0, "height": 11.0, "radius": 1.8, "fill": "navy"}
+ ]
+}

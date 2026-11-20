@@ -1,0 +1,20 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Warning: triangle with an exclamation mark (white, the game tints it)",
+ "seed": 1,
+ "palette": {"white": "#FFFFFF"},
+ "commands": [
+  {"cmd": "canvas", "width": 24, "height": 24},
+  {"cmd": "layer", "name": "Icon"},
+  {"cmd": "polygon", "points": [[12.0, 3.6], [21.4, 20.0], [2.6, 20.0]], "fill": "white"},
+  {"cmd": "polygon", "points": [[10.96, 4.2], [20.36, 20.6], [22.44, 19.4], [13.04, 3.0]], "fill": "white"},
+  {"cmd": "polygon", "points": [[21.4, 18.8], [2.6, 18.8], [2.6, 21.2], [21.4, 21.2]], "fill": "white"},
+  {"cmd": "polygon", "points": [[3.64, 20.6], [13.04, 4.2], [10.96, 3.0], [1.56, 19.4]], "fill": "white"},
+  {"cmd": "ellipse", "center": [12.0, 3.6], "radius": 1.2, "fill": "white"},
+  {"cmd": "ellipse", "center": [21.4, 20.0], "radius": 1.2, "fill": "white"},
+  {"cmd": "ellipse", "center": [2.6, 20.0], "radius": 1.2, "fill": "white"},
+  {"cmd": "rect", "x": 11.0, "y": 8.6, "width": 2.0, "height": 6.0, "radius": 1.0, "fill": "white", "erase": true},
+  {"cmd": "ellipse", "center": [12.0, 17.3], "radius": 1.3, "fill": "white", "erase": true}
+ ]
+}

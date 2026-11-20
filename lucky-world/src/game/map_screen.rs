@@ -1,32 +1,35 @@
-//! The world map screen: look round the 3D map, click provinces and nations.
+//! The world map screen: the 3D map under the HUD (`hud.rs`).
+//!
+//! Everything can be done with the mouse; keys are shortcuts (shown in the
+//! tooltips, changeable in Settings):
 //!
 //! | | |
 //! |---|---|
-//! | Pan | drag with the left button, or WASD / arrow keys |
-//! | Rotate | drag with the right button, or Q / E |
-//! | Zoom | mouse wheel, or R / F (T / G tilts) |
-//! | Select | click a province; click a name or flag for that nation's card |
-//! | Keys | Tab: next nation · H: home · M: terrain / political · V: economy overlays · C: card · Esc: back |
-//! | Economy | Space: pause · 1-5: speed · O: the economy window (see `econ_screen`) |
-//! | War | K: the war room · J: the biggest battle · click crossed swords to watch a battle (see `war_screen`) |
+//! | Pan | drag with the left button; the screen's edges (in fullscreen); WASD / arrows |
+//! | Turn and tilt | drag with the right or middle button; Q / E, T / G |
+//! | Zoom | the mouse wheel, towards the pointer; the + and − beside the minimap; R / F |
+//! | Jump | click or drag the minimap; double-click a nation to centre on it |
+//! | Select | click a province; click a nation's name for its country card |
+//! | Menu | right-click a nation or province |
+//! | Esc | closes what is open; with nothing open, the pause menu |
 
 use duckforge::prelude::*;
 
-use super::econ_screen::{EconUi, ECON_BUTTON};
+use super::cmd::Cmd;
+use super::econ_screen::EconUi;
+use super::gui::{self, Act, Space};
+use super::hud::{Menu, BAR_H, MINIMAP_AT};
 use super::{Lucky, INSPECT_BACK};
 use crate::country;
 use crate::map_view::Mode;
-use crate::settings::Act;
-use crate::ui::{self, Button, ButtonKind, GOLD, MUTED, SOFT};
+use crate::settings::Act as KeyAct;
+use crate::ui;
 
-const CARD_BUTTON: Button = Button::new(66.0, 356.0, "COUNTRY CARD", "C", ButtonKind::Gold);
-/// The minimap frame's top-left corner; the map sits inside it.
-const MINIMAP_FRAME: Vec2 = Vec2 { x: 976.0, y: 532.0 };
-const MINIMAP_AT: Vec2 = Vec2 { x: 985.0, y: 545.0 };
-const PANEL_AT: Vec2 = Vec2 { x: 14.0, y: 70.0 };
-
-/// A nation's name as laid out this frame: (nation, name rect, name size, flag foot and scale).
+/// A nation's name as laid out this frame: (nation, its chip, text size, flag foot and scale).
 type Label = (usize, Rect, f32, Option<(Vec2, f32)>);
+
+/// The country card's frame (clicking outside it closes it).
+const CARD: Rect = Rect { x: 30.0, y: 14.0, w: 1220.0, h: 690.0 };
 
 /// What the map screen remembers between frames.
 #[derive(Default)]
@@ -38,18 +41,36 @@ pub struct MapUi {
     /// Spectator mode: the nation whose brain panel is open.
     pub brain: Option<usize>,
     pub ambient: Option<LoopId>,
+    /// Where the left button went down on the map (None: on the HUD).
     press_at: Option<Vec2>,
     last_mouse: Option<Vec2>,
-    dragging: bool,
-    right_last: Option<Vec2>,
+    pub dragging: bool,
+    /// Turning with the right or middle button: where it went down, the
+    /// last place, and how far it has moved (a still right-click is a menu).
+    turn_from: Option<Vec2>,
+    turn_last: Option<Vec2>,
+    turn_moved: f32,
     on_minimap: bool,
     next_nation: usize,
-    /// Names and flags as laid out this frame: (nation, name rect, name size, flag foot).
+    /// Names and flags as laid out this frame.
     labels: Vec<Label>,
     pub(super) camera: Option<Camera3D>,
     /// Where the camera is gliding to (a visit, a battle); any pan stops it.
     pub glide: Option<Vec2>,
+    /// The zoom the + and − buttons are easing towards.
+    pub zoom_goal: Option<f32>,
     last_tick: f32,
+    /// The right-click menu.
+    pub menu: Option<Menu>,
+    /// The selected province's details card is open.
+    pub details: bool,
+    /// Where the news strip's event happened (a ground point), for "Show".
+    pub news_at: Option<Vec2>,
+    /// The mouse is over the HUD (the map under it ignores it).
+    pub over_ui: bool,
+    /// News-log entries and spy reports already looked at (the badges count the rest).
+    pub log_seen: usize,
+    pub spy_seen_day: u32,
     /// The economy window and overlays.
     pub econ: EconUi,
     /// The war room, battle markers and reports.
@@ -59,9 +80,14 @@ pub struct MapUi {
 }
 
 impl MapUi {
-    /// Esc has something to close here (so it doesn't quit the game).
+    /// Esc has something to close here (before it opens the pause menu).
     pub fn wants_escape(&self) -> bool {
-        self.card.is_some() || self.selected.is_some() || self.econ.open.is_some() || self.brain.is_some() || self.war.wants_escape() || self.diplo.wants_escape()
+        self.card.is_some() || self.selected.is_some() || self.menu.is_some() || self.details || self.econ.open.is_some() || self.brain.is_some() || self.war.wants_escape() || self.diplo.wants_escape()
+    }
+
+    /// A window covers the map.
+    pub fn window_open(&self) -> bool {
+        self.econ.open.is_some() || self.war.open.is_some() || self.diplo.wants_escape()
     }
 }
 
@@ -69,20 +95,30 @@ impl Lucky {
     pub(super) fn enter_map(&mut self, ctx: &mut Context) {
         crate::ui::sfx(ctx, &self.assets.open_map, 0.9, 0.0);
         if self.map_ui.ambient.is_none() {
-            self.map_ui.ambient = Some(ctx.play_loop(&self.assets.world_ambience, 0.55));
+            self.map_ui.ambient = Some(ctx.play_loop(&self.assets.world_ambience, 0.55 * ui::effects_volume()));
         }
         self.inspect = None;
+        // The rival reveal's confetti stays behind.
+        self.particles.clear();
+        // The game starts over the player's own nation, near enough to see it whole.
+        if !self.spectating {
+            self.frame_nation(0);
+        }
+        self.map_ui.log_seen = self.notes.log.len();
         self.go(super::Screen::Map);
     }
 
-    fn open_card(&mut self, ctx: &mut Context, nation: usize) {
+    pub(super) fn open_card(&mut self, ctx: &mut Context, nation: usize) {
         self.map_ui.card = Some(nation);
         crate::ui::sfx(ctx, &self.assets.card_sound, 0.8, 0.0);
     }
 
-    fn select_province(&mut self, ctx: &mut Context, province: Option<usize>) {
+    pub(super) fn select_province(&mut self, ctx: &mut Context, province: Option<usize>) {
         if self.map_ui.selected != province {
             self.map_ui.selected = province;
+            if province.is_none() {
+                self.map_ui.details = false;
+            }
             let (Some(view), Some(world)) = (self.map_view.as_mut(), self.world.as_ref()) else { return };
             view.select(&self.atlas, world, province);
             if province.is_some() {
@@ -95,47 +131,109 @@ impl Lucky {
     fn visit(&mut self, ctx: &mut Context, nation: usize) {
         let Some(world) = self.world.as_ref() else { return };
         let capital = world.capital[nation];
-        let map = self.atlas.map(world.map);
-        let (x, y) = map.provinces[capital].middle;
-        if let Some(view) = self.map_view.as_mut() {
-            let p = view.world(x, y, 0.0);
-            self.map_ui.glide = Some(vec2(p.x, p.z));
-        }
+        self.centre_on(nation);
         self.select_province(ctx, Some(capital));
+    }
+
+    /// A screen point where a click lands on one of this nation's
+    /// provinces (and not on a name label or the HUD): for the bot, which
+    /// plays with the mouse as a person would.
+    pub fn clickable_province(&self, nation: usize) -> Option<(usize, Vec2)> {
+        let (view, world) = (self.map_view.as_ref()?, self.world.as_ref()?);
+        let camera = view.orbit.camera();
+        let map = self.atlas.map(world.map);
+        let s = self.settings.ui_scale;
+        let mut hud = self.hud_widgets();
+        hud.extend(self.details_widgets());
+        let mut best: Option<(usize, Vec2, f32)> = None;
+        for p in (0..world.owner.len()).filter(|&p| world.owner[p] == Some(nation)) {
+            let Some((at, _)) = camera.project(view.province_point(&self.atlas, world, p, 0.0), &self.projector) else { continue };
+            if !(260.0..1100.0).contains(&at.x) || !(80.0..600.0).contains(&at.y) || gui::over(&hud, s, Some(at)) {
+                continue;
+            }
+            if self.map_ui.labels.iter().any(|(_, rect, ..)| rect.contains(at) || rect.center().distance(at) < 60.0) {
+                continue;
+            }
+            let ray = camera.ray_through(at, &self.projector);
+            if view.pick(map, ray.origin, ray.direction) != Some(p) {
+                continue;
+            }
+            let d = at.distance(vec2(ui::W / 2.0, ui::H / 2.0));
+            if best.is_none_or(|b| d < b.2) {
+                best = Some((p, at, d));
+            }
+        }
+        best.map(|(p, at, _)| (p, at))
+    }
+
+    /// The ground point under a screen point, with the camera as it is now.
+    fn ground_under(&self, p: Vec2) -> Option<Vec2> {
+        let view = self.map_view.as_ref()?;
+        let ray = view.orbit.camera().ray_through(p, &self.projector);
+        view.ground(ray.origin, ray.direction)
+    }
+
+    /// Keeps the camera over the map: how near and far it may go, and the
+    /// middle of the screen never leaves the land's own rectangle, so at
+    /// most a margin of open sea shows at the map's edges.
+    fn clamp_camera(&mut self) {
+        let Some(view) = self.map_view.as_mut() else { return };
+        view.clamp_target();
+        // The map's corners on the ground (from the minimap's corners).
+        let mm = view.minimap();
+        let (w, h) = (mm.width() as f32, mm.height() as f32);
+        let a = view.minimap_to_ground(vec2(0.0, 0.0), Vec2::ZERO);
+        let b = view.minimap_to_ground(vec2(w, h), Vec2::ZERO);
+        let (x0, x1) = (a.x.min(b.x), a.x.max(b.x));
+        let (z0, z1) = (a.y.min(b.y), a.y.max(b.y));
+        // Zoomed right out, the whole map just fits: no further.
+        let far = ((x1 - x0).max((z1 - z0) * 1.6) * 0.75).clamp(14.0, 48.0);
+        view.orbit.distance = view.orbit.distance.clamp(4.5, far);
+        // The nearer the camera, the nearer the edge it may look; from far
+        // away it stays towards the middle, so the map fills the screen.
+        let reach = (view.orbit.distance * 0.55).min((x1 - x0) / 2.0).min((z1 - z0) / 2.0);
+        let margin = 2.0;
+        let clamp = |v: f32, lo: f32, hi: f32| if lo > hi { (lo + hi) / 2.0 } else { v.clamp(lo, hi) };
+        view.orbit.target.x = clamp(view.orbit.target.x, x0 + reach - margin, x1 - reach + margin);
+        view.orbit.target.y = clamp(view.orbit.target.y, z0 + reach - margin, z1 - reach + margin);
     }
 
     pub(super) fn update_map(&mut self, ctx: &mut Context) {
         ctx.idle_ok();
         let dt = ctx.dt();
         let mouse = self.mouse;
+        let s = self.settings.ui_scale;
+        let left = ctx.input.was_mouse_pressed(MouseButton::Left);
 
-        // The pause menu and the notification log stop everything else.
-        if self.shell.pause {
-            self.update_pause(ctx);
-            self.report_map(ctx);
-            return;
-        }
+        // The news log covers everything: only closing it.
         if self.notes.log_open {
-            if ctx.input.was_pressed(Key::Escape) || ctx.input.was_pressed(self.settings.key(Act::Log)) || ctx.input.was_mouse_pressed(MouseButton::Left) {
+            let ws = self.log_widgets();
+            let outside = left && !gui::over(&ws, s, mouse);
+            let _ = self.clicked(ctx, &ws);
+            if gui::pressed(ctx, Key::Escape) || gui::pressed(ctx, self.settings.key(KeyAct::Log)) || outside {
                 self.notes.log_open = false;
                 crate::ui::sfx(ctx, &self.assets.click, 0.6, 0.0);
             }
+            self.notes.log_scroll = (self.notes.log_scroll as f32 - ctx.input.scroll() * 3.0).clamp(0.0, self.notes.log.len().saturating_sub(10) as f32) as usize;
+            self.report_map(ctx);
             return;
         }
-        // The days go by (a card or the economy window doesn't stop them).
+        // The days go by (a card or a window doesn't stop them).
         self.update_clock(ctx);
         if self.screen != super::Screen::Map {
             // A result came in (victory or defeat): its screen is up.
             return;
         }
 
-        // A country card is open: only closing it.
+        // A country card is open: only closing it (its button, Esc, or a click outside it).
         if self.map_ui.card.is_some() {
-            if ctx.input.was_pressed(Key::Escape)
-                || ctx.input.was_pressed(Key::Space)
-                || ctx.input.was_pressed(Key::Enter)
-                || ctx.input.was_pressed(Key::C)
+            let outside = left && self.ui_mouse().is_some_and(|m| !CARD.contains(m));
+            if gui::pressed(ctx, Key::Escape)
+                || gui::pressed(ctx, Key::Space)
+                || gui::pressed(ctx, Key::Enter)
+                || gui::pressed(ctx, self.settings.key(KeyAct::Card))
                 || self.mouse_clicked(ctx, &INSPECT_BACK)
+                || outside
             {
                 self.map_ui.card = None;
                 crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
@@ -144,22 +242,22 @@ impl Lucky {
             return;
         }
 
-        // The clock's pause, and the economy window.
-        if ctx.input.was_pressed(self.settings.key(Act::Pause)) {
+        // The clock's pause works under any window.
+        if gui::pressed(ctx, self.settings.key(KeyAct::Pause)) {
             self.clock.paused = !self.clock.paused;
             crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
         }
-        if self.map_ui.econ.open.is_some() {
-            self.update_econ_window(ctx);
-            self.report_map(ctx);
-            return;
-        }
         // A battle report opened in full: only closing it.
         if self.map_ui.war.full.is_some() {
-            if ctx.input.was_pressed(Key::Escape) || ctx.input.was_pressed(Key::Enter) || ctx.input.was_mouse_pressed(MouseButton::Left) {
+            if gui::pressed(ctx, Key::Escape) || gui::pressed(ctx, Key::Enter) || left {
                 self.map_ui.war.full = None;
                 crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
             }
+            self.report_map(ctx);
+            return;
+        }
+        if self.map_ui.econ.open.is_some() {
+            self.update_econ_window(ctx);
             self.report_map(ctx);
             return;
         }
@@ -178,53 +276,76 @@ impl Lucky {
             self.report_map(ctx);
             return;
         }
-        let (k_diplo, k_spies) = (self.settings.key(Act::Diplomacy), self.settings.key(Act::Spies));
-        if self.diplo.is_some() && (ctx.input.was_pressed(k_diplo) || ctx.input.was_pressed(k_spies)) {
-            let spies = ctx.input.was_pressed(k_spies);
+
+        // The right-click menu: a line, or anything else closes it.
+        if self.map_ui.menu.is_some() {
+            let ws = self.menu_widgets();
+            let any = left || ctx.input.was_mouse_pressed(MouseButton::Right);
+            match self.clicked(ctx, &ws) {
+                Some(Act::Cmd(cmd)) => {
+                    self.map_ui.menu = None;
+                    self.run(ctx, cmd);
+                }
+                Some(_) => {}
+                None if any || gui::pressed(ctx, Key::Escape) => self.map_ui.menu = None,
+                None => {}
+            }
+            self.report_map(ctx);
+            return;
+        }
+
+        // The HUD: its buttons either run a command or press their key.
+        let mut hud = self.hud_widgets();
+        hud.extend(self.details_widgets());
+        self.map_ui.over_ui = gui::over(&hud, s, mouse);
+        if let Some(Act::Cmd(cmd)) = self.clicked(ctx, &hud) {
+            self.run(ctx, cmd);
+            self.report_map(ctx);
+            return;
+        }
+        let over_ui = self.map_ui.over_ui;
+
+        // The windows' keys.
+        let (k_diplo, k_spies) = (self.settings.key(KeyAct::Diplomacy), self.settings.key(KeyAct::Spies));
+        if self.diplo.is_some() && (gui::pressed(ctx, k_diplo) || gui::pressed(ctx, k_spies)) {
+            let spies = gui::pressed(ctx, k_spies);
+            self.close_windows();
             self.open_diplo(ctx, spies);
             self.report_map(ctx);
             return;
         }
-        // The last battle's card fades; Enter opens it.
-        if let Some((k, left)) = self.map_ui.war.card {
-            let left = left - dt;
-            self.map_ui.war.card = if left > 0.0 { Some((k, left)) } else { None };
-            if ctx.input.was_pressed(Key::Enter) {
-                self.map_ui.war.full = Some(k);
-                self.map_ui.war.card = None;
-                crate::ui::sfx(ctx, &self.assets.card_sound, 0.7, 0.0);
+        // The last battle's card fades; Enter (or a click on it) opens it.
+        if let Some((k, left_s)) = self.map_ui.war.card {
+            let left_s = left_s - dt;
+            self.map_ui.war.card = if left_s > 0.0 { Some((k, left_s)) } else { None };
+            if gui::pressed(ctx, Key::Enter) {
+                self.run(ctx, Cmd::Report(k));
             }
         }
-        let war_click = ctx.input.was_mouse_pressed(MouseButton::Left) && mouse.is_some_and(|m| super::war_screen::WAR_BUTTON.contains(m));
-        if self.wars.is_some() && (ctx.input.was_pressed(self.settings.key(Act::WarRoom)) || war_click) {
-            self.map_ui.war.open = Some(super::war_screen::Page::Wars);
-            self.map_ui.war.row = 0;
-            crate::ui::sfx(ctx, &self.assets.card_sound, 0.8, 0.0);
+        if self.wars.is_some() && gui::pressed(ctx, self.settings.key(KeyAct::WarRoom)) {
+            self.run(ctx, Cmd::War(super::war_screen::Page::Wars));
             self.report_map(ctx);
             return;
         }
-        if ctx.input.was_pressed(self.settings.key(Act::Battle)) {
+        if gui::pressed(ctx, self.settings.key(KeyAct::Battle)) {
             if let Some(b) = self.biggest_battle() {
                 self.watch_battle(ctx, b);
             }
         }
-        let econ_click = ctx.input.was_mouse_pressed(MouseButton::Left) && mouse.is_some_and(|m| ECON_BUTTON.contains(m));
-        if self.economy.is_some() && (ctx.input.was_pressed(self.settings.key(Act::Economy)) || econ_click) {
-            self.map_ui.econ.open = Some(super::econ_screen::Tab::Budget);
-            self.map_ui.econ.row = 0;
-            crate::ui::sfx(ctx, &self.assets.card_sound, 0.8, 0.0);
+        if self.economy.is_some() && gui::pressed(ctx, self.settings.key(KeyAct::Economy)) {
+            self.run(ctx, Cmd::Econ(super::econ_screen::Tab::Budget, 0));
             self.report_map(ctx);
             return;
         }
-        if ctx.input.was_pressed(self.settings.key(Act::Overlay)) {
+        if gui::pressed(ctx, self.settings.key(KeyAct::Overlay)) {
             self.cycle_overlay(ctx);
         }
-        // Quick save and load, help, the notification log.
-        if !self.spectating && ctx.input.was_pressed(self.settings.key(Act::QuickSave)) {
+        // Quick save and load, help, the news log.
+        if !self.spectating && gui::pressed(ctx, self.settings.key(KeyAct::QuickSave)) {
             let path = crate::save::path_for("Quick save");
             self.save_game(ctx, "Quick save", &path);
         }
-        if ctx.input.was_pressed(self.settings.key(Act::QuickLoad)) {
+        if gui::pressed(ctx, self.settings.key(KeyAct::QuickLoad)) {
             let path = crate::save::path_for("Quick save");
             if path.exists() {
                 self.load_from(ctx, &path);
@@ -233,47 +354,49 @@ impl Lucky {
             }
             return;
         }
-        if ctx.input.was_pressed(self.settings.key(Act::Help)) {
-            self.open_help_from_map(ctx);
+        if gui::pressed(ctx, self.settings.key(KeyAct::Help)) {
+            self.open_pause(ctx);
+            self.open_sub(super::Screen::Help);
             return;
         }
-        if ctx.input.was_pressed(self.settings.key(Act::Log)) {
+        if gui::pressed(ctx, self.settings.key(KeyAct::Log)) {
             self.notes.log_open = true;
+            self.notes.log_scroll = 0;
+            self.map_ui.log_seen = self.notes.log.len();
             crate::ui::sfx(ctx, &self.assets.card_sound, 0.6, 0.0);
             return;
         }
 
-        // Keys.
+        // Esc: closes what is open on the map; with nothing open, the pause menu.
         let nations = self.world.as_ref().map_or(0, |w| w.nations.len());
-        if ctx.input.was_pressed(Key::Escape) {
-            let had = self.map_ui.selected.is_some() || self.map_ui.brain.is_some() || self.map_ui.war.watching.is_some();
-            self.select_province(ctx, None);
-            self.map_ui.brain = None;
-            self.map_ui.war.watching = None;
+        if gui::pressed(ctx, Key::Escape) {
+            let had = self.map_ui.selected.is_some() || self.map_ui.brain.is_some() || self.map_ui.war.watching.is_some() || self.map_ui.details;
+            if self.map_ui.details {
+                self.map_ui.details = false;
+            } else {
+                self.select_province(ctx, None);
+                self.map_ui.brain = None;
+                self.map_ui.war.watching = None;
+            }
             if !had {
-                // Nothing to close: the pause menu (a bare --spectate run quits, as before).
-                if self.spectating && !self.menu_started {
-                    ctx.quit();
-                } else {
-                    self.open_pause(ctx);
-                }
+                self.open_pause(ctx);
                 self.report_map(ctx);
                 return;
             }
         }
-        if ctx.input.was_pressed(self.settings.key(Act::MapMode)) {
-            if let Some(view) = self.map_view.as_mut() {
-                view.mode = match view.mode {
-                    Mode::Political => Mode::Terrain,
-                    Mode::Terrain => Mode::Political,
-                };
+        if gui::pressed(ctx, self.settings.key(KeyAct::MapMode)) {
+            let next = if self.map_view.as_ref().is_some_and(|v| v.mode == Mode::Political) { super::cmd::View::Terrain } else { super::cmd::View::Nations };
+            self.run(ctx, Cmd::View(next));
+        }
+        if gui::pressed(ctx, self.settings.key(KeyAct::Home)) {
+            if self.spectating {
+                self.visit(ctx, 0);
+            } else {
+                self.centre_on(0);
+                crate::ui::sfx(ctx, &self.assets.select, 0.6, 0.0);
             }
-            crate::ui::sfx(ctx, &self.assets.click, 0.8, 0.0);
         }
-        if ctx.input.was_pressed(self.settings.key(Act::Home)) {
-            self.visit(ctx, 0);
-        }
-        if ctx.input.was_pressed(self.settings.key(Act::NextNation)) && nations > 0 {
+        if gui::pressed(ctx, self.settings.key(KeyAct::NextNation)) && nations > 0 {
             self.map_ui.next_nation = (self.map_ui.next_nation + 1) % nations;
             let n = self.map_ui.next_nation;
             self.visit(ctx, n);
@@ -281,71 +404,112 @@ impl Lucky {
                 self.map_ui.brain = Some(n);
             }
         }
-        if ctx.input.was_pressed(self.settings.key(Act::Card)) || self.mouse_clicked(ctx, &CARD_BUTTON) && self.map_ui.selected.is_some() {
+        if gui::pressed(ctx, self.settings.key(KeyAct::Card)) {
             let owner = self.map_ui.selected.and_then(|p| self.world.as_ref().and_then(|w| w.owner[p])).unwrap_or(0);
             self.open_card(ctx, owner);
             self.report_map(ctx);
             return;
         }
 
-        let Some(view) = self.map_view.as_mut() else { return };
-        let orbit = &mut view.orbit;
-        let (sy, cy) = orbit.yaw.sin_cos();
-        let forward = vec2(sy, cy);
-        let right = vec2(cy, -sy);
-        let pan = orbit.distance * 0.9 * dt;
+        // ---- The camera.
+        let minimap = self.minimap_rect();
+        let mm_mouse = mouse.map(|m| Space::BottomRight.to_local(s, m));
+        let edge = self.settings.edge_scroll && self.settings.fullscreen;
         let settings = &self.settings;
-        let k = |a: Act| settings.key(a);
-        let ax = ctx.input.axis(k(Act::PanLeft), k(Act::PanRight)) + ctx.input.axis(Key::Left, Key::Right);
-        let az = ctx.input.axis(k(Act::PanDown), k(Act::PanUp)) + ctx.input.axis(Key::Down, Key::Up);
-        orbit.target = orbit.target + right * (ax * pan) + forward * (az * pan);
-        // A glide eases the camera to its goal (the player's own panning takes over).
-        if ax != 0.0 || az != 0.0 || ctx.input.is_mouse_down(MouseButton::Left) && self.map_ui.dragging {
-            self.map_ui.glide = None;
+        let k = |a: KeyAct| settings.key(a);
+        let mut ax = ctx.input.axis(k(KeyAct::PanLeft), k(KeyAct::PanRight)) + ctx.input.axis(Key::Left, Key::Right);
+        let mut az = ctx.input.axis(k(KeyAct::PanDown), k(KeyAct::PanUp)) + ctx.input.axis(Key::Down, Key::Up);
+        // The screen's edges push the map along (fullscreen only: in a
+        // window the pointer rests on the edge on its way out).
+        if let (true, Some(m)) = (edge, ctx.input.mouse_position()) {
+            let e = 3.0;
+            ax += f32::from(u8::from(m.x >= ui::W - e)) - f32::from(u8::from(m.x <= e));
+            az += f32::from(u8::from(m.y <= e)) - f32::from(u8::from(m.y >= ui::H - e));
         }
-        if let Some(goal) = self.map_ui.glide {
-            let k = 1.0 - (-7.0 * dt).exp();
-            orbit.target = orbit.target + (goal - orbit.target) * k;
-            if orbit.target.distance(goal) < 0.01 {
-                orbit.target = goal;
+        let turn = ctx.input.axis(k(KeyAct::TurnLeft), k(KeyAct::TurnRight));
+        let tilt = ctx.input.axis(k(KeyAct::TiltUp), k(KeyAct::TiltDown));
+        let zoom_keys = ctx.input.axis(k(KeyAct::ZoomIn), k(KeyAct::ZoomOut));
+        let scroll = if over_ui { 0.0 } else { ctx.input.scroll() };
+        // The wheel zooms towards the pointer: the ground under it stays under it.
+        let anchor = if scroll != 0.0 { mouse.and_then(|m| self.ground_under(m).map(|g| (m, g))) } else { None };
+        {
+            let Some(view) = self.map_view.as_mut() else { return };
+            let orbit = &mut view.orbit;
+            let (sy, cy) = orbit.yaw.sin_cos();
+            let forward = vec2(sy, cy);
+            let right = vec2(cy, -sy);
+            let pan = orbit.distance * 0.9 * dt;
+            orbit.target = orbit.target + right * (ax.clamp(-1.0, 1.0) * pan) + forward * (az.clamp(-1.0, 1.0) * pan);
+            if ax != 0.0 || az != 0.0 {
                 self.map_ui.glide = None;
             }
+            orbit.yaw += turn * 1.3 * dt;
+            orbit.pitch += tilt * 0.8 * dt;
+            orbit.distance *= (zoom_keys * 1.4 * dt).exp();
+            if zoom_keys != 0.0 {
+                self.map_ui.zoom_goal = None;
+            }
+            if scroll != 0.0 {
+                orbit.distance *= 0.87f32.powf(scroll);
+                self.map_ui.zoom_goal = None;
+                if self.time - self.map_ui.last_tick > 0.08 {
+                    crate::ui::sfx(ctx, &self.assets.pan_tick, 0.5, 0.0);
+                    self.map_ui.last_tick = self.time;
+                }
+            }
+            // The + and − buttons ease the zoom to its goal.
+            if let Some(goal) = self.map_ui.zoom_goal {
+                let t = 1.0 - (-9.0 * dt).exp();
+                orbit.distance += (goal - orbit.distance) * t;
+                if (orbit.distance - goal).abs() < 0.05 {
+                    self.map_ui.zoom_goal = None;
+                }
+            }
+            // A glide eases the camera to its goal.
+            if let Some(goal) = self.map_ui.glide {
+                let t = 1.0 - (-7.0 * dt).exp();
+                orbit.target = orbit.target + (goal - orbit.target) * t;
+                if orbit.target.distance(goal) < 0.01 {
+                    orbit.target = goal;
+                    self.map_ui.glide = None;
+                }
+            }
         }
-        orbit.yaw += (ctx.input.axis(k(Act::TurnLeft), k(Act::TurnRight))) * 1.3 * dt;
-        orbit.pitch += ctx.input.axis(k(Act::TiltUp), k(Act::TiltDown)) * 0.8 * dt;
-        let zoom = ctx.input.axis(k(Act::ZoomIn), k(Act::ZoomOut));
-        orbit.distance *= (zoom * 1.4 * dt).exp();
-        let scroll = ctx.input.scroll();
-        if scroll != 0.0 {
-            orbit.distance *= 0.87f32.powf(scroll);
-            if self.time - self.map_ui.last_tick > 0.08 {
-                crate::ui::sfx(ctx, &self.assets.pan_tick, 0.5, 0.0);
-                self.map_ui.last_tick = self.time;
+        self.clamp_camera();
+        if let Some((m, before)) = anchor {
+            if let Some(after) = self.ground_under(m) {
+                if let Some(view) = self.map_view.as_mut() {
+                    view.orbit.target += before - after;
+                }
+                self.clamp_camera();
             }
         }
 
-        // The mouse: drag to pan (the ground under it stays under it),
-        // right-drag to turn, click to select.
-        let camera = view.orbit.camera();
-        let ground_at = |p: Vec2| {
-            let ray = camera.ray_through(p, &self.projector);
-            view.ground(ray.origin, ray.direction)
-        };
-        let minimap_rect = Rect::new(MINIMAP_AT.x, MINIMAP_AT.y, view.minimap().width() as f32, view.minimap().height() as f32);
-        if ctx.input.was_mouse_pressed(MouseButton::Left) {
-            self.map_ui.press_at = mouse;
+        // The mouse on the map: drag to pan (the ground under the pointer
+        // stays under it), right- or middle-drag to turn and tilt, click to
+        // select, right-click for the menu.
+        if left {
+            self.map_ui.on_minimap = mm_mouse.is_some_and(|m| minimap.contains(m));
+            self.map_ui.press_at = if over_ui && !self.map_ui.on_minimap { None } else { mouse };
             self.map_ui.dragging = false;
-            self.map_ui.on_minimap = mouse.is_some_and(|m| minimap_rect.contains(m));
         }
         if ctx.input.is_mouse_down(MouseButton::Left) {
             if let (Some(m), Some(from)) = (mouse, self.map_ui.press_at) {
                 if self.map_ui.on_minimap {
-                    view.orbit.target = view.minimap_to_ground(m, MINIMAP_AT);
+                    // Click or drag the minimap: the camera goes there.
+                    if let (Some(view), Some(mm)) = (self.map_view.as_mut(), mm_mouse) {
+                        let at = vec2(mm.x.clamp(minimap.left(), minimap.right()), mm.y.clamp(minimap.top(), minimap.bottom()));
+                        view.orbit.target = view.minimap_to_ground(at, MINIMAP_AT);
+                        self.map_ui.glide = None;
+                    }
                 } else if self.map_ui.dragging || m.distance(from) > 5.0 {
                     self.map_ui.dragging = true;
-                    if let (Some(last), true) = (self.map_ui.last_mouse, true) {
-                        if let (Some(a), Some(b)) = (ground_at(last), ground_at(m)) {
-                            view.orbit.target += a - b;
+                    self.map_ui.glide = None;
+                    if let Some(last) = self.map_ui.last_mouse {
+                        if let (Some(a), Some(b)) = (self.ground_under(last), self.ground_under(m)) {
+                            if let Some(view) = self.map_view.as_mut() {
+                                view.orbit.target += a - b;
+                            }
                         }
                     }
                 }
@@ -353,110 +517,139 @@ impl Lucky {
         }
         let mut clicked = None;
         if ctx.input.was_mouse_released(MouseButton::Left) {
-            if !self.map_ui.dragging && !self.map_ui.on_minimap {
+            if !self.map_ui.dragging && !self.map_ui.on_minimap && self.map_ui.press_at.is_some() {
                 clicked = mouse;
             }
             self.map_ui.press_at = None;
             self.map_ui.dragging = false;
             self.map_ui.on_minimap = false;
         }
-        if ctx.input.is_mouse_down(MouseButton::Right) {
-            if let (Some(m), Some(last)) = (mouse, self.map_ui.right_last) {
-                view.orbit.yaw += (m.x - last.x) * 0.008;
-                view.orbit.pitch += (m.y - last.y) * 0.005;
+        let turning = ctx.input.is_mouse_down(MouseButton::Right) || ctx.input.is_mouse_down(MouseButton::Middle);
+        let mut menu_at = None;
+        if ctx.input.was_mouse_pressed(MouseButton::Right) || ctx.input.was_mouse_pressed(MouseButton::Middle) {
+            self.map_ui.turn_from = if over_ui { None } else { mouse };
+            self.map_ui.turn_last = mouse;
+            self.map_ui.turn_moved = 0.0;
+        }
+        if turning && self.map_ui.turn_from.is_some() {
+            if let (Some(m), Some(last), Some(view)) = (mouse, self.map_ui.turn_last, self.map_view.as_mut()) {
+                self.map_ui.turn_moved += m.distance(last);
+                if self.map_ui.turn_moved > 4.0 {
+                    view.orbit.yaw += (m.x - last.x) * 0.008;
+                    view.orbit.pitch += (m.y - last.y) * 0.005;
+                }
             }
-            self.map_ui.right_last = mouse;
-        } else {
-            self.map_ui.right_last = None;
+            self.map_ui.turn_last = mouse;
+        }
+        if ctx.input.was_mouse_released(MouseButton::Right) {
+            // A right-click that didn't drag: the menu.
+            if self.map_ui.turn_from.is_some() && self.map_ui.turn_moved <= 4.0 {
+                menu_at = mouse;
+            }
+            self.map_ui.turn_from = None;
+        }
+        if !turning {
+            self.map_ui.turn_from = None;
         }
         self.map_ui.last_mouse = mouse;
-        view.clamp_target();
+        self.clamp_camera();
 
         // What's under the mouse.
+        let Some(view) = self.map_view.as_ref() else { return };
         let camera = view.orbit.camera();
         let map = self.atlas.map(self.world.as_ref().map_or(0, |w| w.map));
-        self.map_ui.hover = mouse
-            .filter(|m| !minimap_rect.contains(*m))
-            .and_then(|m| {
-                let ray = camera.ray_through(m, &self.projector);
-                view.pick(map, ray.origin, ray.direction)
-            });
+        self.map_ui.hover = mouse.filter(|_| !over_ui).and_then(|m| {
+            let ray = camera.ray_through(m, &self.projector);
+            view.pick(map, ray.origin, ray.direction)
+        });
         self.map_ui.camera = Some(camera);
         self.layout_labels();
         self.layout_battles();
+        let label_at = |g: &Lucky, at: Vec2| g.map_ui.labels.iter().find(|(_, rect, _, flag)| rect.contains(at) || flag.is_some_and(|(foot, k)| Rect::new(foot.x - 2.0, foot.y - 46.0 * k, 44.0 * k, 32.0 * k).contains(at))).map(|(n, ..)| *n);
 
+        // A right-click: the menu for the nation or province under it.
+        if let Some(at) = menu_at {
+            let province = self.map_ui.hover;
+            let nation = label_at(self, at).or_else(|| province.and_then(|p| self.world.as_ref().and_then(|w| w.owner[p])));
+            if nation.is_some() || province.is_some() {
+                if let Some(p) = province {
+                    self.select_province(ctx, Some(p));
+                }
+                self.map_ui.menu = Some(Menu { at, nation, province });
+                crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
+            }
+        }
         // A battle marker: watch that battle.
         if let Some(b) = clicked.and_then(|at| self.battle_at(at)) {
             self.watch_battle(ctx, b);
             clicked = None;
         }
         if let Some(at) = clicked {
-            let on_label = self
-                .map_ui
-                .labels
-                .iter()
-                .find(|(_, rect, _, flag)| {
-                    rect.contains(at) || flag.is_some_and(|(foot, k)| Rect::new(foot.x - 2.0, foot.y - 46.0 * k, 44.0 * k, 32.0 * k).contains(at))
-                })
-                .map(|(n, ..)| *n);
-            let on_battle_panel = self.map_ui.war.watching.is_some() && Rect::new(900.0, 70.0, 366.0, 446.0).contains(at);
-            let on_panel = on_battle_panel
-                || self.map_ui.selected.is_some() && !(self.spectating && self.map_ui.brain.is_some()) && Rect::new(PANEL_AT.x, PANEL_AT.y, 360.0, 350.0).contains(at)
-                || self.map_ui.brain.is_some() && super::brain_panel::BRAIN_PANEL.contains(at);
+            let twice = self.pointer.double(at, self.time);
+            let on_label = label_at(self, at);
+            let on_panel = self.map_ui.war.watching.is_some() && super::war_screen::BATTLE_PANEL.contains(at) || self.map_ui.brain.is_some() && super::brain_panel::BRAIN_PANEL.contains(at);
+            let hit = self.map_ui.hover;
+            let owner = hit.and_then(|p| self.world.as_ref().and_then(|w| w.owner[p]));
             if let Some(n) = on_label {
-                // Watching, a name opens its brain; playing, its card.
-                if self.spectating {
+                if twice {
+                    self.map_ui.card = None;
+                    self.centre_on(n);
+                } else if self.spectating {
+                    // Watching, a name opens its brain; playing, its card.
                     self.map_ui.brain = Some(n);
                     crate::ui::sfx(ctx, &self.assets.card_sound, 0.8, 0.0);
                 } else {
                     self.open_card(ctx, n);
                 }
             } else if !on_panel {
-                let hit = self.map_ui.hover;
                 self.select_province(ctx, hit);
                 if self.spectating {
-                    if let Some(o) = hit.and_then(|p| self.world.as_ref().and_then(|w| w.owner[p])) {
+                    if let Some(o) = owner {
                         self.map_ui.brain = Some(o);
                     }
+                }
+                // A double click on a nation's land centres the map on it.
+                if let (true, Some(o)) = (twice, owner) {
+                    self.centre_on(o);
                 }
             }
         }
         self.report_map(ctx);
     }
 
-    /// Lays out the nations' names (biggest first, none on top of another)
-    /// and their capitals' flags.
+    /// Lays out the nations' names (biggest first, none on top of another
+    /// or under the HUD) and their capitals' flags.
     fn layout_labels(&mut self) {
         let (Some(view), Some(world), Some(camera)) = (self.map_view.as_ref(), self.world.as_ref(), self.map_ui.camera.as_ref()) else {
             return;
         };
         let map = self.atlas.map(world.map);
-        let mut order: Vec<(usize, Vec3, usize)> = view
-            .label_points
-            .iter()
-            .map(|&(n, p)| (n, p, world.provinces_of(n).iter().map(|&q| map.provinces[q].cells.len()).sum()))
-            .collect();
-        order.sort_by_key(|&(n, _, cells)| (n != 0, std::cmp::Reverse(cells)));
+        let hud: Vec<Rect> = self.hud_rects().into_iter().map(|(_, r)| r).collect();
+        let mut order: Vec<(usize, Vec3, usize)> = view.label_points.iter().map(|&(n, p)| (n, p, world.provinces_of(n).iter().map(|&q| map.provinces[q].cells.len()).sum())).collect();
+        let me = if self.spectating { usize::MAX } else { 0 };
+        order.sort_by_key(|&(n, _, cells)| (n != me, std::cmp::Reverse(cells)));
         let mut placed: Vec<Label> = Vec::new();
         for (n, point, cells) in order {
             let Some((at, depth)) = camera.project(point, &self.projector) else { continue };
-            let size = ((cells as f32).sqrt() * 34.0 / depth.max(1.0)).clamp(10.0, 30.0);
+            let size = ((cells as f32).sqrt() * 30.0 / depth.max(1.0)).clamp(11.0, 22.0);
             let name = &world.nations[n].name;
-            let style = ui::style(size, Color::WHITE);
+            let style = TextStyle { size, ..TextStyle::default() };
             let measured = self.assets.serif.measure(name, &style);
-            let rect = Rect::new(at.x - measured.x / 2.0, at.y - measured.y / 2.0, measured.x, measured.y);
-            let on_screen = rect.x > 4.0 && rect.right() < ui::W - 4.0 && rect.y > 60.0 && rect.bottom() < ui::H - 28.0;
-            let clash = placed.iter().any(|(_, r, ..)| r.expand(4.0).overlaps(&rect));
-            let flag = camera
-                .project(view.capital_tops[n], &self.projector)
-                .map(|(foot, d)| (foot, (14.0 / d.max(1.0)).clamp(0.45, 1.1)));
-            let rect = if on_screen && (!clash || n == 0) { rect } else { Rect::new(-1000.0, -1000.0, 0.0, 0.0) };
+            // The chip: the colour square, the name, a little air.
+            let (pad, chip) = (5.0, size * 0.62);
+            let w = measured.x + chip + pad * 3.0;
+            let h = size + pad * 1.2;
+            let rect = Rect::new(at.x - w / 2.0, at.y - h / 2.0, w, h);
+            let on_screen = rect.x > 4.0 && rect.right() < ui::W - 4.0 && rect.y > BAR_H && rect.bottom() < ui::H - 4.0;
+            let clash = placed.iter().any(|(_, r, ..)| r.expand(3.0).overlaps(&rect)) || hud.iter().any(|r| r.overlaps(&rect));
+            let flag = camera.project(view.capital_tops[n], &self.projector).map(|(foot, d)| (foot, (14.0 / d.max(1.0)).clamp(0.45, 1.1)));
+            let rect = if on_screen && !clash { rect } else { Rect::new(-1000.0, -1000.0, 0.0, 0.0) };
             placed.push((n, rect, size, flag));
         }
         self.map_ui.labels = placed;
     }
 
-    fn report_map(&self, ctx: &mut Context) {
+    pub(super) fn report_map(&self, ctx: &mut Context) {
         let Some(view) = &self.map_view else { return };
         ctx.report("map_mode", format!("{:?}", view.mode));
         ctx.report("camera_x", (view.orbit.target.x * 10.0).round() / 10.0);
@@ -468,6 +661,9 @@ impl Lucky {
         ctx.report("selected", selected);
         ctx.report("card", self.map_ui.card.map_or("none".to_string(), |n| self.world.as_ref().map_or(String::new(), |w| w.nations[n].name.clone())));
         ctx.report("spectating", self.spectating);
+        ctx.report("menu_open", self.map_ui.menu.is_some());
+        ctx.report("view", self.view_now().map_or("other", |v| v.name()));
+        ctx.report("needs", self.needs().len());
         self.report_war(ctx);
         self.report_diplo(ctx);
         if let (Some(n), Some(b)) = (self.map_ui.brain, self.brains.as_ref()) {
@@ -485,28 +681,39 @@ impl Lucky {
         let camera = self.map_ui.camera.unwrap_or_else(|| view.orbit.camera());
         let map = self.atlas.map(world.map);
         view.draw(canvas, &camera);
+        let window = self.map_ui.window_open();
+        let modal = window || self.map_ui.card.is_some() || self.map_ui.war.full.is_some() || self.notes.log_open || self.shell.pause || self.shell.confirm.is_some() || self.screen != super::Screen::Map;
 
-        // Flags on the capitals, then the names.
+        // Flags on the capitals, then each nation's name on its dark chip.
         for &(n, _, _, flag) in &self.map_ui.labels {
             let Some((foot, k)) = flag else { continue };
-            if foot.x < -50.0 || foot.x > ui::W + 50.0 || foot.y < -50.0 || foot.y > ui::H + 50.0 {
+            if foot.x < -50.0 || foot.x > ui::W + 50.0 || foot.y < BAR_H || foot.y > ui::H + 50.0 {
                 continue;
             }
             canvas.draw_placed(&a.flag_pole, foot, Placed { pivot: vec2(4.0, 64.0), scale: vec2(k, k * 0.75), ..Placed::default() });
             let r = Rect::new(foot.x + 2.0 * k, foot.y - 46.0 * k, 40.0 * k, 26.0 * k);
             country::draw_flag(canvas, r, &world.nations[n].flag);
             canvas.draw_placed(&a.flag_cloth, vec2(r.x, r.y), Placed { pivot: Vec2::ZERO, scale: vec2(k, k), ..Placed::default() });
-            canvas.label(&format!("flag {}", world.nations[n].name), r);
+            if r.x > 0.0 && r.right() < ui::W && r.bottom() < ui::H {
+                canvas.label(&format!("flag {}", world.nations[n].name), r);
+            }
         }
+        let me = if self.spectating { usize::MAX } else { 0 };
         for &(n, rect, size, _) in &self.map_ui.labels {
             if rect.x < -500.0 {
                 continue;
             }
-            let color = if n == 0 { ui::GOLD_HI } else { Color::WHITE };
-            let mut style = ui::style(size, color);
-            style.outline = (size / 7.0).max(2.0);
-            style.align = Align::Center;
-            canvas.draw_font_text(&a.serif, &world.nations[n].name, vec2(rect.center().x, rect.y), &style);
+            let hot = !modal && !self.map_ui.over_ui && self.mouse.is_some_and(|m| rect.contains(m));
+            gui::chip(canvas, a, rect);
+            if n == me || hot {
+                canvas.draw_rect(rect, gui::GOLD);
+            }
+            let chip = size * 0.62;
+            let c = Rect::new(rect.x + 5.0, rect.center().y - chip / 2.0, chip, chip);
+            canvas.fill_rect(c, world.color[n]);
+            canvas.draw_rect(c, Color::rgba(0, 0, 0, 120));
+            let style = TextStyle { size, color: if n == me { gui::GOLD } else { gui::IVORY }, ..TextStyle::default() };
+            canvas.draw_font_text(&a.serif, &world.nations[n].name, vec2(c.right() + 5.0, rect.y + (rect.h - size) / 2.0 - 1.0), &style);
             canvas.label(&format!("nation {}", world.nations[n].name), rect);
         }
 
@@ -514,99 +721,28 @@ impl Lucky {
         self.draw_war_map(canvas);
 
         // The province under the mouse.
-        if let (Some(p), Some(m)) = (self.map_ui.hover, self.mouse) {
-            if self.map_ui.card.is_none() {
-                let prov = &map.provinces[p];
-                let owner = world.owner[p].map_or("Unclaimed".to_string(), |o| world.nations[o].name.clone());
-                let words = format!("{}  ·  {}", prov.name, owner);
-                let w = a.font.measure(&words, &ui::style(15.0, Color::WHITE)).x + 16.0;
-                let at = vec2((m.x + 16.0).min(ui::W - w - 4.0), m.y + 18.0);
-                canvas.fill_rect(Rect::new(at.x, at.y, w, 26.0), Color::rgba(12, 6, 30, 210));
-                ui::plain(canvas, &a.font, &words, at + vec2(8.0, 4.0), 15.0, Color::WHITE, Align::Left);
-            }
+        if let (Some(p), Some(m), false) = (self.map_ui.hover, self.mouse, modal || self.map_ui.menu.is_some()) {
+            let prov = &map.provinces[p];
+            let owner = world.owner[p].map_or("Unclaimed".to_string(), |o| world.nations[o].name.clone());
+            let words = format!("{}  ·  {}", prov.name, owner);
+            let w = a.font.measure(&words, &TextStyle { size: 14.0, ..TextStyle::default() }).x + 16.0;
+            let at = vec2((m.x + 16.0).min(ui::W - w - 4.0), (m.y + 18.0).min(ui::H - 30.0));
+            gui::chip(canvas, a, Rect::new(at.x, at.y, w, 24.0));
+            ui::plain(canvas, &a.font, &words, at + vec2(8.0, 4.0), 14.0, gui::IVORY, Align::Left);
         }
 
-        // The top bar.
-        canvas.blit_sprite(&a.topbar, Vec2::ZERO, Blit::default());
-        let player = &world.nations[0];
-        if self.spectating {
-            ui::plain(canvas, &a.font, "SPECTATING", vec2(14.0, 7.0), 11.0, GOLD, Align::Left);
-            let words = format!("{} NPC brains, {} difficulty  ·  click a nation", world.nations.len(), self.brains.as_ref().map_or("", |b| b.difficulty_name.as_str()));
-            ui::text(canvas, &a.font, &words, vec2(14.0, 22.0), 17.0, Color::WHITE, Align::Left, 440.0);
-        } else {
-            country::draw_flag(canvas, Rect::new(14.0, 10.0, 48.0, 32.0), &player.flag);
-            ui::plain(canvas, &a.font, "YOU", vec2(72.0, 7.0), 11.0, GOLD, Align::Left);
-            ui::text(canvas, &a.serif, &player.name, vec2(72.0, 20.0), 20.0, Color::WHITE, Align::Left, 380.0);
-        }
-        ui::text(canvas, &a.font, &self.data.maps[world.map].name.to_uppercase(), vec2(640.0, 14.0), 22.0, GOLD, Align::Center, 360.0);
-        let mine = world.provinces_of(0).len();
-        let facts = if self.spectating {
-            format!("{} nations  ·  {} provinces  ·  6: top speed (3 months a second)", world.nations.len(), map.provinces.len())
-        } else {
-            format!("{} nations  ·  {} provinces  ·  yours: {}", world.nations.len(), map.provinces.len(), mine)
-        };
-        ui::plain(canvas, &a.font, &facts, vec2(640.0, 39.0), 12.0, SOFT, Align::Center);
-        self.draw_econ_topbar(canvas);
-
-        // Watching, a brain panel takes the province panel's place. Neither
-        // is drawn under a window (they used to show at its edges).
-        let window = self.map_ui.econ.open.is_some() || self.map_ui.war.open.is_some() || self.map_ui.diplo.wants_escape();
-        if let Some(p) = self.map_ui.selected.filter(|_| !window && !(self.spectating && self.map_ui.brain.is_some())) {
-            self.draw_province_panel(canvas, p);
-        }
+        // Watching, a nation's brain panel.
         if let Some(n) = self.map_ui.brain.filter(|_| !window) {
             self.draw_brain_panel(canvas, n);
         }
-
-        // The minimap, with the camera's view on it.
-        canvas.blit_sprite(&a.minimap_frame, MINIMAP_FRAME, Blit::default());
-        canvas.blit_sprite(view.minimap(), MINIMAP_AT, Blit::default());
-        let corners = [vec2(0.0, 58.0), vec2(ui::W, 58.0), vec2(ui::W, ui::H), vec2(0.0, ui::H)];
-        let ground: Vec<Option<Vec2>> = corners
-            .iter()
-            .map(|&c| {
-                let ray = camera.ray_through(c, &self.projector);
-                view.ground(ray.origin, ray.direction)
-            })
-            .collect();
-        let mm = view.minimap();
-        let clip = Rect::new(MINIMAP_AT.x, MINIMAP_AT.y, mm.width() as f32, mm.height() as f32);
-        let clamp = |p: Vec2| vec2(p.x.clamp(clip.left(), clip.right()), p.y.clamp(clip.top(), clip.bottom()));
-        for k in 0..4 {
-            if let (Some(p), Some(q)) = (ground[k], ground[(k + 1) % 4]) {
-                let (p, q) = (clamp(view.to_minimap(p, MINIMAP_AT)), clamp(view.to_minimap(q, MINIMAP_AT)));
-                canvas.draw_line(p, q, Color::WHITE);
-                canvas.draw_line(p + vec2(0.0, 1.0), q + vec2(0.0, 1.0), Color::rgba(0, 0, 0, 160));
-            }
-        }
-        if let Some(cap) = world.capital.first() {
-            let (x, y) = map.provinces[*cap].middle;
-            canvas.blit_sprite(&a.icon_capital, MINIMAP_AT + vec2(x * 4.0 - 7.0, y * 4.0 - 7.0), Blit { scale: 0.5, ..Blit::default() });
-        }
-        canvas.label("minimap", clip);
         self.draw_overlay_legend(canvas);
 
-        let hint = if self.spectating {
-            "Click a nation: its brain · Tab: next nation · Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · M: terrain · V: overlays · Space: pause · 1-6: speed · O: economy · K: war · J: battle · P: diplomacy · I: spies · Esc: close"
-        } else {
-            match view.mode {
-                Mode::Political => "Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · T/G: tilt · Click: province · Name or flag: card · Tab: next nation · H: home · M: terrain · V: overlays · Space: pause · 1-5: speed · O: economy · K: war · J: battle · P: diplomacy · I: spies",
-                Mode::Terrain => "Drag: pan · Right-drag, Q/E: turn · Wheel, R/F: zoom · T/G: tilt · Click: province · Name or flag: card · Tab: next nation · H: home · M: nations · V: overlays · Space: pause · 1-5: speed · O: economy · K: war · J: battle · P: diplomacy · I: spies",
-            }
-        };
-        ui::plain(
-            canvas,
-            &a.font,
-            hint,
-            vec2(14.0, 699.0),
-            12.0,
-            Color::rgba(255, 255, 255, 200),
-            Align::Left,
-        );
+        // The HUD, then whatever is open on top of it.
+        self.draw_hud(canvas, !modal && self.map_ui.menu.is_none());
+        self.draw_details(canvas, !modal && self.map_ui.menu.is_none());
+        self.draw_menu_popup(canvas);
 
-        // A window covers the map: the map behind it is dimmed (so panels
-        // behind it don't show through at its edges), and it's drawn at the UI scale.
-        let window = self.map_ui.econ.open.is_some() || self.map_ui.war.open.is_some() || self.map_ui.diplo.wants_escape();
+        // A window covers the map: the map behind it is dimmed, and it is drawn at the UI scale.
         if window {
             ui::dim(canvas, 0.6);
             self.push_ui(canvas);
@@ -622,118 +758,7 @@ impl Lucky {
         if let Some(n) = self.map_ui.card {
             ui::dim(canvas, 0.75);
             self.draw_country_card(canvas, &world.nations[n], usize::MAX, n == 0);
-            INSPECT_BACK.draw(canvas, a, self.mouse, self.time, false);
-        }
-    }
-
-    fn draw_province_panel(&self, canvas: &mut Canvas, p: usize) {
-        let (Some(world), a) = (self.world.as_ref(), &self.assets) else { return };
-        let map = self.atlas.map(world.map);
-        let prov = &map.provinces[p];
-        let (x, y) = (PANEL_AT.x, PANEL_AT.y);
-        canvas.blit_sprite(&a.map_panel, PANEL_AT, Blit::default());
-        canvas.label("province panel", Rect::new(x, y, 360.0, 350.0));
-        ui::plain(canvas, &a.font, "PROVINCE", vec2(x + 22.0, y + 16.0), 12.0, GOLD, Align::Left);
-        ui::text(canvas, &a.serif, &prov.name, vec2(x + 22.0, y + 30.0), 26.0, Color::WHITE, Align::Left, 316.0);
-        let continent = &self.data.maps[world.map].continents[prov.continent].label;
-        let terrain = &self.atlas.terrains[prov.terrain].name;
-        ui::plain(canvas, &a.font, &format!("{terrain}  ·  {continent}"), vec2(x + 22.0, y + 66.0), 15.0, MUTED, Align::Left);
-
-        // Its owner.
-        let mut row = y + 96.0;
-        match world.owner[p] {
-            Some(o) => {
-                country::draw_flag(canvas, Rect::new(x + 22.0, row, 42.0, 28.0), &world.nations[o].flag);
-                let who = if o == 0 { "YOUR NATION" } else { "OWNED BY" };
-                ui::plain(canvas, &a.font, who, vec2(x + 74.0, row - 2.0), 11.0, if o == 0 { GOLD } else { SOFT }, Align::Left);
-                ui::text(canvas, &a.serif, &world.nations[o].name, vec2(x + 74.0, row + 11.0), 17.0, Color::WHITE, Align::Left, 262.0);
-                if world.capital[o] == p {
-                    canvas.blit_sprite(&a.icon_capital, vec2(x + 318.0, row + 54.0), Blit::default());
-                    ui::plain(canvas, &a.font, "Capital", vec2(x + 312.0, row + 58.0), 14.0, GOLD, Align::Right);
-                }
-            }
-            None => {
-                ui::plain(canvas, &a.font, "Unclaimed land", vec2(x + 22.0, row + 4.0), 17.0, MUTED, Align::Left);
-            }
-        }
-        row += 52.0;
-
-        // What it's like.
-        let mut facts: Vec<(Option<&Sprite>, String)> = Vec::new();
-        facts.push((None, if prov.coastal { format!("Coastal ({} sea edges)", prov.sea_edges) } else { "Inland: no coast".to_string() }));
-        if prov.river {
-            let names: Vec<&str> = map
-                .rivers
-                .iter()
-                .filter(|r| r.cells.iter().any(|&(c, rr)| map.province_of[map.index(c, rr)] == Some(p)))
-                .map(|r| r.name.as_str())
-                .collect();
-            facts.push((Some(&a.icon_river), names.join(", ")));
-        }
-        if prov.lake {
-            facts.push((None, "On a lake shore".to_string()));
-        }
-        for l in &map.landmarks {
-            if map.province_of[map.index(l.at.0, l.at.1)] == Some(p) {
-                facts.push((Some(&a.icon_landmark), l.name.clone()));
-            }
-        }
-        facts.push((None, format!("{} hexes", prov.cells.len())));
-        // Its economy: people, what's under the ground, what's built.
-        if let Some(e) = self.economy.as_ref() {
-            let ed = &self.econ_data;
-            let pe = &e.provinces[p];
-            if let Some(o) = world.owner[p] {
-                let people = e.nations[o].population * pe.people;
-                let mut built: Vec<(f64, usize)> = Vec::new();
-                for b in e.nations[o].buildings.iter().filter(|b| b.province == p) {
-                    match built.iter_mut().find(|(_, k)| *k == b.kind) {
-                        Some(x) => x.0 += b.levels,
-                        None => built.push((b.levels, b.kind)),
-                    }
-                }
-                built.sort_by(|a, b| b.0.total_cmp(&a.0));
-                let names: Vec<String> = built.iter().take(3).map(|(l, k)| format!("{} {:.0}", ed.buildings[*k].name, l)).collect();
-                let jobs = if names.is_empty() { "no buildings".to_string() } else { names.join(", ") };
-                facts.push((None, format!("{} people  ·  {}", super::econ_screen::people(people), jobs)));
-                facts.push((None, format!("Roads {:.1}  ·  rail {:.1}  ·  port {:.1}  ·  moving {:.0}%", pe.road, pe.rail, pe.port, pe.transport * 100.0)));
-            }
-            let mut rich: Vec<usize> = (0..ed.goods.len()).filter(|&g| pe.deposits[g] >= 0.2).collect();
-            rich.sort_by(|&a, &b| pe.deposits[b].total_cmp(&pe.deposits[a]));
-            if !rich.is_empty() {
-                let names: Vec<String> = rich.iter().take(3).map(|&g| format!("{} {:.1}", ed.goods[g].name, pe.deposits[g])).collect();
-                facts.push((None, format!("Rich in {}", names.join(", "))));
-            }
-        }
-        for (icon, words) in facts {
-            if let Some(icon) = icon {
-                canvas.blit_sprite(icon, vec2(x + 22.0, row - 1.0), Blit::default());
-            } else {
-                canvas.fill_circle(vec2(x + 31.0, row + 9.0), 3.0, SOFT);
-            }
-            let r = ui::text(canvas, &a.font, &words, vec2(x + 48.0, row), 15.0, Color::WHITE, Align::Left, 290.0);
-            if words.contains(" people") {
-                self.tip(r, "people");
-            } else if words.starts_with("Roads") {
-                self.tip(r, "roads");
-            } else if words.starts_with("Rich in") {
-                self.tip(r, "deposits");
-            }
-            row += 24.0;
-        }
-
-        // Its neighbours.
-        let names: Vec<&str> = prov.neighbours.iter().map(|&q| map.provinces[q].name.as_str()).collect();
-        let shown = if names.is_empty() { "none (an island)".to_string() } else { names.join(", ") };
-        let mut style = ui::style(14.0, MUTED);
-        style.outline = 0.0;
-        style.shadow = None;
-        style.wrap = Some(316.0);
-        ui::plain(canvas, &a.font, &format!("NEIGHBOURS ({})", names.len()), vec2(x + 22.0, row + 4.0), 11.0, SOFT, Align::Left);
-        canvas.draw_font_text(&a.font, &shown, vec2(x + 22.0, row + 20.0), &style);
-
-        if world.owner[p].is_some() {
-            CARD_BUTTON.draw(canvas, a, self.mouse, self.time, false);
+            self.button(canvas, &INSPECT_BACK, false);
         }
     }
 }

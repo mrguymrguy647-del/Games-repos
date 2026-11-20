@@ -1,0 +1,15 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Panel corner (top left), radius 8: navy 95%, 1 px bronze arc",
+ "seed": 1,
+ "palette": {"navy": "#0d1722", "bronze": "#8a6d2f"},
+ "commands": [
+  {"cmd": "canvas", "width": 10, "height": 10},
+  {"cmd": "layer", "name": "Fill", "opacity": 0.95},
+  {"cmd": "rect", "x": 0.0, "y": 0.0, "width": 40.0, "height": 40.0, "radius": 8.0, "fill": "navy"},
+  {"cmd": "layer", "name": "Edge"},
+  {"cmd": "rect", "x": 0.0, "y": 0.0, "width": 40.0, "height": 40.0, "radius": 8.0, "fill": "bronze"},
+  {"cmd": "rect", "x": 1.0, "y": 1.0, "width": 40.0, "height": 40.0, "radius": 7.0, "fill": "bronze", "erase": true}
+ ]
+}

@@ -1,0 +1,17 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Close: X (white, the game tints it)",
+ "seed": 1,
+ "palette": {"white": "#FFFFFF"},
+ "commands": [
+  {"cmd": "canvas", "width": 24, "height": 24},
+  {"cmd": "layer", "name": "Icon"},
+  {"cmd": "polygon", "points": [[5.12, 6.88], [17.12, 18.88], [18.88, 17.12], [6.88, 5.12]], "fill": "white"},
+  {"cmd": "ellipse", "center": [6.0, 6.0], "radius": 1.25, "fill": "white"},
+  {"cmd": "ellipse", "center": [18.0, 18.0], "radius": 1.25, "fill": "white"},
+  {"cmd": "polygon", "points": [[17.12, 5.12], [5.12, 17.12], [6.88, 18.88], [18.88, 6.88]], "fill": "white"},
+  {"cmd": "ellipse", "center": [18.0, 6.0], "radius": 1.25, "fill": "white"},
+  {"cmd": "ellipse", "center": [6.0, 18.0], "radius": 1.25, "fill": "white"}
+ ]
+}

@@ -1,0 +1,15 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Rail button: navy disc, bronze ring",
+ "seed": 1,
+ "palette": {"navy": "#0d1722", "bronze": "#8a6d2f"},
+ "commands": [
+  {"cmd": "canvas", "width": 48, "height": 48},
+  {"cmd": "layer", "name": "Ring"},
+  {"cmd": "ellipse", "center": [24.0, 24.0], "radius": 23.0, "fill": "bronze"},
+  {"cmd": "ellipse", "center": [24.0, 24.0], "radius": 21.0, "fill": "navy"},
+  {"cmd": "ellipse", "center": [24.0, 24.0], "radius": 20.0, "fill": {"gradient": "linear", "from": [0, 4], "to": [0, 44], "colors": ["#e9e2cf2e", "#e9e2cf06"]}},
+  {"cmd": "ellipse", "center": [24.0, 24.0], "radius": 19.0, "fill": "navy"}
+ ]
+}

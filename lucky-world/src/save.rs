@@ -72,8 +72,10 @@ pub struct Saved {
     pub landed: Vec<Landed>,
     pub player: Option<Country>,
     pub rivals: Vec<Country>,
-    pub world: World,
-    pub sim: Sim,
+    /// The placed world and its simulation; `None` in a save made among
+    /// the wheels (before the nations are on the map).
+    pub world: Option<World>,
+    pub sim: Option<Sim>,
     pub spectating: bool,
     pub setup: Setup,
     /// How the game is going: victory, defeat, the story so far.
@@ -265,8 +267,8 @@ mod tests {
             landed: world.nations[0].landed.clone(),
             player: Some(world.nations[0].clone()),
             rivals: world.nations[1..].to_vec(),
-            world: world.clone(),
-            sim: sim.clone(),
+            world: Some(world.clone()),
+            sim: Some(sim.clone()),
             spectating: false,
             setup: Setup::default(),
             fate: Default::default(),
@@ -325,7 +327,7 @@ mod tests {
             drop(sim);
             let (s, loaded) = from_bytes(&bytes).unwrap();
             assert_eq!(s, summary());
-            let mut sim = loaded.sim;
+            let mut sim = loaded.sim.expect("saved on the map");
             assert_eq!(differ(&sim, &never), "", "{}: loading changed the state", b.data.maps[map].id);
             for day in 0..500 {
                 never.day(&b.econ);

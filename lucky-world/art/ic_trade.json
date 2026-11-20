@@ -1,0 +1,15 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Trade: two opposite arrows (white, the game tints it)",
+ "seed": 1,
+ "palette": {"white": "#FFFFFF"},
+ "commands": [
+  {"cmd": "canvas", "width": 24, "height": 24},
+  {"cmd": "layer", "name": "Icon"},
+  {"cmd": "rect", "x": 3.0, "y": 7.0, "width": 12.5, "height": 2.0, "radius": 1.0, "fill": "white"},
+  {"cmd": "polygon", "points": [[14.6, 3.6], [21.4, 8.0], [14.6, 12.4]], "fill": "white"},
+  {"cmd": "rect", "x": 8.5, "y": 15.0, "width": 12.5, "height": 2.0, "radius": 1.0, "fill": "white"},
+  {"cmd": "polygon", "points": [[9.4, 11.6], [2.6, 16.0], [9.4, 20.4]], "fill": "white"}
+ ]
+}

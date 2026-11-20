@@ -1,0 +1,19 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Government: a domed building (white, the game tints it)",
+ "seed": 1,
+ "palette": {"white": "#FFFFFF"},
+ "commands": [
+  {"cmd": "canvas", "width": 24, "height": 24},
+  {"cmd": "layer", "name": "Icon"},
+  {"cmd": "rect", "x": 11.2, "y": 1.6, "width": 1.6, "height": 3.4, "fill": "white"},
+  {"cmd": "polygon", "points": [[5.6, 10.6], [5.7, 9.49], [5.99, 8.41], [6.46, 7.4], [7.1, 6.49], [7.89, 5.7], [8.8, 5.06], [9.81, 4.59], [10.89, 4.3], [12.0, 4.2], [13.11, 4.3], [14.19, 4.59], [15.2, 5.06], [16.11, 5.7], [16.9, 6.49], [17.54, 7.4], [18.01, 8.41], [18.3, 9.49], [18.4, 10.6]], "fill": "white"},
+  {"cmd": "rect", "x": 3.5, "y": 10.2, "width": 17.0, "height": 2.2, "radius": 0.5, "fill": "white"},
+  {"cmd": "rect", "x": 4.5, "y": 13.4, "width": 2.0, "height": 5.0, "fill": "white"},
+  {"cmd": "rect", "x": 8.83, "y": 13.4, "width": 2.0, "height": 5.0, "fill": "white"},
+  {"cmd": "rect", "x": 13.17, "y": 13.4, "width": 2.0, "height": 5.0, "fill": "white"},
+  {"cmd": "rect", "x": 17.5, "y": 13.4, "width": 2.0, "height": 5.0, "fill": "white"},
+  {"cmd": "rect", "x": 2.5, "y": 19.2, "width": 19.0, "height": 2.2, "radius": 0.5, "fill": "white"}
+ ]
+}

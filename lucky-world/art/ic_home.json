@@ -1,0 +1,15 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Home: a house (white, the game tints it)",
+ "seed": 1,
+ "palette": {"white": "#FFFFFF"},
+ "commands": [
+  {"cmd": "canvas", "width": 24, "height": 24},
+  {"cmd": "layer", "name": "Icon"},
+  {"cmd": "polygon", "points": [[12.0, 2.6], [22.2, 12.0], [1.8, 12.0]], "fill": "white"},
+  {"cmd": "rect", "x": 5.0, "y": 11.0, "width": 14.0, "height": 10.0, "radius": 0.6, "fill": "white"},
+  {"cmd": "rect", "x": 16.0, "y": 4.0, "width": 2.6, "height": 5.0, "fill": "white"},
+  {"cmd": "rect", "x": 10.0, "y": 15.0, "width": 4.0, "height": 6.5, "fill": "white", "erase": true}
+ ]
+}

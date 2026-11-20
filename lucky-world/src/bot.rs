@@ -11,6 +11,8 @@ pub struct Bot {
     pub sim: Simulation<Lucky>,
     /// What it did, one line per step of its plan.
     pub log: Vec<String>,
+    /// Playing with the mouse alone: a key press is a bug in the test.
+    pub mouse_only: bool,
 }
 
 #[cfg_attr(not(test), allow(dead_code))] // some helpers only the player test uses
@@ -22,7 +24,7 @@ impl Bot {
         game.start_settings();
         let mut config = crate::config();
         config.seed = Some(seed);
-        Bot { sim: Simulation::new(config, game), log: Vec::new() }
+        Bot { sim: Simulation::new(config, game), log: Vec::new(), mouse_only: false }
     }
 
     pub fn g(&self) -> &Lucky {
@@ -36,6 +38,7 @@ impl Bot {
 
     /// Presses and lets go of a key, then lets the game see it settle.
     pub fn tap(&mut self, key: Key) {
+        assert!(!self.mouse_only, "the mouse-only bot pressed {key:?}");
         self.sim.press(key);
         self.sim.step();
         self.sim.release(key);
@@ -79,6 +82,48 @@ impl Bot {
         self.sim.release_mouse(MouseButton::Left);
         self.sim.step();
         self.wait(4);
+    }
+
+    /// A right click (the map's menu).
+    pub fn right_click(&mut self, at: Vec2) {
+        self.sim.move_mouse(at);
+        self.sim.step();
+        self.sim.press_mouse(MouseButton::Right);
+        self.sim.step();
+        self.sim.release_mouse(MouseButton::Right);
+        self.sim.step();
+        self.wait(4);
+    }
+
+    /// Clicks the button (or row) with this name; false when nothing by
+    /// that name can be clicked right now.
+    pub fn click_on(&mut self, name: &str) -> bool {
+        let at = self.g().click_targets().into_iter().find(|(n, _)| n.eq_ignore_ascii_case(name)).map(|(_, p)| p);
+        match at {
+            Some(p) => {
+                self.click(p);
+                true
+            }
+            None => {
+                let seen: Vec<String> = self.g().click_targets().into_iter().map(|(n, _)| n).collect();
+                self.note(format!("nothing called \"{name}\" to click; there is: {}", seen.join(", ")));
+                false
+            }
+        }
+    }
+
+    /// Clicks the first of these names that can be clicked; which one, or None.
+    pub fn click_any(&mut self, names: &[&str]) -> Option<String> {
+        let targets = self.g().click_targets();
+        let hit = names.iter().find_map(|n| targets.iter().find(|(t, _)| t.eq_ignore_ascii_case(n)).cloned());
+        let (name, at) = hit?;
+        self.click(at);
+        Some(name)
+    }
+
+    /// Whether something by this name can be clicked now.
+    pub fn can_click(&self, name: &str) -> bool {
+        self.g().click_targets().iter().any(|(t, _)| t.eq_ignore_ascii_case(name))
     }
 
     /// Saves what's on screen now.
@@ -157,6 +202,117 @@ impl Bot {
         }
         None
     }
+}
+
+/// `--shots DIR`: the phase 8 pictures, every one reached with the mouse:
+/// the map screen, its right-click menu, the pause menu, the windows, the
+/// "are you sure?" box, at several window sizes and UI scales.
+pub fn shots(args: &[String]) -> Result<(), String> {
+    let dir = args.first().cloned().unwrap_or_else(|| "out/shots".to_string());
+    let saves = format!("{dir}/saves");
+    let _ = std::fs::remove_dir_all(&saves);
+    crate::save::set_folder(&saves);
+    let map: usize = args.get(1).and_then(|m| m.parse().ok()).unwrap_or(0);
+    let shot = |bot: &mut Bot, name: &str| {
+        // A few frames drawn first: tooltips appear after a moment of hover.
+        for _ in 0..3 {
+            let _ = bot.sim.picture();
+            bot.sim.step();
+        }
+        let path = format!("{dir}/{name}.png");
+        bot.shot(&path);
+        println!("saved {path} (screen {:?})", bot.g().screen);
+    };
+    let hover = |bot: &mut Bot, at: Vec2| {
+        bot.sim.move_mouse(at);
+        for _ in 0..40 {
+            let _ = bot.sim.picture();
+            bot.sim.step();
+        }
+    };
+    let mut g = crate::new_game().map_err(|e| e.to_string())?;
+    g.settings.tooltips = true;
+    let mut bot = Bot::new(g, 21);
+    bot.wait(20);
+    shot(&mut bot, "menu");
+    if !bot.new_game(map, "normal") {
+        return Err(format!("couldn't start a game: {:?}", bot.log));
+    }
+    bot.wait(30);
+    bot.sim.move_mouse(vec2(700.0, 300.0));
+    shot(&mut bot, "map_start");
+    // A while later, the clock stopped, a province of mine chosen.
+    bot.tap(Key::Digit5);
+    bot.wait(600);
+    bot.click_on("pause");
+    if let Some((_, at)) = bot.g().clickable_province(0) {
+        bot.click(at);
+    }
+    bot.sim.move_mouse(vec2(760.0, 260.0));
+    shot(&mut bot, "map");
+    // Hover a top-bar number.
+    if let Some((_, at)) = bot.g().click_targets().into_iter().find(|(n, _)| n.contains('$') || n.ends_with('B') || n.ends_with('T')) {
+        hover(&mut bot, at);
+        shot(&mut bot, "map_tooltip");
+    }
+    // The right-click menu on a neighbour.
+    let neighbours = bot.neighbours();
+    let mut spot = neighbours.iter().find_map(|&n| bot.g().clickable_province(n));
+    if spot.is_none() {
+        bot.click_on("minus");
+        spot = neighbours.iter().find_map(|&n| bot.g().clickable_province(n));
+    }
+    if let Some((_, at)) = spot.or_else(|| bot.g().clickable_province(0)) {
+        bot.right_click(at);
+        let items = bot.g().click_targets();
+        if let Some((_, first)) = items.first() {
+            hover(&mut bot, *first);
+        }
+        shot(&mut bot, "right_click_menu");
+        bot.tap(Key::Escape);
+    }
+    // The pause menu, from the Menu button.
+    bot.click_on("Menu");
+    bot.sim.move_mouse(vec2(20.0, 700.0));
+    shot(&mut bot, "pause_menu");
+    bot.click_on("Save game");
+    shot(&mut bot, "save_slots");
+    bot.click_on("Back");
+    bot.click_on("Settings");
+    shot(&mut bot, "settings");
+    bot.click_on("close");
+    bot.click_on("How to play");
+    shot(&mut bot, "help");
+    bot.click_on("close");
+    bot.click_on("Main menu");
+    shot(&mut bot, "are_you_sure");
+    bot.click_on("Cancel");
+    bot.click_on("Resume");
+    // The windows, from the rail.
+    for (button, name) in [("Economy", "economy"), ("War room", "war_room"), ("Diplomacy", "diplomacy"), ("Spies", "spies"), ("News log", "news_log")] {
+        if bot.click_on(button) {
+            bot.sim.move_mouse(vec2(640.0, 300.0));
+            shot(&mut bot, name);
+            bot.tap(Key::Escape);
+        }
+    }
+    if bot.click_on("Country card") {
+        shot(&mut bot, "country_card");
+        bot.tap(Key::Escape);
+    }
+    // Every UI scale (the window shows the 1280 x 720 picture scaled to
+    // fit, so the scale is what changes the layout): nothing may overlap.
+    for scale in [0.9, 1.0, 1.1, 1.15] {
+        bot.sim.game_mut().settings.ui_scale = scale;
+        bot.wait(4);
+        shot(&mut bot, &format!("map_ui{}", (scale * 100.0) as u32));
+        if bot.click_on("Economy") {
+            shot(&mut bot, &format!("economy_ui{}", (scale * 100.0) as u32));
+            bot.tap(Key::Escape);
+        }
+    }
+    bot.sim.game_mut().settings.ui_scale = 1.0;
+    Ok(())
 }
 
 /// `--tour DIR`: the bot plays through every new screen and saves a picture

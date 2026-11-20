@@ -1,0 +1,12 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Minus (white, the game tints it)",
+ "seed": 1,
+ "palette": {"white": "#FFFFFF"},
+ "commands": [
+  {"cmd": "canvas", "width": 24, "height": 24},
+  {"cmd": "layer", "name": "Icon"},
+  {"cmd": "rect", "x": 4.0, "y": 11.0, "width": 16.0, "height": 2.0, "radius": 1.0, "fill": "white"}
+ ]
+}

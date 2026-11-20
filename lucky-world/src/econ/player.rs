@@ -57,7 +57,7 @@ impl Lever {
     }
 
     /// The step for one press, and the range it stays in.
-    fn step(self) -> (f64, f64, f64) {
+    pub fn step(self) -> (f64, f64, f64) {
         match self {
             Lever::IncomeTax => (0.01, 0.0, 0.7),
             Lever::CorporateTax => (0.01, 0.0, 0.7),

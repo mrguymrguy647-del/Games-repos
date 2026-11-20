@@ -4,18 +4,9 @@
  "title": "Battle marker: crossed swords",
  "seed": 1,
  "palette": {
-  "ink": "#1A1030",
-  "gold": "#F5C542",
-  "gold_dark": "#A8740E",
-  "gold_hi": "#FFF1B8",
-  "white": "#FFFFFF",
+  "gold": "#e2b84a",
   "steel": "#C8D0DA",
-  "steel_dark": "#7A8696",
-  "red": "#F06A6A",
-  "brown": "#6B4A2E",
-  "paper": "#EFE3C4",
-  "paper_dark": "#D8C79C",
-  "ink_brown": "#4A3420"
+  "brown": "#6B4A2E"
  },
  "commands": [
   {
@@ -34,7 +25,7 @@
     16
    ],
    "radius": 15,
-   "fill": "#B0262699",
+   "fill": "#c8372db0",
    "outline": "gold",
    "outline_size": 1.5
   },

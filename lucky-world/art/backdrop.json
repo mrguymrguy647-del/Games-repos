@@ -1,13 +1,9 @@
 {
   "format": "duckquill-script",
   "version": 1,
-  "title": "Stage backdrop",
+  "title": "Stage backdrop (navy, steel-blue rays, bronze glow)",
   "seed": 1,
-  "palette": {
-    "deep": "#0B0620",
-    "mid": "#2A1460",
-    "glow": "#4B2A9A"
-  },
+  "palette": {},
   "commands": [
     {
       "cmd": "canvas",
@@ -32,15 +28,15 @@
       "stops": [
         [
           0,
-          "#5B33B0"
+          "#22405c"
         ],
         [
           0.35,
-          "#2E1668"
+          "#13263a"
         ],
         [
           1,
-          "#0B0620"
+          "#070d15"
         ]
       ]
     },
@@ -64,7 +60,7 @@
           576
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -82,7 +78,7 @@
           954
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -100,7 +96,7 @@
           1293
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -118,7 +114,7 @@
           1570
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -136,7 +132,7 @@
           1766
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -154,7 +150,7 @@
           1867
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -172,7 +168,7 @@
           1867
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -190,7 +186,7 @@
           1766
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -208,7 +204,7 @@
           1570
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -226,7 +222,7 @@
           1293
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -244,7 +240,7 @@
           954
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -262,7 +258,7 @@
           576
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -280,7 +276,7 @@
           184
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -298,7 +294,7 @@
           -194
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -316,7 +312,7 @@
           -533
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -334,7 +330,7 @@
           -810
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -352,7 +348,7 @@
           -1006
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -370,7 +366,7 @@
           -1107
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -388,7 +384,7 @@
           -1107
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -406,7 +402,7 @@
           -1006
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -424,7 +420,7 @@
           -810
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -442,7 +438,7 @@
           -533
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -460,7 +456,7 @@
           -194
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "polygon",
@@ -478,7 +474,7 @@
           184
         ]
       ],
-      "fill": "#FFFFFF0B"
+      "fill": "#9fc0e009"
     },
     {
       "cmd": "layer",
@@ -497,16 +493,16 @@
       "count": 260,
       "size": [
         1,
-        3.5
+        3
       ],
       "colors": [
-        "#FFFFFF",
-        "#FFE9A8",
-        "#B9C8FF"
+        "#dfe8f2",
+        "#e9e2cf",
+        "#9fb6cf"
       ],
       "opacity": [
-        0.25,
-        0.9
+        0.12,
+        0.55
       ],
       "hardness": 0.8
     },
@@ -535,9 +531,9 @@
           1300
         ],
         "colors": [
-          "#3A2470",
-          "#1C1040",
-          "#0C0620"
+          "#1a3048",
+          "#0f1c2a",
+          "#080f18"
         ]
       }
     },
@@ -562,8 +558,8 @@
           560
         ],
         "colors": [
-          "#7A55D0A0",
-          "#7A55D000"
+          "#c8923f44",
+          "#c8923f00"
         ]
       }
     },
@@ -577,8 +573,8 @@
         1250,
         420
       ],
-      "outline": "#8A6AE060",
-      "outline_size": 3
+      "outline": "#8a6d2f80",
+      "outline_size": 2
     },
     {
       "cmd": "layer",

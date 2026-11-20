@@ -4,10 +4,11 @@
   "title": "Victory: a trophy cup",
   "seed": 1,
   "palette": {
-    "ink": "#1A1030",
-    "gold": "#F5C542",
-    "gold_dark": "#A8740E",
-    "gold_hi": "#FFF1B8"
+    "ink": "#0d1722",
+    "gold": "#e2b84a",
+    "gold_dark": "#a07f33",
+    "gold_hi": "#f6e2a0",
+    "bronze": "#8a6d2f"
   },
   "commands": [
     {
@@ -27,7 +28,7 @@
       ],
       "radius": 11,
       "fill": "ink",
-      "outline": "gold",
+      "outline": "bronze",
       "outline_size": 1.5
     },
     {

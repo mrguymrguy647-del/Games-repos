@@ -1,0 +1,18 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Diplomacy: a treaty with a seal (white, the game tints it)",
+ "seed": 1,
+ "palette": {"white": "#FFFFFF"},
+ "commands": [
+  {"cmd": "canvas", "width": 24, "height": 24},
+  {"cmd": "layer", "name": "Icon"},
+  {"cmd": "rect", "x": 3.0, "y": 3.0, "width": 16.0, "height": 15.0, "radius": 1.6, "fill": "white"},
+  {"cmd": "rect", "x": 5.0, "y": 5.0, "width": 12.0, "height": 11.0, "radius": 0.6, "fill": "white", "erase": true},
+  {"cmd": "rect", "x": 7.0, "y": 7.2, "width": 8.0, "height": 1.6, "fill": "white"},
+  {"cmd": "rect", "x": 7.0, "y": 10.6, "width": 5.0, "height": 1.6, "fill": "white"},
+  {"cmd": "ellipse", "center": [17.3, 15.5], "radius": 5.0, "fill": "white", "erase": true},
+  {"cmd": "polygon", "points": [[14.8, 17.0], [14.2, 22.6], [17.3, 20.8], [20.4, 22.6], [19.8, 17.0]], "fill": "white"},
+  {"cmd": "ellipse", "center": [17.3, 15.5], "radius": 3.8, "fill": "white"}
+ ]
+}

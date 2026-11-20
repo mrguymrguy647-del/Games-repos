@@ -13,7 +13,7 @@ use crate::diplo::spies::{self, Kind as Mission};
 use crate::diplo::{talks, treaties, Diplomacy, Inbox, Kind, Proposal, State};
 use crate::ui::{self, GOLD, MUTED, SOFT};
 
-const WIN: Rect = Rect { x: 110.0, y: 64.0, w: 1060.0, h: 600.0 };
+use super::windows::WIN;
 const GOOD: Color = Color::rgb(107, 212, 138);
 const WARN: Color = Color::rgb(245, 197, 66);
 const BAD: Color = Color::rgb(240, 106, 106);
@@ -59,6 +59,22 @@ impl SpyPage {
     }
 }
 
+/// What a treaty means, in a sentence.
+pub(super) fn treaty_words(kind: Kind) -> &'static str {
+    match kind {
+        Kind::Trade => "No tariffs between you, and each prefers the other's goods (10 years).",
+        Kind::NonAggression => "Neither may attack the other (10 years). Attacking breaks it.",
+        Kind::Defensive => "If either is attacked, the other is called to arms (10 years).",
+        Kind::Alliance => "Defensive, called to each other's wars, military access (15 years).",
+        Kind::Access => "Armies may pass and retreat through each other's land (5 years).",
+        Kind::Guarantee => "You guarantee their independence: attacked, they call on you (10 years).",
+        Kind::Arms => "You buy 50 tanks from them, at the world price + 20%.",
+        Kind::Loan => "You borrow 3% of their GDP, repaid monthly over 8 years with interest.",
+        Kind::Sanctions => "",
+    }
+}
+
+#[allow(dead_code)]
 fn tab_rect(k: usize) -> Rect {
     Rect::new(WIN.x + 24.0 + k as f32 * 168.0, WIN.y + 16.0, 160.0, 40.0)
 }
@@ -121,7 +137,7 @@ impl Lucky {
         if self.spectating { self.map_ui.brain.unwrap_or(0) } else { 0 }
     }
 
-    fn diplo_rows(&self, page: Page) -> usize {
+    pub(super) fn diplo_rows(&self, page: Page) -> usize {
         let (Some(d), Some(w)) = (self.diplo.as_ref(), self.wars.as_ref()) else { return 0 };
         let v = self.diplo_viewer();
         match page {
@@ -152,24 +168,28 @@ impl Lucky {
     /// Keys in the diplomacy window.
     pub(super) fn update_diplo(&mut self, ctx: &mut Context) {
         let Some(page) = self.map_ui.diplo.open else { return };
-        if ctx.input.was_pressed(Key::Escape) || ctx.input.was_pressed(Key::P) {
+        // Tabs, the close button, rows, treaty buttons and the bottom bar (windows.rs).
+        let ws = self.diplo_widgets();
+        let (act, outside) = self.window_clicks(ctx, &ws);
+        match act {
+            Some(super::gui::Act::Cmd(cmd)) => {
+                self.run(ctx, cmd);
+                return;
+            }
+            Some(super::gui::Act::Row(i)) => self.map_ui.diplo.row = i,
+            _ => {}
+        }
+        let wheel = ctx.input.scroll();
+        let key_p = self.settings.key(crate::settings::Act::Diplomacy);
+        if crate::game::gui::pressed(ctx, Key::Escape) || crate::game::gui::pressed(ctx, key_p) || outside {
             self.map_ui.diplo.open = None;
             crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
             return;
         }
         let mut next = None;
-        if ctx.input.was_pressed(Key::Tab) {
+        if crate::game::gui::pressed(ctx, Key::Tab) {
             let k = Page::ALL.iter().position(|&p| p == page).unwrap_or(0);
             next = Some(Page::ALL[(k + 1) % Page::ALL.len()]);
-        }
-        if ctx.input.was_mouse_pressed(MouseButton::Left) {
-            if let Some(m) = self.ui_mouse() {
-                for (k, p) in Page::ALL.iter().enumerate() {
-                    if tab_rect(k).contains(m) {
-                        next = Some(*p);
-                    }
-                }
-            }
         }
         if let Some(p) = next {
             self.map_ui.diplo.open = Some(p);
@@ -180,11 +200,14 @@ impl Lucky {
         let rows = self.diplo_rows(page);
         let ui = &mut self.map_ui.diplo;
         if page != Page::Propose {
-            if ctx.input.was_pressed(Key::Down) && rows > 0 {
+            if crate::game::gui::pressed(ctx, Key::Down) && rows > 0 {
                 ui.row = (ui.row + 1) % rows;
             }
-            if ctx.input.was_pressed(Key::Up) && rows > 0 {
+            if crate::game::gui::pressed(ctx, Key::Up) && rows > 0 {
                 ui.row = (ui.row + rows - 1) % rows;
+            }
+            if wheel != 0.0 && rows > 0 {
+                ui.row = (ui.row as i32 - wheel.signum() as i32).clamp(0, rows as i32 - 1) as usize;
             }
             ui.row = ui.row.min(rows.saturating_sub(1));
         }
@@ -196,7 +219,7 @@ impl Lucky {
         let list = order(d, v);
         if page == Page::Nations {
             ui.nation = list.get(ui.row).copied();
-            if ctx.input.was_pressed(Key::Enter) && !self.spectating {
+            if crate::game::gui::pressed(ctx, Key::Enter) && !self.spectating {
                 ui.open = Some(Page::Propose);
                 crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
             }
@@ -209,18 +232,18 @@ impl Lucky {
         let mut sound: Option<&'static str> = None;
         match page {
             Page::Propose => {
-                if ctx.input.was_pressed(Key::Right) {
+                if crate::game::gui::pressed(ctx, Key::Right) {
                     ui.kind = (ui.kind + 1) % Kind::PROPOSE.len();
                 }
-                if ctx.input.was_pressed(Key::Left) {
+                if crate::game::gui::pressed(ctx, Key::Left) {
                     ui.kind = (ui.kind + Kind::PROPOSE.len() - 1) % Kind::PROPOSE.len();
                 }
-                if ctx.input.was_pressed(Key::Down) || ctx.input.was_pressed(Key::Up) {
+                if crate::game::gui::pressed(ctx, Key::Down) || crate::game::gui::pressed(ctx, Key::Up) {
                     let k = ui.nation.and_then(|n| list.iter().position(|&x| x == n)).unwrap_or(0);
-                    let k = if ctx.input.was_pressed(Key::Down) { (k + 1) % list.len() } else { (k + list.len() - 1) % list.len() };
+                    let k = if crate::game::gui::pressed(ctx, Key::Down) { (k + 1) % list.len() } else { (k + list.len() - 1) % list.len() };
                     ui.nation = list.get(k).copied();
                 }
-                if ctx.input.was_pressed(Key::Enter) {
+                if crate::game::gui::pressed(ctx, Key::Enter) {
                     if let Some(to) = ui.nation {
                         let kind = Kind::PROPOSE[ui.kind];
                         let (good, amount) = match kind {
@@ -236,7 +259,7 @@ impl Lucky {
                 }
             }
             Page::Treaties => {
-                if ctx.input.was_pressed(Key::B) {
+                if crate::game::gui::pressed(ctx, Key::B) {
                     let ours: Vec<usize> = d.live().filter(|t| t.involves(v)).map(|t| t.id).collect();
                     if let Some(&id) = ours.get(ui.row) {
                         treaties::break_treaty(d, e, id, v, "the player ended it");
@@ -246,20 +269,20 @@ impl Lucky {
                 }
             }
             Page::Inbox => {
-                let yes = ctx.input.was_pressed(Key::Y);
-                if yes || ctx.input.was_pressed(Key::N) {
+                let yes = crate::game::gui::pressed(ctx, Key::Y);
+                if yes || crate::game::gui::pressed(ctx, Key::N) {
                     sound = Some(if yes { "treaty" } else { "click" });
                     said = Some(treaties::answer_inbox(d, e, ed, w, b, ui.row, yes));
                 }
             }
             Page::Talks => {
-                if ctx.input.was_pressed(Key::Right) {
+                if crate::game::gui::pressed(ctx, Key::Right) {
                     ui.demand = (ui.demand + 1).min(3);
                 }
-                if ctx.input.was_pressed(Key::Left) {
+                if crate::game::gui::pressed(ctx, Key::Left) {
                     ui.demand = ui.demand.saturating_sub(1);
                 }
-                if ctx.input.was_pressed(Key::Enter) {
+                if crate::game::gui::pressed(ctx, Key::Enter) {
                     let wars: Vec<usize> = (0..w.wars.len()).filter(|&k| w.wars[k].active() && w.wars[k].side_of(v).is_some() && !w.wars[k].civil).collect();
                     if let Some(&k) = wars.get(ui.row) {
                         said = Some(talks::player_offer(d, e, ed, w, k, ui.demand));
@@ -277,24 +300,34 @@ impl Lucky {
     /// Keys in the spy window.
     pub(super) fn update_spies(&mut self, ctx: &mut Context) {
         let Some(page) = self.map_ui.diplo.spies else { return };
-        if ctx.input.was_pressed(Key::Escape) || ctx.input.was_pressed(Key::I) {
+        let ws = self.spy_widgets();
+        let (act, outside) = self.window_clicks(ctx, &ws);
+        let mut slide = None;
+        match act {
+            Some(super::gui::Act::Cmd(cmd)) => {
+                self.run(ctx, cmd);
+                return;
+            }
+            Some(super::gui::Act::Row(i)) => self.map_ui.diplo.mission = i,
+            Some(super::gui::Act::Slide(_, t)) => slide = Some(t),
+            _ => {}
+        }
+        if let Some(d) = self.diplo.as_ref() {
+            // Reports looked at are no longer "new".
+            if page == SpyPage::Reports {
+                self.map_ui.spy_seen_day = d.day + 1;
+            }
+        }
+        let key_i = self.settings.key(crate::settings::Act::Spies);
+        if crate::game::gui::pressed(ctx, Key::Escape) || crate::game::gui::pressed(ctx, key_i) || outside {
             self.map_ui.diplo.spies = None;
             crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
             return;
         }
         let mut next = None;
-        if ctx.input.was_pressed(Key::Tab) {
+        if crate::game::gui::pressed(ctx, Key::Tab) {
             let k = SpyPage::ALL.iter().position(|&p| p == page).unwrap_or(0);
             next = Some(SpyPage::ALL[(k + 1) % SpyPage::ALL.len()]);
-        }
-        if ctx.input.was_mouse_pressed(MouseButton::Left) {
-            if let Some(m) = self.ui_mouse() {
-                for (k, p) in SpyPage::ALL.iter().enumerate() {
-                    if tab_rect(k).contains(m) {
-                        next = Some(*p);
-                    }
-                }
-            }
         }
         if let Some(p) = next {
             self.map_ui.diplo.spies = Some(p);
@@ -313,35 +346,38 @@ impl Lucky {
         let mut sound: Option<&'static str> = None;
         match page {
             SpyPage::Agents => {
-                if ctx.input.was_pressed(Key::T) {
+                if crate::game::gui::pressed(ctx, Key::T) {
                     said = Some(spies::train(d, e, v).unwrap_or_else(|x| x));
                 }
                 let s = &mut d.spies.services[v];
-                if ctx.input.was_pressed(Key::Right) {
+                if let Some(t) = slide {
+                    s.ci_share = ((t as f64) * 20.0).round() / 20.0;
+                }
+                if crate::game::gui::pressed(ctx, Key::Right) {
                     s.ci_share = (s.ci_share + 0.1).min(1.0);
                 }
-                if ctx.input.was_pressed(Key::Left) {
+                if crate::game::gui::pressed(ctx, Key::Left) {
                     s.ci_share = (s.ci_share - 0.1).max(0.0);
                 }
             }
             SpyPage::Missions => {
                 let k = ui.nation.and_then(|n| others.iter().position(|&x| x == n)).unwrap_or(0);
-                if ctx.input.was_pressed(Key::Right) {
+                if crate::game::gui::pressed(ctx, Key::Right) {
                     ui.nation = others.get((k + 1) % others.len()).copied();
                 }
-                if ctx.input.was_pressed(Key::Left) {
+                if crate::game::gui::pressed(ctx, Key::Left) {
                     ui.nation = others.get((k + others.len() - 1) % others.len()).copied();
                 }
                 if ui.nation.is_none() {
                     ui.nation = others.first().copied();
                 }
-                if ctx.input.was_pressed(Key::Down) {
+                if crate::game::gui::pressed(ctx, Key::Down) {
                     ui.mission = (ui.mission + 1) % Mission::ALL.len();
                 }
-                if ctx.input.was_pressed(Key::Up) {
+                if crate::game::gui::pressed(ctx, Key::Up) {
                     ui.mission = (ui.mission + Mission::ALL.len() - 1) % Mission::ALL.len();
                 }
-                if ctx.input.was_pressed(Key::Enter) {
+                if crate::game::gui::pressed(ctx, Key::Enter) {
                     if let Some(t) = ui.nation {
                         let agents = d.spies.idle(v).min(2);
                         let r = spies::launch(d, e, w, v, t, Mission::ALL[ui.mission], agents);
@@ -366,8 +402,8 @@ impl Lucky {
         }
         if d.inbox.len() > self.map_ui.diplo.inbox_seen {
             let words = match d.inbox.last() {
-                Some(Inbox::Proposal(p)) => format!("{} proposes a {}: P, then Inbox, to answer", d.names[p.from], p.kind.name().to_lowercase()),
-                Some(Inbox::Call { ally, .. }) => format!("{} calls you to war: P, then Inbox, to answer (14 days)", d.names[*ally]),
+                Some(Inbox::Proposal(p)) => format!("{} proposes a {}: answer in Diplomacy, Inbox", d.names[p.from], p.kind.name().to_lowercase()),
+                Some(Inbox::Call { ally, .. }) => format!("{} calls you to war: answer in Diplomacy, Inbox (14 days)", d.names[*ally]),
                 None => String::new(),
             };
             self.map_ui.diplo.inbox_seen = d.inbox.len();
@@ -399,32 +435,19 @@ impl Lucky {
         ctx.report("answers_to_player", d.answers.iter().filter(|a| a.from == v).count());
     }
 
-    fn draw_tabs(&self, canvas: &mut Canvas, names: &[&str], icons: &[&Sprite], on: usize, label: &str) {
-        let a = &self.assets;
-        ui::dim(canvas, 0.45);
-        canvas.blit_sprite(&a.econ_window, vec2(WIN.x, WIN.y), Blit::default());
+    fn draw_frame(&self, canvas: &mut Canvas, label: &str) {
+        canvas.blit_sprite(&self.assets.econ_window, vec2(WIN.x, WIN.y), Blit::default());
         canvas.label(label, WIN);
-        for (k, name) in names.iter().enumerate() {
-            let r = tab_rect(k);
-            let hot = self.ui_mouse().is_some_and(|m| r.contains(m));
-            canvas.fill_rect(r, if k == on { Color::rgba(120, 170, 255, 80) } else if hot { Color::rgba(255, 255, 255, 30) } else { Color::rgba(255, 255, 255, 12) });
-            let icon = icons[k % icons.len()];
-            canvas.blit_sprite(icon, vec2(r.x + 10.0, r.y + 8.0), Blit { scale: 24.0 / icon.width().max(1) as f32, ..Blit::default() });
-            plain(canvas, &a.font, name, vec2(r.x + 42.0, r.y + 11.0), 15.0, if k == on { GOLD } else { Color::WHITE });
-            canvas.label(&format!("tab {name}"), r);
-        }
     }
 
     /// The diplomacy window.
     pub(super) fn draw_diplo(&self, canvas: &mut Canvas) {
         let (Some(page), Some(d), Some(w), Some(e)) = (self.map_ui.diplo.open, self.diplo.as_ref(), self.wars.as_ref(), self.economy.as_ref()) else { return };
         let a = &self.assets;
-        let names: Vec<&str> = Page::ALL.iter().map(|p| p.name()).collect();
-        let on = Page::ALL.iter().position(|&p| p == page).unwrap_or(0);
-        self.draw_tabs(canvas, &names, &[&a.icon_handshake, &a.icon_treaty, &a.icon_scales, &a.icon_crate, &a.icon_swords], on, "diplomacy window");
+        self.draw_frame(canvas, "diplomacy window");
         let v = self.diplo_viewer();
         let (x, y) = (WIN.x + 26.0, WIN.y + 76.0);
-        let r = ui::plain(canvas, &a.font, &format!("{} · reputation {:.0}", d.names[v], d.reputation[v]), vec2(WIN.right() - 28.0, WIN.y + 28.0), 13.0, SOFT, Align::Right);
+        let r = ui::plain(canvas, &a.font, &format!("{} · reputation {:.0}", d.names[v], d.reputation[v]), vec2(WIN.right() - 50.0, WIN.y + 28.0), 13.0, SOFT, Align::Right);
         self.tip(r, "reputation");
         let row = self.map_ui.diplo.row;
         let list = order(d, v);
@@ -477,12 +500,11 @@ impl Lucky {
                     let text = if ours.is_empty() { "none".to_string() } else { ours.join(" · ") };
                     fit(canvas, &a.font, &text, vec2(dx, y + 280.0), 13.0, Color::WHITE, 500.0);
                     let at_war = w.at_war(v, j).is_some();
-                    plain(canvas, &a.font, if at_war { "AT WAR WITH US" } else { "Enter: propose a treaty" }, vec2(dx, y + 310.0), 13.0, if at_war { BAD } else { SOFT });
-                    plain(canvas, &a.font, "T trade · N non-aggression · D defensive · A alliance · M access · G guarantee · L loan", vec2(dx, y + 334.0), 11.0, MUTED);
+                    plain(canvas, &a.font, if at_war { "AT WAR WITH US" } else { "PROPOSE A TREATY TO THEM: click one" }, vec2(dx, WIN.bottom() - 152.0), 12.0, if at_war { BAD } else { GOLD });
                 }
             }
             Page::Treaties => {
-                plain(canvas, &a.font, "OUR TREATIES (B: break the chosen one; it costs reputation with everyone)", vec2(x, y), 12.0, GOLD);
+                plain(canvas, &a.font, "OUR TREATIES (breaking one costs reputation with everyone)", vec2(x, y), 12.0, GOLD);
                 let ours: Vec<&crate::diplo::Treaty> = d.live().filter(|t| t.involves(v)).collect();
                 for (k, t) in ours.iter().enumerate().take(12) {
                     let ry = y + 20.0 + k as f32 * 24.0;
@@ -515,27 +537,12 @@ impl Lucky {
             Page::Propose => {
                 let kind = Kind::PROPOSE[self.map_ui.diplo.kind];
                 let to = self.map_ui.diplo.nation.or_else(|| list.first().copied());
-                plain(canvas, &a.font, "PROPOSE A TREATY (Up/Down: the nation · Left/Right: the treaty · Enter: propose)", vec2(x, y), 12.0, GOLD);
+                plain(canvas, &a.font, "PROPOSE A TREATY: click one to send it", vec2(x, y), 12.0, GOLD);
                 if let Some(to) = to {
                     fit(canvas, &a.serif, &format!("To {}", d.names[to]), vec2(x, y + 26.0), 22.0, Color::WHITE, 600.0);
                     plain(canvas, &a.font, &format!("relations {:+.0} (theirs {:+.0}) · their reputation {:.0}", d.relations[v][to], d.relations[to][v], d.reputation[to]), vec2(x, y + 58.0), 13.0, SOFT);
                 }
-                for (k, kd) in Kind::PROPOSE.iter().enumerate() {
-                    let r = Rect::new(x + (k % 4) as f32 * 250.0, y + 92.0 + (k / 4) as f32 * 44.0, 240.0, 36.0);
-                    canvas.fill_rect(r, if *kd == kind { Color::rgba(120, 170, 255, 110) } else { Color::rgba(255, 255, 255, 18) });
-                    plain(canvas, &a.font, kd.name(), vec2(r.x + 10.0, r.y + 9.0), 15.0, if *kd == kind { Color::WHITE } else { SOFT });
-                }
-                let what = match kind {
-                    Kind::Trade => "No tariffs between you, and each prefers the other's goods (10 years).",
-                    Kind::NonAggression => "Neither may attack the other (10 years). Attacking breaks it.",
-                    Kind::Defensive => "If either is attacked, the other is called to arms (10 years).",
-                    Kind::Alliance => "Defensive, called to each other's wars, military access (15 years).",
-                    Kind::Access => "Armies may pass and retreat through each other's land (5 years).",
-                    Kind::Guarantee => "You guarantee their independence: attacked, they call on you (10 years).",
-                    Kind::Arms => "You buy 50 tanks from them, at the world price + 20%.",
-                    Kind::Loan => "You borrow 3% of their GDP, repaid monthly over 8 years with interest.",
-                    Kind::Sanctions => "",
-                };
+                let what = treaty_words(kind);
                 plain(canvas, &a.font, what, vec2(x, y + 190.0), 14.0, Color::WHITE);
                 if let Some(m) = &self.map_ui.diplo.message {
                     fit(canvas, &a.font, m, vec2(x, y + 224.0), 17.0, if m.contains("Yes") || m.contains("Signed") { GOOD } else { BAD }, 1000.0);
@@ -547,7 +554,7 @@ impl Lucky {
                 }
             }
             Page::Inbox => {
-                plain(canvas, &a.font, "INBOX (Y: yes · N: no)", vec2(x, y), 12.0, GOLD);
+                plain(canvas, &a.font, "INBOX", vec2(x, y), 12.0, GOLD);
                 if d.inbox.is_empty() {
                     plain(canvas, &a.font, "Nothing waiting.", vec2(x, y + 24.0), 14.0, MUTED);
                 }
@@ -576,7 +583,7 @@ impl Lucky {
                 }
             }
             Page::Talks => {
-                plain(canvas, &a.font, "PEACE TALKS (Up/Down: our war · Left/Right: our demand · Enter: send it)", vec2(x, y), 12.0, GOLD);
+                plain(canvas, &a.font, "PEACE TALKS", vec2(x, y), 12.0, GOLD);
                 let wars: Vec<usize> = (0..w.wars.len()).filter(|&k| w.wars[k].active() && w.wars[k].side_of(v).is_some() && !w.wars[k].civil).collect();
                 for (k, &war) in wars.iter().enumerate().take(6) {
                     let ry = y + 22.0 + k as f32 * 26.0;
@@ -604,31 +611,20 @@ impl Lucky {
                 }
             }
         }
-        let help = if self.spectating {
-            "Watching: the diplomacy window only shows · Up/Down: choose · Tab: next page · P or Esc: close"
-        } else {
-            match page {
-                Page::Nations => "Up/Down: a nation · Enter: propose to it · Tab: next page · P or Esc: close",
-                Page::Treaties => "Up/Down: a treaty · B: break it · Tab: next page · P or Esc: close",
-                Page::Propose => "Up/Down: the nation · Left/Right: the treaty · Enter: propose · Tab · P: close",
-                Page::Inbox => "Up/Down: choose · Y: yes · N: no · Tab: next page · P or Esc: close",
-                Page::Talks => "Up/Down: a war · Left/Right: our demand · Enter: send · Tab · P: close",
-            }
-        };
-        plain(canvas, &a.font, help, vec2(WIN.x + 26.0, WIN.bottom() - 30.0), 13.0, SOFT);
+        self.pop_ui(canvas);
+        self.draw_widgets(canvas, &self.diplo_widgets(), self.window_live());
+        self.push_ui(canvas);
     }
 
     /// The spy window.
     pub(super) fn draw_spies(&self, canvas: &mut Canvas) {
         let (Some(page), Some(d)) = (self.map_ui.diplo.spies, self.diplo.as_ref()) else { return };
         let a = &self.assets;
-        let names: Vec<&str> = SpyPage::ALL.iter().map(|p| p.name()).collect();
-        let on = SpyPage::ALL.iter().position(|&p| p == page).unwrap_or(0);
-        self.draw_tabs(canvas, &names, &[&a.icon_spy, &a.icon_swords, &a.icon_chart], on, "spy window");
+        self.draw_frame(canvas, "spy window");
         let v = self.diplo_viewer();
         let (x, y) = (WIN.x + 26.0, WIN.y + 76.0);
         let s = &d.spies.services[v];
-        ui::plain(canvas, &a.font, &format!("{} · secret service", d.names[v]), vec2(WIN.right() - 28.0, WIN.y + 28.0), 13.0, SOFT, Align::Right);
+        ui::plain(canvas, &a.font, &format!("{} · secret service", d.names[v]), vec2(WIN.right() - 50.0, WIN.y + 28.0), 13.0, SOFT, Align::Right);
         match page {
             SpyPage::Agents => {
                 let lines = [
@@ -711,15 +707,8 @@ impl Lucky {
                 }
             }
         }
-        let help = if self.spectating {
-            "Watching: the spy window only shows · Tab: next page · I or Esc: close"
-        } else {
-            match page {
-                SpyPage::Agents => "T: train an agent · Left/Right: the share at home on counter-intelligence · Tab · I: close",
-                SpyPage::Missions => "Left/Right: the target · Up/Down: the mission · Enter: send · Tab: next page · I: close",
-                SpyPage::Reports => "Tab: next page · I or Esc: close",
-            }
-        };
-        plain(canvas, &a.font, help, vec2(WIN.x + 26.0, WIN.bottom() - 30.0), 13.0, SOFT);
+        self.pop_ui(canvas);
+        self.draw_widgets(canvas, &self.spy_widgets(), self.window_live());
+        self.push_ui(canvas);
     }
 }

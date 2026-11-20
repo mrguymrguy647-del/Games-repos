@@ -17,6 +17,8 @@
 
 use duckforge::prelude::*;
 
+use super::gui::Act;
+use super::windows::{LEVER_ROW, WIN};
 use super::Lucky;
 use crate::econ::data::Tier;
 use crate::econ::player::Lever;
@@ -27,10 +29,6 @@ use crate::ui::{self, GOLD, MUTED, SOFT};
 pub const SPEEDS: [f32; 6] = [1.0, 3.0, 7.0, 15.0, 30.0, 90.0];
 /// Spectator mode's own top speed (key 6): three months a second.
 pub const SPECTATOR_SPEED: usize = 5;
-/// Where the economy window sits.
-const WIN: Rect = Rect { x: 110.0, y: 64.0, w: 1060.0, h: 600.0 };
-/// The economy button on the top bar.
-pub const ECON_BUTTON: Rect = Rect { x: 1086.0, y: 30.0, w: 180.0, h: 22.0 };
 const GOOD: Color = Color::rgb(107, 212, 138);
 const WARN: Color = Color::rgb(245, 197, 66);
 const BAD: Color = Color::rgb(240, 106, 106);
@@ -61,10 +59,12 @@ pub enum Tab {
     Trade,
     Stockpile,
     Charts,
+    /// People and jobs, and what moves stability.
+    People,
 }
 
 impl Tab {
-    pub const ALL: [Tab; 6] = [Tab::Budget, Tab::Chains, Tab::Market, Tab::Trade, Tab::Stockpile, Tab::Charts];
+    pub const ALL: [Tab; 7] = [Tab::Budget, Tab::Chains, Tab::Market, Tab::Trade, Tab::Stockpile, Tab::Charts, Tab::People];
 
     fn name(self) -> &'static str {
         match self {
@@ -74,6 +74,7 @@ impl Tab {
             Tab::Trade => "TRADE",
             Tab::Stockpile => "STOCKPILE",
             Tab::Charts => "CHARTS",
+            Tab::People => "PEOPLE",
         }
     }
 
@@ -83,12 +84,10 @@ impl Tab {
             Tab::Chains | Tab::Market | Tab::Charts => ed.goods.len(),
             Tab::Trade => e.nations.len().saturating_sub(1),
             Tab::Stockpile => 1,
+            Tab::People => 2,
         }
     }
 
-    fn tab_rect(k: usize) -> Rect {
-        Rect::new(WIN.x + 24.0 + k as f32 * 168.0, WIN.y + 16.0, 160.0, 40.0)
-    }
 }
 
 /// The map's economy overlays.
@@ -114,6 +113,10 @@ pub enum Overlay {
 pub struct EconUi {
     pub open: Option<Tab>,
     pub row: usize,
+    /// "Build here": the province the next building goes to.
+    pub build_at: Option<usize>,
+    /// When a slider last made its sound.
+    slide_time: f32,
     pub overlay: Overlay,
     overlay_month: u32,
 }
@@ -191,7 +194,7 @@ fn right(canvas: &mut Canvas, font: &Font, words: &str, at: Vec2, size: f32, col
 }
 
 /// How well a good is going at home: 1 fine, 0 stopped.
-fn supply_ratio(n: &NationEcon, g: usize) -> f64 {
+pub(super) fn supply_ratio(n: &NationEcon, g: usize) -> f64 {
     if n.wanted[g] > 1e-9 { (n.got[g] / n.wanted[g]).clamp(0.0, 1.0) } else { 1.0 }
 }
 
@@ -213,7 +216,7 @@ impl Lucky {
         let keys = [Key::Digit1, Key::Digit2, Key::Digit3, Key::Digit4, Key::Digit5, Key::Digit6];
         let top = if self.spectating { SPECTATOR_SPEED } else { SPECTATOR_SPEED - 1 };
         for (k, key) in keys.into_iter().enumerate() {
-            if k <= top && ctx.input.was_pressed(key) {
+            if k <= top && crate::game::gui::pressed(ctx, key) {
                 self.clock.speed = k;
                 self.clock.paused = false;
                 crate::ui::sfx(ctx, &self.assets.click, 0.6, 0.0);
@@ -292,7 +295,7 @@ impl Lucky {
     }
 
     /// Rebuilds the map overlay when it changes (and each month for industry).
-    fn refresh_overlay(&mut self) {
+    pub(super) fn refresh_overlay(&mut self) {
         let (Some(e), Some(view), Some(world)) = (self.economy.as_ref(), self.map_view.as_mut(), self.world.as_ref()) else { return };
         let ui = &mut self.map_ui.econ;
         // The war overlay follows the war day by day; the others monthly.
@@ -404,29 +407,56 @@ impl Lucky {
         self.refresh_overlay();
     }
 
+    /// A lever's slider was dragged to share `t` of its range.
+    fn slide_lever(&mut self, ctx: &mut Context, k: usize, t: f32) {
+        let (Some(e), ed) = (self.economy.as_mut(), &self.econ_data) else { return };
+        let lever = Lever::ALL[k.min(Lever::ALL.len() - 1)];
+        let (step, lo, hi) = lever.step();
+        let target = lo + (hi - lo) * t as f64;
+        let steps = ((target - e.lever_with(0, lever, Some(ed))) / step).round() as i32;
+        self.map_ui.econ.row = k;
+        if steps != 0 {
+            let words = e.pull_with(Some(ed), 0, lever, steps);
+            self.toast = Some((words, 2.5));
+            if self.time - self.map_ui.econ.slide_time > 0.12 {
+                self.map_ui.econ.slide_time = self.time;
+                crate::ui::sfx(ctx, &self.assets.coin, 0.5, 0.0);
+            }
+        }
+    }
+
     /// The economy window is open: its keys and clicks (the camera rests).
     pub(super) fn update_econ_window(&mut self, ctx: &mut Context) {
         let Some(mut tab) = self.map_ui.econ.open else { return };
         let mouse = self.ui_mouse();
+        // Tabs, the close button, rows, sliders and the bottom bar (windows.rs).
+        let ws = self.econ_widgets();
+        let (act, outside) = self.window_clicks(ctx, &ws);
+        match act {
+            Some(Act::Cmd(cmd)) => {
+                self.run(ctx, cmd);
+                return;
+            }
+            Some(Act::Row(i)) => self.map_ui.econ.row = i,
+            Some(Act::Slide(k, t)) => self.slide_lever(ctx, k as usize, t),
+            _ => {}
+        }
+        let wheel = ctx.input.scroll();
+        let key_o = self.settings.key(crate::settings::Act::Economy);
+        let build_at = self.map_ui.econ.build_at;
         let (Some(e), ed) = (self.economy.as_mut(), &self.econ_data) else { return };
         let click = ctx.input.was_mouse_pressed(MouseButton::Left).then_some(mouse).flatten();
-        if ctx.input.was_pressed(Key::Escape) || ctx.input.was_pressed(Key::O) || click.is_some_and(|m| !WIN.contains(m) && !ECON_BUTTON.contains(m)) {
+        if crate::game::gui::pressed(ctx, Key::Escape) || crate::game::gui::pressed(ctx, key_o) || outside {
             self.map_ui.econ.open = None;
+            self.map_ui.econ.build_at = None;
             crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
             return;
         }
         // Pages.
         let mut new_tab = None;
-        if ctx.input.was_pressed(Key::Tab) {
+        if crate::game::gui::pressed(ctx, Key::Tab) {
             let k = Tab::ALL.iter().position(|&t| t == tab).unwrap_or(0);
             new_tab = Some(Tab::ALL[(k + 1) % Tab::ALL.len()]);
-        }
-        if let Some(m) = click {
-            for (k, t) in Tab::ALL.iter().enumerate() {
-                if Tab::tab_rect(k).contains(m) {
-                    new_tab = Some(*t);
-                }
-            }
         }
         if let Some(t) = new_tab {
             if t != tab {
@@ -438,11 +468,15 @@ impl Lucky {
         }
         let rows = tab.rows(ed, e).max(1);
         let ui = &mut self.map_ui.econ;
-        if ctx.input.was_pressed(Key::Down) {
+        if crate::game::gui::pressed(ctx, Key::Down) {
             ui.row = (ui.row + 1) % rows;
         }
-        if ctx.input.was_pressed(Key::Up) {
+        if crate::game::gui::pressed(ctx, Key::Up) {
             ui.row = (ui.row + rows - 1) % rows;
+        }
+        // The mouse wheel moves down and up the list.
+        if wheel != 0.0 && tab != Tab::Budget {
+            ui.row = (ui.row as i32 - wheel.signum() as i32).clamp(0, rows as i32 - 1) as usize;
         }
         // Clicking a row chooses it.
         if let Some(m) = click {
@@ -457,10 +491,10 @@ impl Lucky {
             Tab::Budget => {
                 let lever = Lever::ALL[row];
                 let mut steps = 0;
-                if ctx.input.was_pressed(Key::Right) {
+                if crate::game::gui::pressed(ctx, Key::Right) {
                     steps += 1;
                 }
-                if ctx.input.was_pressed(Key::Left) {
+                if crate::game::gui::pressed(ctx, Key::Left) {
                     steps -= 1;
                 }
                 if let Some(m) = click {
@@ -477,7 +511,7 @@ impl Lucky {
                 if steps != 0 {
                     said = Some(Ok(e.pull_with(Some(ed), 0, lever, steps)));
                 }
-                if ctx.input.was_pressed(Key::A) {
+                if crate::game::gui::pressed(ctx, Key::A) {
                     e.free_rate(0);
                     said = Some(Ok(e.free_taxes(0) + "; the bank sets the rate"));
                 }
@@ -485,21 +519,25 @@ impl Lucky {
             Tab::Chains => {
                 let g = chain_order(ed)[row];
                 if let Some(kind) = ed.buildings.iter().position(|b| b.output == g) {
-                    if ctx.input.was_pressed(Key::B) || click.is_some_and(|m| BUILD_BUTTON.contains(m)) {
-                        said = Some(e.player_build(ed, 0, kind));
+                    if crate::game::gui::pressed(ctx, Key::B) {
+                        // "Build here" aims it at the chosen province; otherwise the best place.
+                        said = Some(match build_at {
+                            Some(p) => e.player_build_at(ed, 0, kind, p),
+                            None => e.player_build(ed, 0, kind),
+                        });
                     }
-                    if ctx.input.was_pressed(Key::X) || click.is_some_and(|m| CLOSE_BUTTON.contains(m)) {
+                    if crate::game::gui::pressed(ctx, Key::X) {
                         said = Some(e.player_close(ed, 0, kind));
                     }
                 }
                 // Roads where goods are stuck, a bigger port (the brains have the same keys).
-                if ctx.input.was_pressed(Key::R) {
+                if crate::game::gui::pressed(ctx, Key::R) {
                     said = Some(match e.most_choked(0) {
                         Some(q) => e.player_road(ed, 0, q),
                         None => Err("Goods move freely everywhere: no road needed".to_string()),
                     });
                 }
-                if ctx.input.was_pressed(Key::P) {
+                if crate::game::gui::pressed(ctx, Key::P) {
                     said = Some(match e.smallest_port(0) {
                         Some(q) => e.player_port(ed, 0, q),
                         None => Err("No coast with room for a bigger port".to_string()),
@@ -507,7 +545,7 @@ impl Lucky {
                 }
             }
             Tab::Market => {
-                if ctx.input.was_pressed(Key::T) || click.is_some_and(|m| POLICY_BUTTON.contains(m)) {
+                if crate::game::gui::pressed(ctx, Key::T) {
                     if ed.goods[row].trade {
                         said = Some(Ok(e.cycle_trade_policy(ed, 0, row)));
                     } else {
@@ -516,12 +554,12 @@ impl Lucky {
                 }
             }
             Tab::Trade => {
-                if ctx.input.was_pressed(Key::X) || click.is_some_and(|m| EMBARGO_BUTTON.contains(m)) {
+                if crate::game::gui::pressed(ctx, Key::X) {
                     let other = partners(e)[row];
                     said = Some(Ok(e.toggle_embargo(0, other)));
                 }
             }
-            Tab::Stockpile | Tab::Charts => {}
+            Tab::Stockpile | Tab::Charts | Tab::People => {}
         }
         match said {
             Some(Ok(words)) => {
@@ -555,78 +593,6 @@ impl Lucky {
     }
 
     /// Date, speed and the headline numbers, on the top bar.
-    pub(super) fn draw_econ_topbar(&self, canvas: &mut Canvas) {
-        let (Some(e), a) = (self.economy.as_ref(), &self.assets) else { return };
-        let ed = &self.econ_data;
-        let n = &e.nations[0];
-        let speed = if self.clock.paused { "PAUSED".to_string() } else { format!("{}  x{}", ">".repeat(self.clock.speed + 1), SPEEDS[self.clock.speed]) };
-        let r = ui::plain(canvas, &a.font, &speed, vec2(1076.0, 32.0), 13.0, if self.clock.paused { WARN } else { GOLD }, Align::Right);
-        self.tip(r, "speed");
-        let r = ui::plain(canvas, &a.font, &e.date(ed), vec2(990.0, 30.0), 16.0, Color::WHITE, Align::Right);
-        self.tip(r, "date");
-        if !self.spectating {
-            // The player's numbers, each with its tip, right to left.
-            let parts = [
-                ("treasury", format!("Treasury {}", money(n.treasury * n.exchange))),
-                ("jobless", format!("Jobless {}", pct(n.unemployment(ed)))),
-                ("inflation", format!("Inflation {}", pct(n.inflation))),
-                ("gdp", format!("GDP {}", money(n.gdp))),
-            ];
-            let mut x = 1266.0;
-            for (k, (tip, words)) in parts.iter().enumerate() {
-                let r = ui::plain(canvas, &a.font, words, vec2(x, 8.0), 13.0, Color::WHITE, Align::Right);
-                self.tip(r, tip);
-                x = r.x - 6.0;
-                if k + 1 < parts.len() {
-                    let dot = ui::plain(canvas, &a.font, "·", vec2(x, 8.0), 13.0, SOFT, Align::Right);
-                    x = dot.x - 6.0;
-                }
-            }
-            // Score and rank (now), with how close each victory is.
-            if let Some(w) = self.wars.as_ref() {
-                let s = crate::victory::scores(&self.victory.victory, e, ed, w);
-                let rank = 1 + (1..s.len()).filter(|&j| s[j] > s[0]).count();
-                let r = ui::plain(canvas, &a.font, &format!("Score {:.0} · #{}", s[0], rank), vec2(x - 14.0, 8.0), 13.0, GOLD, Align::Right);
-                canvas.blit_sprite(&a.icon_trophy, vec2(r.x - 22.0, 5.0), Blit { scale: 0.75, ..Blit::default() });
-                self.tip_words(Rect::new(r.x - 22.0, r.y, r.w + 22.0, r.h), self.victory_progress());
-            }
-        }
-        let facts = if self.spectating {
-            let (now, start): (f64, f64) = e.nations.iter().fold((0.0, 0.0), |(a, b), n| (a + n.gdp, b + n.gdp_start));
-            let years = e.day as f64 / ed.days_per_year as f64;
-            let jobless = e.nations.iter().filter(|n| n.unemployment(ed) > 0.15).count();
-            // A yearly rate from a few weeks says nothing (one good month
-            // compounds to +20%): it waits for a whole year.
-            let growth = if years >= 1.0 { format!("{} a year", pct((now / start.max(1.0)).powf(1.0 / years) - 1.0)) } else { "growth after a year".to_string() };
-            format!("World GDP {}  ·  {growth}  ·  {} over 15% jobless", money(now), jobless)
-        } else {
-            format!(
-                "GDP {}  ·  Inflation {}  ·  Jobless {}  ·  Treasury {}",
-                money(n.gdp),
-                pct(n.inflation),
-                pct(n.unemployment(ed)),
-                money(n.treasury * n.exchange)
-            )
-        };
-        if self.spectating {
-            ui::plain(canvas, &a.font, &facts, vec2(1266.0, 8.0), 13.0, Color::WHITE, Align::Right);
-        }
-        let hot = self.mouse.is_some_and(|m| ECON_BUTTON.contains(m));
-        canvas.fill_rect(ECON_BUTTON, if hot { Color::rgba(245, 197, 66, 90) } else { Color::rgba(245, 197, 66, 40) });
-        canvas.blit_sprite(&a.icon_coin, vec2(ECON_BUTTON.x + 2.0, ECON_BUTTON.y - 1.0), Blit::default());
-        ui::plain(canvas, &a.font, "O: ECONOMY", vec2(ECON_BUTTON.x + 32.0, ECON_BUTTON.y + 3.0), 13.0, GOLD, Align::Left);
-        canvas.label("economy button", ECON_BUTTON);
-        if self.wars.is_some() {
-            let b = super::war_screen::WAR_BUTTON;
-            let hot = self.mouse.is_some_and(|m| b.contains(m));
-            let at_war = self.wars.as_ref().is_some_and(|w| w.level_of(self.war_viewer_pub()) >= 1);
-            canvas.fill_rect(b, if hot { Color::rgba(240, 106, 106, 120) } else if at_war { Color::rgba(240, 70, 70, 90) } else { Color::rgba(240, 106, 106, 45) });
-            canvas.blit_sprite(&a.icon_swords, vec2(b.x + 4.0, b.y + 1.0), Blit { scale: 0.62, ..Blit::default() });
-            ui::plain(canvas, &a.font, "K: WAR ROOM", vec2(b.x + 32.0, b.y + 3.0), 13.0, Color::WHITE, Align::Left);
-            canvas.label("war button", b);
-        }
-    }
-
     /// The overlay's key, bottom left.
     pub(super) fn draw_overlay_legend(&self, canvas: &mut Canvas) {
         let a = &self.assets;
@@ -699,19 +665,8 @@ impl Lucky {
     pub(super) fn draw_econ_window(&self, canvas: &mut Canvas) {
         let (Some(tab), Some(e)) = (self.map_ui.econ.open, self.economy.as_ref()) else { return };
         let a = &self.assets;
-        ui::dim(canvas, 0.45);
         canvas.blit_sprite(&a.econ_window, vec2(WIN.x, WIN.y), Blit::default());
         canvas.label("economy window", WIN);
-        let icons = [&a.icon_coin, &a.icon_factory, &a.icon_scales, &a.icon_ship, &a.icon_crate, &a.icon_chart];
-        for (k, t) in Tab::ALL.iter().enumerate() {
-            let r = Tab::tab_rect(k);
-            let on = *t == tab;
-            let hot = self.ui_mouse().is_some_and(|m| r.contains(m));
-            canvas.fill_rect(r, if on { Color::rgba(245, 197, 66, 70) } else if hot { Color::rgba(255, 255, 255, 30) } else { Color::rgba(255, 255, 255, 12) });
-            canvas.blit_sprite(icons[k], vec2(r.x + 10.0, r.y + 8.0), Blit::default());
-            plain(canvas, &a.font, t.name(), vec2(r.x + 42.0, r.y + 11.0), 15.0, if on { GOLD } else { Color::WHITE });
-            canvas.label(&format!("tab {}", t.name()), r);
-        }
         let n = &e.nations[0];
         let row = self.map_ui.econ.row;
         match tab {
@@ -721,16 +676,11 @@ impl Lucky {
             Tab::Trade => self.draw_trade(canvas, e, n, row),
             Tab::Stockpile => self.draw_stockpile(canvas, e, n),
             Tab::Charts => self.draw_charts(canvas, e, n, row),
+            Tab::People => self.draw_people(canvas, e, n, row),
         }
-        let help = match tab {
-            Tab::Budget => "Up/Down: choose  ·  Left/Right or -/+: change  ·  A: hand back to the autopilot  ·  Tab: next page  ·  O or Esc: close",
-            Tab::Chains => "Up/Down: choose a good  ·  B: build more of its maker  ·  X: close some  ·  R: a road where goods are stuck  ·  P: a port  ·  Tab: next page",
-            Tab::Market => "Up/Down: choose a good  ·  T: free → no exports → no imports  ·  Tab: next page",
-            Tab::Trade => "Up/Down: choose a nation  ·  X: embargo (or lift it)  ·  Tab: next page",
-            Tab::Stockpile => "Weapons made at home or bought go into the stockpile  ·  Tab: next page",
-            Tab::Charts => "Up/Down: choose the good in the price chart  ·  Tab: next page",
-        };
-        plain(canvas, &a.font, help, vec2(WIN.x + 26.0, WIN.bottom() - 30.0), 13.0, SOFT);
+        self.pop_ui(canvas);
+        self.draw_widgets(canvas, &self.econ_widgets(), self.window_live());
+        self.push_ui(canvas);
     }
 
     fn draw_budget(&self, canvas: &mut Canvas, e: &Economy, n: &NationEcon, row: usize) {
@@ -744,7 +694,7 @@ impl Lucky {
             if k == row {
                 canvas.fill_rect(r, Color::rgba(245, 197, 66, 40));
             }
-            plain(canvas, &a.font, lever.name(), vec2(x, ry + 4.0), 16.0, Color::WHITE);
+            super::gui::fit(canvas, &a.font, lever.name(), vec2(x, ry + 4.0), 15.0, Color::WHITE, Align::Left, 190.0);
             let key = match lever {
                 Lever::IncomeTax => "income_tax",
                 Lever::CorporateTax => "corporate_tax",
@@ -756,7 +706,7 @@ impl Lucky {
                 Lever::Arms => "procurement",
                 Lever::PublicWorks => "jobless",
             };
-            self.tip(Rect::new(x - 6.0, ry - 4.0, 380.0, LEVER_ROW - 4.0), key);
+            self.tip(Rect::new(x - 6.0, ry - 4.0, 196.0, LEVER_ROW - 4.0), key);
             let value = e.lever_with(0, *lever, Some(ed));
             let auto = match lever {
                 Lever::InterestRate => n.manual_rate.is_none(),
@@ -765,9 +715,9 @@ impl Lucky {
                 Lever::PublicWorks => n.works.is_none(),
                 _ => !n.manual_taxes,
             };
-            right(canvas, &a.font, &pct(value), vec2(x + 360.0, ry + 4.0), 17.0, GOLD);
+            right(canvas, &a.bold, &pct(value), vec2(WIN.x + 392.0, ry + 4.0), 16.0, GOLD);
             if auto {
-                plain(canvas, &a.font, "auto", vec2(x + 252.0, ry + 7.0), 12.0, SOFT);
+                plain(canvas, &a.font, "auto", vec2(WIN.x + 472.0, ry + 7.0), 12.0, SOFT);
             }
             let (minus, plus) = lever_buttons(k);
             for (b, s) in [(minus, "-"), (plus, "+")] {
@@ -939,13 +889,7 @@ impl Lucky {
                 ly += 21.0;
             }
             let (block, cost) = self.economy.as_ref().map_or((0.0, 0.0), |e| e.build_block(ed, 0, kind));
-            plain(canvas, &a.font, &format!("B: build {:.0} levels for {}", block, money(cost * n.exchange)), vec2(px, ly + 8.0), 13.0, SOFT);
-            for (b, label) in [(BUILD_BUTTON, "BUILD (B)"), (CLOSE_BUTTON, "CLOSE (X)")] {
-                let hot = self.ui_mouse().is_some_and(|m| b.contains(m));
-                canvas.fill_rect(b, if hot { Color::rgba(245, 197, 66, 140) } else { Color::rgba(245, 197, 66, 60) });
-                ui::plain(canvas, &a.font, label, vec2(b.center().x, b.y + 8.0), 14.0, Color::WHITE, Align::Center);
-                canvas.label(label, b);
-            }
+            plain(canvas, &a.font, &format!("One order builds {:.0} levels for {}", block, money(cost * n.exchange)), vec2(px, ly + 8.0), 13.0, SOFT);
         }
         // What's being built.
         let mut cy = WIN.bottom() - 120.0;
@@ -1023,9 +967,6 @@ impl Lucky {
             plain(canvas, &a.font, policy, vec2(x + 870.0, ry), 13.0, if policy == "free" { SOFT } else { WARN });
             canvas.label(&format!("market {}", ed.goods[g].id), Rect::new(x - 6.0, ry - 3.0, 1010.0, 25.0));
         }
-        let hot = self.ui_mouse().is_some_and(|m| POLICY_BUTTON.contains(m));
-        canvas.fill_rect(POLICY_BUTTON, if hot { Color::rgba(245, 197, 66, 140) } else { Color::rgba(245, 197, 66, 60) });
-        ui::plain(canvas, &a.font, "TRADE POLICY (T)", vec2(POLICY_BUTTON.center().x, POLICY_BUTTON.y + 8.0), 14.0, Color::WHITE, Align::Center);
     }
 
     fn draw_trade(&self, canvas: &mut Canvas, e: &Economy, n: &NationEcon, row: usize) {
@@ -1086,9 +1027,86 @@ impl Lucky {
                 plain(canvas, &a.font, if n.embargo[j] { "EMBARGO" } else { "embargoes you" }, vec2(px + 452.0, ry + 1.0), 11.0, BAD);
             }
         }
-        let hot = self.ui_mouse().is_some_and(|m| EMBARGO_BUTTON.contains(m));
-        canvas.fill_rect(EMBARGO_BUTTON, if hot { Color::rgba(245, 197, 66, 140) } else { Color::rgba(245, 197, 66, 60) });
-        ui::plain(canvas, &a.font, "EMBARGO (X)", vec2(EMBARGO_BUTTON.center().x, EMBARGO_BUTTON.y + 8.0), 14.0, Color::WHITE, Align::Center);
+    }
+
+    /// People and jobs, and what moves happiness and stability (the same
+    /// sums the simulation uses, src/econ/tick.rs).
+    fn draw_people(&self, canvas: &mut Canvas, _e: &Economy, n: &NationEcon, row: usize) {
+        let a = &self.assets;
+        let ed = &self.econ_data;
+        let (x, y) = (WIN.x + 26.0, WIN.y + 84.0);
+        plain(canvas, &a.bold, "PEOPLE AND JOBS", vec2(x, y), 12.0, GOLD);
+        if row == 0 {
+            canvas.fill_rect(Rect::new(x - 6.0, y - 4.0, 480.0, 300.0), Color::rgba(226, 184, 74, 14));
+        }
+        let labour = (n.population * ed.participation - n.army).max(1.0);
+        let jobs = [
+            ("Farming", n.farming, "Farms: grain and timber"),
+            ("Mining", n.mining, "Mines and wells: ore, coal, oil, bauxite"),
+            ("Industry", n.industry, "Refineries and factories"),
+            ("Services", n.services, "Shops, transport, everything people buy from each other"),
+            ("Government", n.government, "The state's own workers"),
+            ("Public works", n.public_works, "The state's job scheme (the Budget page sets its size)"),
+            ("Without work", n.unemployed, "People looking for a job. Over 15% drags happiness and stability down"),
+        ];
+        plain(canvas, &a.font, &format!("{} people · {} of working age · {} in the army", people(n.population), people(n.population * ed.participation), people(n.army)), vec2(x, y + 22.0), 14.0, Color::WHITE);
+        for (k, (name, count, tip)) in jobs.iter().enumerate() {
+            let ly = y + 50.0 + k as f32 * 26.0;
+            let share = (count / labour).clamp(0.0, 1.0);
+            plain(canvas, &a.font, name, vec2(x, ly), 14.0, MUTED);
+            let bar = Rect::new(x + 110.0, ly + 3.0, 220.0, 12.0);
+            canvas.fill_rect(bar, Color::rgba(255, 255, 255, 22));
+            canvas.fill_rect(Rect::new(bar.x, bar.y, bar.w * share as f32, bar.h), if k == 6 { if share > 0.15 { BAD } else { WARN } } else { GOOD });
+            right(canvas, &a.font, &format!("{} · {}", people(*count), pct(share)), vec2(x + 470.0, ly), 14.0, Color::WHITE);
+            self.tip_words(Rect::new(x, ly, 470.0, 22.0), tip.to_string());
+        }
+        let ly = y + 50.0 + 7.0 * 26.0 + 6.0;
+        plain(canvas, &a.font, &format!("A year's wage: {} · skilled workers: {} · human development {:.1}", money(n.wage_w * ed.days_per_year as f64), pct(n.skilled), n.hdi * 100.0), vec2(x, ly), 13.0, SOFT);
+        self.tip(Rect::new(x, ly, 470.0, 18.0), "wage");
+
+        // Happiness and stability: every part and what it adds.
+        let sx = WIN.x + 540.0;
+        if row == 1 {
+            canvas.fill_rect(Rect::new(sx - 6.0, y - 4.0, 500.0, 440.0), Color::rgba(226, 184, 74, 14));
+        }
+        plain(canvas, &a.bold, &format!("HAPPINESS {:.0} OF 100", n.happiness), vec2(sx, y), 12.0, GOLD);
+        self.tip(Rect::new(sx, y, 300.0, 16.0), "happiness");
+        let u = n.unemployment(ed);
+        let parts = [
+            ("Food on the table", 35.0 * n.food_sat.min(1.0), 35.0, "How much of the food people want they get"),
+            ("Goods in the shops", 20.0 * n.goods_sat.min(1.0), 20.0, "Consumer goods"),
+            ("Luxuries", 10.0 * n.lux_sat.min(1.0), 10.0, "The extras"),
+            ("Work for everyone", 20.0 * (1.0 - (u / 0.25).min(1.0)), 20.0, "Falls to nothing at 25% without work"),
+            ("Steady prices", 15.0 * (1.0 - (n.inflation.max(0.0) / 0.30).min(1.0)), 15.0, "Falls to nothing at 30% inflation"),
+        ];
+        for (k, (name, got, of, tip)) in parts.iter().enumerate() {
+            let ly = y + 24.0 + k as f32 * 24.0;
+            plain(canvas, &a.font, name, vec2(sx, ly), 14.0, MUTED);
+            let bar = Rect::new(sx + 150.0, ly + 3.0, 200.0, 12.0);
+            canvas.fill_rect(bar, Color::rgba(255, 255, 255, 22));
+            canvas.fill_rect(Rect::new(bar.x, bar.y, bar.w * (got / of) as f32, bar.h), if got / of > 0.8 { GOOD } else if got / of > 0.5 { WARN } else { BAD });
+            right(canvas, &a.font, &format!("{:.0} of {:.0}", got, of), vec2(sx + 480.0, ly), 14.0, Color::WHITE);
+            self.tip_words(Rect::new(sx, ly, 480.0, 22.0), tip.to_string());
+        }
+        let ty = y + 24.0 + 5.0 * 24.0 + 16.0;
+        plain(canvas, &a.bold, &format!("STABILITY {:.0} OF 100", n.stability), vec2(sx, ty), 12.0, GOLD);
+        self.tip(Rect::new(sx, ty, 300.0, 16.0), "stability");
+        let md = &ed.models[n.model];
+        let target = 0.6 * n.happiness + 0.4 * md.base_stability + n.mods.get("stability") + n.war_stability;
+        let moves = [
+            (format!("Happiness ({:.0}) counts for six tenths", n.happiness), 0.6 * n.happiness),
+            (format!("The {} (its own steadiness)", md.name.to_lowercase()), 0.4 * md.base_stability),
+            ("Your wheels: ideology, history, leader, luck".to_string(), n.mods.get("stability")),
+            ("War: weariness, occupation, lost battles".to_string(), n.war_stability),
+        ];
+        for (k, (name, v)) in moves.iter().enumerate() {
+            let ly = ty + 24.0 + k as f32 * 22.0;
+            plain(canvas, &a.font, name, vec2(sx, ly), 14.0, MUTED);
+            right(canvas, &a.font, &format!("{:+.0}", v), vec2(sx + 480.0, ly), 14.0, if *v < 0.0 { BAD } else { Color::WHITE });
+        }
+        let ly = ty + 24.0 + 4.0 * 22.0 + 6.0;
+        let words = format!("It is heading for {:.0}, a little each day. Under 20 for long, a civil war can start.", target.clamp(0.0, 100.0));
+        plain(canvas, &a.font, &words, vec2(sx, ly), 13.0, if target < 25.0 { BAD } else { SOFT });
     }
 
     fn draw_stockpile(&self, canvas: &mut Canvas, e: &Economy, n: &NationEcon) {
@@ -1213,15 +1231,8 @@ impl Lucky {
 /// A chart: title, its line, a second line to compare (as an index), and whether it's a percentage.
 type Chart<'a> = (&'a str, Vec<f32>, Option<Vec<f32>>, bool);
 
-const BUILD_BUTTON: Rect = Rect { x: 830.0, y: 560.0, w: 150.0, h: 34.0 };
-const CLOSE_BUTTON: Rect = Rect { x: 994.0, y: 560.0, w: 150.0, h: 34.0 };
-const POLICY_BUTTON: Rect = Rect { x: 960.0, y: 618.0, w: 190.0, h: 30.0 };
-const EMBARGO_BUTTON: Rect = Rect { x: 1010.0, y: 618.0, w: 140.0, h: 30.0 };
 
 /// The -/+ buttons of a lever row.
-/// The height of a lever's row on the budget page.
-const LEVER_ROW: f32 = 27.0;
-
 fn lever_buttons(k: usize) -> (Rect, Rect) {
     let y = WIN.y + 84.0 + 22.0 + k as f32 * LEVER_ROW;
     (Rect::new(WIN.x + 400.0, y, 30.0, 28.0), Rect::new(WIN.x + 436.0, y, 30.0, 28.0))
@@ -1265,7 +1276,7 @@ fn column(ed: &EconData, g: usize) -> usize {
 }
 
 /// Where each good's box sits in the chain diagram.
-fn chain_positions(ed: &EconData) -> Vec<Vec2> {
+pub(super) fn chain_positions(ed: &EconData) -> Vec<Vec2> {
     let order = chain_order(ed);
     let mut pos = vec![Vec2::ZERO; ed.goods.len()];
     let mut count = [0usize; 4];
@@ -1278,7 +1289,7 @@ fn chain_positions(ed: &EconData) -> Vec<Vec2> {
 }
 
 /// The player's trading partners, the biggest first (everyone else after).
-fn partners(e: &Economy) -> Vec<usize> {
+pub(super) fn partners(e: &Economy) -> Vec<usize> {
     let me = &e.nations[0];
     let mut list: Vec<usize> = (1..e.nations.len()).collect();
     list.sort_by(|&a, &b| {

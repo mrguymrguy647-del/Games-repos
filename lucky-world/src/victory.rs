@@ -170,6 +170,13 @@ pub struct Fate {
     /// Treaties already told (by id).
     told_treaties: usize,
     was_vassal: bool,
+    /// The first day was seen (a colony starts under an overlord: that
+    /// isn't a defeat, only becoming a vassal later is).
+    #[serde(default)]
+    seen_start: bool,
+    /// Still the colony we began as, under the same overlord.
+    #[serde(default)]
+    born_colony: Option<usize>,
     first_place: bool,
     gdp_last_year: f64,
     /// The best and worst ranks so far, and the GDP the story last doubled from.
@@ -237,6 +244,22 @@ impl Fate {
         }
         // The vassal's road: made one, and free again.
         let vassal = e.nations[me].overlord.is_some();
+        if !self.seen_start {
+            self.seen_start = true;
+            self.was_vassal = vassal;
+            self.born_colony = e.nations[me].overlord;
+            if let Some(lord) = e.nations[me].overlord {
+                self.say(day, format!("We began as a colony of {}", e.nations[lord].name), -10.0);
+            }
+        }
+        if self.born_colony.is_some() && e.nations[me].overlord != self.born_colony {
+            // Free, or handed to another master: no longer the colony we began as.
+            self.born_colony = None;
+            if vassal {
+                let lord = e.nations[e.nations[me].overlord.unwrap()].name.clone();
+                self.say(day, format!("We became a vassal of {lord}"), -60.0);
+            }
+        }
         if vassal && !self.was_vassal {
             let lord = e.nations[e.nations[me].overlord.unwrap()].name.clone();
             self.say(day, format!("We became a vassal of {lord}"), -60.0);
@@ -307,7 +330,7 @@ impl Fate {
         if overthrown && self.outcome != Some(Outcome::Lost(Loss::Overthrown)) {
             return Some(Outcome::Lost(Loss::Overthrown));
         }
-        if e.nations[me].overlord.is_some() {
+        if e.nations[me].overlord.is_some() && self.born_colony.is_none() {
             return Some(Outcome::Lost(Loss::Vassal));
         }
         let (mine, _, _, _) = shares(e, w, d, me);

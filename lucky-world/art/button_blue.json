@@ -1,10 +1,10 @@
 {
   "format": "duckquill-script",
   "version": 1,
-  "title": "Button",
+  "title": "Button (navy, bronze border)",
   "seed": 1,
   "palette": {
-    "ink": "#0A1540"
+    "bronze": "#8a6d2f"
   },
   "commands": [
     {
@@ -48,12 +48,12 @@
               56
             ],
             "colors": [
-              "#8FB6FF",
-              "#3B5FD0"
+              "#182b3e",
+              "#0d1722"
             ]
           },
-          "outline": "ink",
-          "outline_size": 3
+          "outline": "bronze",
+          "outline_size": 2
         },
         {
           "cmd": "rect",
@@ -62,7 +62,7 @@
           "width": 224,
           "height": 16,
           "radius": 8,
-          "fill": "#FFFFFF40"
+          "fill": "#e9e2cf14"
         }
       ]
     }

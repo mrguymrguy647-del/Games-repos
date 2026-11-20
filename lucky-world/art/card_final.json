@@ -4,12 +4,7 @@
   "title": "Card frame 1220x690",
   "seed": 1,
   "palette": {
-    "ink": "#1A1030",
-    "gold": "#F5C542",
-    "gold_dark": "#A8740E",
-    "gold_hi": "#FFF1B8",
-    "white": "#FFFFFF",
-    "accent": "#F5C542"
+    "border": "#8a6d2f"
   },
   "commands": [
     {
@@ -39,12 +34,12 @@
           690
         ],
         "colors": [
-          "#2B1C5CEE",
-          "#140C33F2"
+          "#0f1c2aF2",
+          "#0a121bF7"
         ]
       },
-      "outline": "accent",
-      "outline_size": 5
+      "outline": "border",
+      "outline_size": 3
     },
     {
       "cmd": "rect",
@@ -53,8 +48,8 @@
       "width": 1188,
       "height": 658,
       "radius": 15,
-      "outline": "#FFFFFF22",
-      "outline_size": 2
+      "outline": "#e9e2cf1a",
+      "outline_size": 1
     },
     {
       "cmd": "gradient",
@@ -70,11 +65,11 @@
       "stops": [
         [
           0,
-          "#FFFFFF1C"
+          "#e9e2cf0d"
         ],
         [
           1,
-          "#FFFFFF00"
+          "#e9e2cf00"
         ]
       ],
       "area": {

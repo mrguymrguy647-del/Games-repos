@@ -34,7 +34,7 @@ pub enum MenuItem {
 }
 
 impl MenuItem {
-    fn words(self) -> (&'static str, &'static str) {
+    pub(super) fn words(self) -> (&'static str, &'static str) {
         match self {
             MenuItem::Continue => ("CONTINUE", "your latest save"),
             MenuItem::NewGame => ("NEW GAME", "choose a world, spin your nation"),
@@ -43,34 +43,6 @@ impl MenuItem {
             MenuItem::Settings => ("SETTINGS", "picture, sound, keys"),
             MenuItem::Help => ("HELP", "how to play"),
             MenuItem::Quit => ("QUIT", "to the desktop"),
-        }
-    }
-}
-
-/// The pause menu's rows (on the map, Esc).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PauseItem {
-    Resume,
-    Save,
-    Load,
-    Settings,
-    Help,
-    MainMenu,
-    Quit,
-}
-
-const PAUSE_ITEMS: [PauseItem; 7] = [PauseItem::Resume, PauseItem::Save, PauseItem::Load, PauseItem::Settings, PauseItem::Help, PauseItem::MainMenu, PauseItem::Quit];
-
-impl PauseItem {
-    fn words(self) -> &'static str {
-        match self {
-            PauseItem::Resume => "Resume",
-            PauseItem::Save => "Save game",
-            PauseItem::Load => "Load game",
-            PauseItem::Settings => "Settings",
-            PauseItem::Help => "Help",
-            PauseItem::MainMenu => "Main menu (saves first)",
-            PauseItem::Quit => "Quit to desktop (saves first)",
         }
     }
 }
@@ -90,11 +62,12 @@ enum SetRow {
     Autosave,
     Notes,
     Tips,
+    EdgeScroll,
     Keys,
     Back,
 }
 
-const SET_ROWS: [SetRow; 11] = [SetRow::Quality, SetRow::Window, SetRow::Fullscreen, SetRow::Music, SetRow::Effects, SetRow::UiScale, SetRow::Autosave, SetRow::Notes, SetRow::Tips, SetRow::Keys, SetRow::Back];
+const SET_ROWS: [SetRow; 12] = [SetRow::Quality, SetRow::Window, SetRow::Fullscreen, SetRow::Music, SetRow::Effects, SetRow::UiScale, SetRow::Autosave, SetRow::Notes, SetRow::Tips, SetRow::EdgeScroll, SetRow::Keys, SetRow::Back];
 const UI_SCALES: [f32; 4] = [0.9, 1.0, 1.1, 1.15];
 
 /// What the shell remembers between frames.
@@ -105,8 +78,13 @@ pub struct Shell {
     pub pause: bool,
     pub pause_slots: bool,
     pub slots: Vec<save::Slot>,
-    /// Where Esc goes back to from Load, Settings and Help.
+    /// Where Esc goes back to from Load, Settings and Help (and how long that screen had been up).
     pub back: Option<Screen>,
+    pub back_time: f32,
+    /// The "are you sure?" box, on top of everything.
+    pub confirm: Option<super::pause::Confirm>,
+    /// Up / Down are in use on the pause menu (its place is outlined).
+    pub key_nav: bool,
     pub help_page: usize,
     /// The Settings screen's key page, and the action waiting for a key.
     pub keys_page: bool,
@@ -114,7 +92,7 @@ pub struct Shell {
     /// A line shown on the menu screens for a while.
     pub message: Option<(String, f32)>,
     /// The clock was paused before the pause menu opened.
-    was_paused: bool,
+    pub was_paused: bool,
     /// The year last autosaved.
     pub autosaved_year: u32,
     /// The settings changed since the screen opened (saved on the way out).
@@ -132,6 +110,8 @@ pub struct Notes {
     /// Everything said: (date, words, level).
     pub log: Vec<(String, String, u8)>,
     pub log_open: bool,
+    /// How far down the log is scrolled (0: the newest).
+    pub log_scroll: usize,
     pub shown: usize,
 }
 
@@ -162,6 +142,9 @@ pub enum Track {
 #[derive(Default)]
 pub struct Tips {
     pub areas: RefCell<Vec<(Rect, String)>>,
+    /// Areas whose tip opens beside them, not below (a menu's rows: below
+    /// would cover the next row).
+    pub beside: RefCell<Vec<Rect>>,
     /// Drawing at the UI scale now (tip areas are turned into screen pixels).
     pub scaled: std::cell::Cell<bool>,
     pub hover: Option<(Rect, String)>,
@@ -182,7 +165,7 @@ impl Lucky {
         self.go(Screen::Menu);
     }
 
-    fn menu_items(&self) -> Vec<MenuItem> {
+    pub(super) fn menu_items(&self) -> Vec<MenuItem> {
         let mut v = Vec::new();
         if self.latest_save().is_some() {
             v.push(MenuItem::Continue);
@@ -195,12 +178,13 @@ impl Lucky {
         self.shell.slots.iter().find(|s| s.summary.is_ok())
     }
 
-    fn say(&mut self, words: impl Into<String>) {
+    pub(super) fn say(&mut self, words: impl Into<String>) {
         self.shell.message = Some((words.into(), 4.0));
     }
 
-    fn open_sub(&mut self, screen: Screen) {
+    pub(super) fn open_sub(&mut self, screen: Screen) {
         self.shell.back = Some(self.screen);
+        self.shell.back_time = self.screen_time;
         self.shell.row = 0;
         self.shell.keys_page = false;
         self.shell.binding = None;
@@ -229,11 +213,27 @@ impl Lucky {
         if back == Screen::Menu {
             self.open_menu();
         } else {
-            self.go(back);
-            if back == Screen::Map {
-                self.shell.pause = true;
-            }
+            // Back to the paused game, as it was (nothing is replayed).
+            self.screen = back;
+            self.screen_time = self.shell.back_time;
+            self.shell.pause = true;
         }
+    }
+
+    /// The Settings rows' names, top to bottom.
+    pub(super) fn set_names() -> Vec<&'static str> {
+        SET_ROWS.iter().map(|r| Self::set_name(*r)).collect()
+    }
+
+    /// A setting changed: it takes effect now and is saved on the way out.
+    pub(super) fn settings_changed(&mut self, ctx: &mut Context) {
+        self.shell.dirty = true;
+        self.apply_settings(ctx);
+    }
+
+    /// A left click this frame that no button has already used.
+    fn left_click(&self, ctx: &Context) -> bool {
+        !self.click_used && ctx.input.was_mouse_pressed(MouseButton::Left)
     }
 
     /// Puts the settings into effect: volumes, music, quality.
@@ -253,7 +253,7 @@ impl Lucky {
     // The main menu
     // ---------------------------------------------------------------
 
-    fn menu_rect(i: usize) -> Rect {
+    pub(super) fn menu_rect(i: usize) -> Rect {
         Rect::new(MENU_AT.x + 24.0, MENU_AT.y + 32.0 + i as f32 * ROW_H, 348.0, ROW_H - 6.0)
     }
 
@@ -266,19 +266,19 @@ impl Lucky {
         let items = self.menu_items();
         let mouse = self.ui_mouse();
         let before = self.shell.row;
-        if ctx.input.was_pressed(Key::Down) || ctx.input.was_pressed(Key::S) {
+        if crate::game::gui::pressed(ctx, Key::Down) || crate::game::gui::pressed(ctx, Key::S) {
             self.shell.row = (self.shell.row + 1) % items.len();
         }
-        if ctx.input.was_pressed(Key::Up) || ctx.input.was_pressed(Key::W) {
+        if crate::game::gui::pressed(ctx, Key::Up) || crate::game::gui::pressed(ctx, Key::W) {
             self.shell.row = (self.shell.row + items.len() - 1) % items.len();
         }
         let mut chosen = None;
         for i in 0..items.len() {
             if mouse.is_some_and(|m| Self::menu_rect(i).contains(m)) {
-                if self.mouse_moved || ctx.input.was_mouse_pressed(MouseButton::Left) {
+                if self.mouse_moved || self.left_click(ctx) {
                     self.shell.row = i;
                 }
-                if ctx.input.was_mouse_pressed(MouseButton::Left) {
+                if self.left_click(ctx) {
                     chosen = Some(items[i]);
                 }
             }
@@ -287,13 +287,13 @@ impl Lucky {
             crate::ui::sfx(ctx, &self.assets.menu_move, 0.6, 0.0);
         }
         self.shell.row = self.shell.row.min(items.len() - 1);
-        if ctx.input.was_pressed(Key::Enter) || ctx.input.was_pressed(Key::Space) {
+        if crate::game::gui::pressed(ctx, Key::Enter) || crate::game::gui::pressed(ctx, Key::Space) {
             chosen = Some(items[self.shell.row]);
         }
-        if ctx.input.was_pressed(Key::N) {
+        if crate::game::gui::pressed(ctx, Key::N) {
             chosen = Some(MenuItem::NewGame);
         }
-        if ctx.input.was_pressed(Key::Escape) {
+        if crate::game::gui::pressed(ctx, Key::Escape) {
             chosen = Some(MenuItem::Quit);
         }
         let Some(item) = chosen else { return };
@@ -314,7 +314,7 @@ impl Lucky {
             MenuItem::Load => self.open_sub(Screen::Load),
             MenuItem::Settings => self.open_sub(Screen::Settings),
             MenuItem::Help => self.open_sub(Screen::Help),
-            MenuItem::Quit => ctx.quit(),
+            MenuItem::Quit => self.run(ctx, super::cmd::Cmd::AskQuit),
         }
     }
 
@@ -361,7 +361,6 @@ impl Lucky {
         }
         self.pop_ui(canvas);
         self.draw_message(canvas);
-        ui::plain(canvas, &a.font, "Up / Down: choose  ·  Enter: go  ·  N: new game  ·  Esc: quit", vec2(640.0, 697.0), 13.0, SOFT, Align::Center);
         ui::plain(canvas, &a.font, &format!("v{}", env!("CARGO_PKG_VERSION")), vec2(1266.0, 698.0), 12.0, SOFT, Align::Right);
     }
 
@@ -373,110 +372,10 @@ impl Lucky {
         }
     }
 
-    // ---------------------------------------------------------------
-    // The pause menu (on the map)
-    // ---------------------------------------------------------------
-
-    pub(super) fn open_pause(&mut self, ctx: &mut Context) {
-        self.shell.pause = true;
-        self.shell.pause_slots = false;
-        self.shell.row = 0;
-        self.shell.was_paused = self.clock.paused;
-        self.clock.paused = true;
-        crate::ui::sfx(ctx, &self.assets.card_sound, 0.6, 0.0);
-    }
-
-    /// F2 on the map: the help, and back to the paused map after.
-    pub(super) fn open_help_from_map(&mut self, ctx: &mut Context) {
-        self.open_pause(ctx);
-        self.open_sub(Screen::Help);
-    }
-
-    fn close_pause(&mut self, ctx: &mut Context) {
-        self.shell.pause = false;
-        self.shell.pause_slots = false;
-        self.clock.paused = self.shell.was_paused;
-        crate::ui::sfx(ctx, &self.assets.click, 0.6, 0.0);
-    }
-
-    fn pause_rect(i: usize) -> Rect {
-        Rect::new(470.0, 196.0 + i as f32 * 48.0, 340.0, 42.0)
-    }
-
-    fn slot_rect(i: usize) -> Rect {
-        Rect::new(330.0, 196.0 + i as f32 * 58.0, 620.0, 52.0)
-    }
-
-    /// The pause menu's keys and clicks (the map waits).
-    pub(super) fn update_pause(&mut self, ctx: &mut Context) {
-        let mouse = self.ui_mouse();
-        let count = if self.shell.pause_slots { SLOTS.len() } else { PAUSE_ITEMS.len() };
-        let before = self.shell.row;
-        if ctx.input.was_pressed(Key::Down) {
-            self.shell.row = (self.shell.row + 1) % count;
-        }
-        if ctx.input.was_pressed(Key::Up) {
-            self.shell.row = (self.shell.row + count - 1) % count;
-        }
-        let mut go = ctx.input.was_pressed(Key::Enter);
-        for i in 0..count {
-            let r = if self.shell.pause_slots { Self::slot_rect(i) } else { Self::pause_rect(i) };
-            if mouse.is_some_and(|m| r.contains(m)) {
-                if self.mouse_moved || ctx.input.was_mouse_pressed(MouseButton::Left) {
-                    self.shell.row = i;
-                }
-                go |= ctx.input.was_mouse_pressed(MouseButton::Left);
-            }
-        }
-        if self.shell.row != before {
-            crate::ui::sfx(ctx, &self.assets.menu_move, 0.6, 0.0);
-        }
-        if ctx.input.was_pressed(Key::Escape) {
-            if self.shell.pause_slots {
-                self.shell.pause_slots = false;
-                self.shell.row = 1;
-            } else {
-                self.close_pause(ctx);
-            }
-            return;
-        }
-        if !go {
-            return;
-        }
-        if self.shell.pause_slots {
-            let label = SLOTS[self.shell.row];
-            let path = save::path_for(label);
-            self.save_game(ctx, label, &path);
-            self.shell.pause_slots = false;
-            self.shell.row = 0;
-            self.shell.slots = save::list();
-            return;
-        }
-        crate::ui::sfx(ctx, &self.assets.click, 0.8, 0.0);
-        match PAUSE_ITEMS[self.shell.row] {
-            PauseItem::Resume => self.close_pause(ctx),
-            PauseItem::Save => {
-                self.shell.slots = save::list();
-                self.shell.pause_slots = true;
-                self.shell.row = 0;
-            }
-            PauseItem::Load => self.open_sub(Screen::Load),
-            PauseItem::Settings => self.open_sub(Screen::Settings),
-            PauseItem::Help => self.open_sub(Screen::Help),
-            PauseItem::MainMenu => {
-                self.leave_game(ctx);
-                self.open_menu();
-            }
-            PauseItem::Quit => {
-                self.leave_game(ctx);
-                ctx.quit();
-            }
-        }
-    }
-
-    /// Leaving a game: saved first (spectating and finished tutorials aren't).
-    fn leave_game(&mut self, ctx: &mut Context) {
-        if !self.spectating && self.economy.is_some() && !self.fate.outcome.is_some_and(|o| !o.can_play_on()) {
+    /// Leaving a game: saved first, the wheels included (a watched world
+    /// and a game that is over aren't).
+    pub(super) fn leave_game(&mut self, ctx: &mut Context) {
+        if self.can_save() {
             let path = save::path_for("Autosave");
             self.save_game(ctx, "Autosave", &path);
         }
@@ -493,64 +392,20 @@ impl Lucky {
         }
     }
 
-    pub(super) fn draw_pause(&self, canvas: &mut Canvas) {
-        let a = &self.assets;
-        ui::dim(canvas, 0.7);
-        self.push_ui(canvas);
-        if self.shell.pause_slots {
-            let frame = Rect::new(300.0, 120.0, 680.0, 480.0);
-            panel(canvas, frame);
-            ui::plain(canvas, &a.font, "SAVE GAME", vec2(640.0, 140.0), 24.0, GOLD, Align::Center);
-            ui::plain(canvas, &a.font, "Choose a slot (it's overwritten). Saves are in the \"saves\" folder beside the game.", vec2(640.0, 172.0), 13.0, MUTED, Align::Center);
-            for (i, label) in SLOTS.iter().enumerate() {
-                let r = Self::slot_rect(i);
-                let on = i == self.shell.row;
-                canvas.fill_rect(r, if on { Color::rgba(245, 197, 66, 50) } else { Color::rgba(255, 255, 255, 12) });
-                if on {
-                    canvas.draw_rect(r, ui::alpha(GOLD, 0.7));
-                }
-                canvas.blit_sprite(&a.icon_save, vec2(r.x + 12.0, r.y + 14.0), Blit::default());
-                ui::plain(canvas, &a.font, label, vec2(r.x + 46.0, r.y + 6.0), 18.0, if on { GOLD } else { Color::WHITE }, Align::Left);
-                let path = save::path_for(label);
-                let what = self.shell.slots.iter().find(|s| s.path == path).map_or("empty".to_string(), |s| match &s.summary {
-                    Ok(x) => format!("{} · {} · {} · {}", x.nation, x.date, x.difficulty, save::ago(x.saved_at)),
-                    Err(e) => format!("can't be loaded: {e}"),
-                });
-                ui::text(canvas, &a.font, &what, vec2(r.x + 46.0, r.y + 29.0), 13.0, MUTED, Align::Left, 560.0);
-                canvas.label(&format!("slot {label}"), r);
-            }
-            ui::plain(canvas, &a.font, "Up / Down: choose  ·  Enter: save here  ·  Esc: back", vec2(640.0, 562.0), 13.0, SOFT, Align::Center);
-        } else {
-            let frame = Rect::new(440.0, 110.0, 400.0, 470.0);
-            panel(canvas, frame);
-            ui::plain(canvas, &a.font, "PAUSED", vec2(640.0, 132.0), 26.0, GOLD, Align::Center);
-            if let Some(e) = self.economy.as_ref() {
-                ui::plain(canvas, &a.font, &e.date(&self.econ_data), vec2(640.0, 166.0), 14.0, MUTED, Align::Center);
-            }
-            for (i, item) in PAUSE_ITEMS.iter().enumerate() {
-                let r = Self::pause_rect(i);
-                let on = i == self.shell.row;
-                if on {
-                    canvas.fill_rect(r, Color::rgba(245, 197, 66, 55));
-                    canvas.draw_rect(r, ui::alpha(GOLD, 0.7));
-                }
-                ui::plain(canvas, &a.font, item.words(), vec2(r.center().x, r.y + 10.0), 19.0, if on { GOLD } else { Color::WHITE }, Align::Center);
-                canvas.label(&format!("pause {}", item.words()), r);
-            }
-            ui::plain(canvas, &a.font, "Esc: resume", vec2(640.0, 548.0), 13.0, SOFT, Align::Center);
-        }
-        self.pop_ui(canvas);
-    }
-
     // ---------------------------------------------------------------
     // Saving and loading
     // ---------------------------------------------------------------
 
     fn summary(&self, label: &str) -> Summary {
-        let (date, day) = self.economy.as_ref().map_or((String::new(), 0), |e| (e.date(&self.econ_data), e.day));
+        let spinning = format!("Wheel {} of {}", (self.landed.len() + 1).min(self.data.wheels.len()), self.data.wheels.len());
+        let (date, day) = match self.economy.as_ref() {
+            Some(e) => (e.date(&self.econ_data), e.day),
+            None if self.player.is_some() => ("Before the first day".to_string(), 0),
+            None => (spinning, 0),
+        };
         Summary {
             label: label.to_string(),
-            nation: self.player.as_ref().map_or(String::new(), |p| p.name.clone()),
+            nation: self.player.as_ref().map_or("A nation being spun".to_string(), |p| p.name.clone()),
             map: self.data.maps[self.map].name.clone(),
             date,
             day,
@@ -565,16 +420,25 @@ impl Lucky {
         Some(save::to_bytes(&self.summary(label), &game))
     }
 
-    /// The game's parts, borrowed, in the save's shape.
+    /// The game's parts, borrowed, in the save's shape. Before the map
+    /// (the wheels, the country card) there is no world yet: the spins so
+    /// far are what's saved.
     fn save_ref(&self) -> Option<SavedRef<'_>> {
-        let (Some(world), Some(e), Some(b), Some(w), Some(d)) = (self.world.as_ref(), self.economy.as_ref(), self.brains.as_ref(), self.wars.as_ref(), self.diplo.as_ref()) else { return None };
+        if !self.in_game() {
+            return None;
+        }
+        let sim = match (self.economy.as_ref(), self.brains.as_ref(), self.wars.as_ref(), self.diplo.as_ref()) {
+            (Some(e), Some(b), Some(w), Some(d)) if self.world.is_some() => Some(SimRef { economy: e, brains: b, wars: w, diplo: d }),
+            _ => None,
+        };
+        // The rival reveal has a world but hasn't begun: it's saved as begun.
         Some(SavedRef {
             map: self.map,
             landed: &self.landed,
             player: &self.player,
             rivals: &self.rivals,
-            world,
-            sim: SimRef { economy: e, brains: b, wars: w, diplo: d },
+            world: if sim.is_some() { self.world.as_ref() } else { None },
+            sim,
             spectating: self.spectating,
             setup: &self.setup,
             fate: &self.fate,
@@ -630,13 +494,29 @@ impl Lucky {
     pub fn install(&mut self, ctx: &mut Context, game: Saved) {
         self.stop_game_sounds(ctx);
         self.restart();
+        self.shell.confirm = None;
         self.map = game.map;
+        self.make_title_wheel();
         self.landed = game.landed;
         self.player = game.player;
         self.rivals = game.rivals;
-        self.map_view = Some(crate::map_view::MapView::new(&self.atlas, &game.world, &self.models));
-        self.world = Some(game.world);
-        let s = game.sim;
+        let (Some(world), Some(s)) = (game.world, game.sim) else {
+            // Saved among the wheels: back to the next wheel (or the country card).
+            self.rivals.clear();
+            self.setup = game.setup;
+            self.tutorial = game.tutorial_step.map(super::tutorial::Tutorial::at);
+            if self.player.is_some() {
+                self.go(Screen::Final);
+                self.screen_time = 10.0;
+            } else {
+                let next = self.landed.len();
+                self.enter_wheel(next);
+            }
+            self.notify(ctx, "Loaded: your spins so far".to_string(), MINOR);
+            return;
+        };
+        self.map_view = Some(crate::map_view::MapView::new(&self.atlas, &world, &self.models));
+        self.world = Some(world);
         self.economy = Some(s.economy);
         self.brains = Some(s.brains);
         self.wars = Some(s.wars);
@@ -697,7 +577,7 @@ impl Lucky {
     // The Load screen
     // ---------------------------------------------------------------
 
-    fn load_rect(i: usize) -> Rect {
+    pub(super) fn load_rect(i: usize) -> Rect {
         Rect::new(WIN.x + 40.0, WIN.y + 96.0 + i as f32 * 54.0, WIN.w - 80.0, 48.0)
     }
 
@@ -705,7 +585,7 @@ impl Lucky {
         ctx.idle_ok();
         let n = self.shell.slots.len();
         let mouse = self.ui_mouse();
-        if ctx.input.was_pressed(Key::Escape) {
+        if crate::game::gui::pressed(ctx, Key::Escape) {
             self.close_sub(ctx);
             return;
         }
@@ -713,33 +593,33 @@ impl Lucky {
             return;
         }
         let before = self.shell.row;
-        if ctx.input.was_pressed(Key::Down) {
+        if crate::game::gui::pressed(ctx, Key::Down) {
             self.shell.row = (self.shell.row + 1) % n;
         }
-        if ctx.input.was_pressed(Key::Up) {
+        if crate::game::gui::pressed(ctx, Key::Up) {
             self.shell.row = (self.shell.row + n - 1) % n;
         }
-        let mut go = ctx.input.was_pressed(Key::Enter);
+        let mut go = crate::game::gui::pressed(ctx, Key::Enter);
         let first = self.shell.row.saturating_sub(8);
         for i in first..n.min(first + 9) {
             if mouse.is_some_and(|m| Self::load_rect(i - first).contains(m)) {
-                if self.mouse_moved || ctx.input.was_mouse_pressed(MouseButton::Left) {
+                if self.left_click(ctx) {
+                    // A click chooses it; a second click on it loads it.
+                    let twice = mouse.is_some_and(|m| self.pointer.double(m, self.time)) && self.shell.row == i;
                     self.shell.row = i;
+                    go |= twice;
                 }
-                go |= ctx.input.was_mouse_pressed(MouseButton::Left);
             }
         }
         if self.shell.row != before {
             crate::ui::sfx(ctx, &self.assets.menu_move, 0.6, 0.0);
         }
-        if ctx.input.was_pressed(Key::X) {
+        if crate::game::gui::pressed(ctx, Key::X) {
             let slot = self.shell.slots[self.shell.row].clone();
-            match std::fs::remove_file(&slot.path) {
-                Ok(()) => self.say(format!("Deleted {}", slot.path.display())),
-                Err(e) => self.say(format!("Couldn't delete it: {e}")),
-            }
-            self.shell.slots = save::list();
-            self.shell.row = self.shell.row.min(self.shell.slots.len().saturating_sub(1));
+            let name = slot.path.file_stem().map_or(String::new(), |s| s.to_string_lossy().to_string());
+            let mut c = super::pause::Confirm::new(&format!("Delete the save \"{name}\"?"), "It is gone for good.", "Delete it", super::cmd::Cmd::DeleteSave(slot.path.clone()));
+            c.danger = true;
+            self.ask(ctx, c);
             return;
         }
         if go {
@@ -750,8 +630,7 @@ impl Lucky {
                 return;
             }
             crate::ui::sfx(ctx, &self.assets.click, 0.8, 0.0);
-            self.shell.back = None;
-            self.load_from(ctx, &slot.path);
+            self.run(ctx, super::cmd::Cmd::AskLoad(slot.path.clone()));
         }
     }
 
@@ -792,7 +671,6 @@ impl Lucky {
             }
             canvas.label(&format!("save {file}"), r);
         }
-        ui::plain(canvas, &a.font, "Up / Down: choose  ·  Enter or click: load  ·  X: delete  ·  Esc: back", vec2(640.0, WIN.bottom() - 34.0), 13.0, SOFT, Align::Center);
         self.pop_ui(canvas);
         self.draw_message(canvas);
     }
@@ -801,8 +679,8 @@ impl Lucky {
     // Settings
     // ---------------------------------------------------------------
 
-    fn set_rect(i: usize) -> Rect {
-        Rect::new(WIN.x + 40.0, WIN.y + 92.0 + i as f32 * 42.0, WIN.w - 80.0, 38.0)
+    pub(super) fn set_rect(i: usize) -> Rect {
+        Rect::new(WIN.x + 40.0, WIN.y + 86.0 + i as f32 * 38.0, WIN.w - 80.0, 34.0)
     }
 
     fn set_value(&self, r: SetRow) -> String {
@@ -821,8 +699,9 @@ impl Lucky {
             SetRow::Autosave => if s.autosave { "Every game year" } else { "Off" }.to_string(),
             SetRow::Notes => ["Only what matters most", "Important news", "Everything"][s.notifications as usize].to_string(),
             SetRow::Tips => if s.tooltips { "On: hover a number to read what it is" } else { "Off" }.to_string(),
-            SetRow::Keys => format!("{} actions · Enter to change", Act::ALL.len()),
-            SetRow::Back => "Esc".to_string(),
+            SetRow::EdgeScroll => if s.edge_scroll { "On: the map moves when the mouse touches the screen's edge (full screen only)" } else { "Off" }.to_string(),
+            SetRow::Keys => format!("{} shortcut keys · click to change", Act::ALL.len()),
+            SetRow::Back => "Back to where you were".to_string(),
         }
     }
 
@@ -837,7 +716,8 @@ impl Lucky {
             SetRow::Autosave => "Autosave",
             SetRow::Notes => "Notifications",
             SetRow::Tips => "Tooltips",
-            SetRow::Keys => "Keys",
+            SetRow::EdgeScroll => "Edge scrolling",
+            SetRow::Keys => "Shortcut keys",
             SetRow::Back => "Back",
         }
     }
@@ -862,6 +742,7 @@ impl Lucky {
             SetRow::Autosave => s.autosave = !s.autosave,
             SetRow::Notes => s.notifications = (s.notifications as i32 + d).clamp(0, 2) as u8,
             SetRow::Tips => s.tooltips = !s.tooltips,
+            SetRow::EdgeScroll => s.edge_scroll = !s.edge_scroll,
             SetRow::Keys | SetRow::Back => {}
         }
         self.shell.dirty = true;
@@ -877,11 +758,11 @@ impl Lucky {
         let mouse = self.ui_mouse();
         // Waiting for a key to bind.
         if let Some(act) = self.shell.binding {
-            if ctx.input.was_pressed(Key::Escape) {
+            if crate::game::gui::pressed(ctx, Key::Escape) {
                 self.shell.binding = None;
                 return;
             }
-            if let Some(k) = Key::ALL.into_iter().find(|&k| ctx.input.was_pressed(k)) {
+            if let Some(k) = Key::ALL.into_iter().find(|&k| crate::game::gui::pressed(ctx, k)) {
                 if crate::settings::reserved(k) {
                     crate::ui::sfx(ctx, &self.assets.denied, 0.7, 0.0);
                     self.say(format!("{} is kept for the game itself; choose another key", k.name()));
@@ -897,34 +778,34 @@ impl Lucky {
         }
         if self.shell.keys_page {
             let n = Act::ALL.len();
-            if ctx.input.was_pressed(Key::Escape) {
+            if crate::game::gui::pressed(ctx, Key::Escape) {
                 self.shell.keys_page = false;
                 self.shell.row = SET_ROWS.iter().position(|r| *r == SetRow::Keys).unwrap_or(0);
                 return;
             }
             let before = self.shell.row;
-            if ctx.input.was_pressed(Key::Down) {
+            if crate::game::gui::pressed(ctx, Key::Down) {
                 self.shell.row = (self.shell.row + 1) % n;
             }
-            if ctx.input.was_pressed(Key::Up) {
+            if crate::game::gui::pressed(ctx, Key::Up) {
                 self.shell.row = (self.shell.row + n - 1) % n;
             }
-            if ctx.input.was_pressed(Key::Right) || ctx.input.was_pressed(Key::Left) {
+            if crate::game::gui::pressed(ctx, Key::Right) || crate::game::gui::pressed(ctx, Key::Left) {
                 self.shell.row = (self.shell.row + 13) % 26 % n;
             }
-            let mut go = ctx.input.was_pressed(Key::Enter);
+            let mut go = crate::game::gui::pressed(ctx, Key::Enter);
             for i in 0..n {
                 if mouse.is_some_and(|m| Self::key_rect(i).contains(m)) {
-                    if self.mouse_moved || ctx.input.was_mouse_pressed(MouseButton::Left) {
+                    if self.mouse_moved || self.left_click(ctx) {
                     self.shell.row = i;
                 }
-                    go |= ctx.input.was_mouse_pressed(MouseButton::Left);
+                    go |= self.left_click(ctx);
                 }
             }
             if self.shell.row != before {
                 crate::ui::sfx(ctx, &self.assets.menu_move, 0.6, 0.0);
             }
-            if ctx.input.was_pressed(Key::Backspace) {
+            if crate::game::gui::pressed(ctx, Key::Backspace) {
                 self.settings.reset_keys();
                 self.shell.dirty = true;
                 self.say("Every key is back to its default");
@@ -935,33 +816,33 @@ impl Lucky {
             }
             return;
         }
-        if ctx.input.was_pressed(Key::Escape) {
+        if crate::game::gui::pressed(ctx, Key::Escape) {
             self.close_sub(ctx);
             return;
         }
         let n = SET_ROWS.len();
         let before = self.shell.row;
-        if ctx.input.was_pressed(Key::Down) {
+        if crate::game::gui::pressed(ctx, Key::Down) {
             self.shell.row = (self.shell.row + 1) % n;
         }
-        if ctx.input.was_pressed(Key::Up) {
+        if crate::game::gui::pressed(ctx, Key::Up) {
             self.shell.row = (self.shell.row + n - 1) % n;
         }
-        let mut go = ctx.input.was_pressed(Key::Enter);
+        let mut go = crate::game::gui::pressed(ctx, Key::Enter);
         let mut d = 0;
-        if ctx.input.was_pressed(Key::Left) {
+        if crate::game::gui::pressed(ctx, Key::Left) {
             d = -1;
         }
-        if ctx.input.was_pressed(Key::Right) {
+        if crate::game::gui::pressed(ctx, Key::Right) {
             d = 1;
         }
         for i in 0..n {
             let r = Self::set_rect(i);
             if mouse.is_some_and(|m| r.contains(m)) {
-                if self.mouse_moved || ctx.input.was_mouse_pressed(MouseButton::Left) {
+                if self.mouse_moved || self.left_click(ctx) {
                     self.shell.row = i;
                 }
-                if ctx.input.was_mouse_pressed(MouseButton::Left) {
+                if self.left_click(ctx) {
                     // Left of the middle lowers, right raises.
                     let m = mouse.unwrap_or_default();
                     d = if m.x < r.x + 300.0 { -1 } else { 1 };
@@ -996,12 +877,13 @@ impl Lucky {
 
     pub(super) fn draw_settings(&self, canvas: &mut Canvas) {
         let a = &self.assets;
+        let mouse_ui = self.ui_mouse();
         self.push_ui(canvas);
         canvas.blit_sprite(&a.econ_window, vec2(WIN.x, WIN.y), Blit::default());
         canvas.blit_sprite(&a.icon_gear, vec2(WIN.x + 40.0, WIN.y + 30.0), Blit::default());
         if self.shell.keys_page {
             ui::plain(canvas, &a.font, "SETTINGS · KEYS ON THE MAP", vec2(WIN.x + 74.0, WIN.y + 28.0), 24.0, GOLD, Align::Left);
-            ui::plain(canvas, &a.font, "Enter: change · Backspace: defaults · Esc: back", vec2(WIN.right() - 30.0, WIN.y + 36.0), 12.0, MUTED, Align::Right);
+            ui::plain(canvas, &a.font, "Click an action, then press its new key", vec2(WIN.right() - 30.0, WIN.y + 36.0), 12.0, MUTED, Align::Right);
             for (i, act) in Act::ALL.iter().enumerate() {
                 let r = Self::key_rect(i);
                 let on = i == self.shell.row;
@@ -1014,28 +896,23 @@ impl Lucky {
             }
         } else {
             ui::plain(canvas, &a.font, "SETTINGS", vec2(WIN.x + 74.0, WIN.y + 28.0), 24.0, GOLD, Align::Left);
-            ui::plain(canvas, &a.font, "Up / Down: choose · Left / Right or click: change · Esc: back (saved in lucky_world.settings.toml)", vec2(WIN.right() - 30.0, WIN.y + 36.0), 12.0, MUTED, Align::Right);
+            ui::plain(canvas, &a.font, "Click a setting: the left side lowers it, the right side raises it. Kept for next time.", vec2(WIN.right() - 30.0, WIN.y + 36.0), 12.0, MUTED, Align::Right);
             for (i, row) in SET_ROWS.iter().enumerate() {
                 let r = Self::set_rect(i);
                 let on = i == self.shell.row;
-                canvas.fill_rect(r, if on { Color::rgba(245, 197, 66, 50) } else { Color::rgba(255, 255, 255, 10) });
+                let hot = mouse_ui.is_some_and(|m| r.contains(m));
+                canvas.fill_rect(r, if on { Color::rgba(226, 184, 74, 40) } else if hot { Color::rgba(255, 255, 255, 18) } else { Color::rgba(255, 255, 255, 8) });
                 if on {
                     canvas.draw_rect(r, ui::alpha(GOLD, 0.7));
                 }
-                ui::plain(canvas, &a.font, Self::set_name(*row), vec2(r.x + 14.0, r.y + 9.0), 17.0, if on { GOLD } else { Color::WHITE }, Align::Left);
+                ui::plain(canvas, &a.font, Self::set_name(*row), vec2(r.x + 14.0, r.y + 7.0), 17.0, if on { GOLD } else { super::gui::IVORY }, Align::Left);
                 let v = self.set_value(*row);
                 let arrows = !matches!(row, SetRow::Keys | SetRow::Back);
                 if arrows {
-                    ui::plain(canvas, &a.font, "<", vec2(r.x + 250.0, r.y + 8.0), 17.0, SOFT, Align::Left);
-                    ui::plain(canvas, &a.font, ">", vec2(r.right() - 20.0, r.y + 8.0), 17.0, SOFT, Align::Left);
+                    ui::plain(canvas, &a.font, "<", vec2(r.x + 250.0, r.y + 6.0), 17.0, SOFT, Align::Left);
+                    ui::plain(canvas, &a.font, ">", vec2(r.right() - 20.0, r.y + 6.0), 17.0, SOFT, Align::Left);
                 }
-                ui::text(canvas, &a.font, &v, vec2(r.x + 276.0, r.y + 10.0), 15.0, MUTED, Align::Left, r.w - 310.0);
-                if matches!(row, SetRow::Music | SetRow::Effects) {
-                    let v = if *row == SetRow::Music { self.settings.music } else { self.settings.effects };
-                    let bar = Rect::new(r.x + 340.0, r.y + 15.0, 300.0, 8.0);
-                    canvas.fill_rect(bar, Color::rgba(255, 255, 255, 30));
-                    canvas.fill_rect(Rect::new(bar.x, bar.y, bar.w * v, bar.h), GOLD);
-                }
+                ui::text(canvas, &a.font, &v, vec2(r.x + 276.0, r.y + 8.0), 15.0, MUTED, Align::Left, r.w - 310.0);
                 canvas.label(&format!("setting {}", Self::set_name(*row)), r);
             }
             let note = "The world map is always drawn by your graphics card; quality only changes how the wheels are smoothed and how busy the map is.";
@@ -1053,14 +930,14 @@ impl Lucky {
         ctx.idle_ok();
         let pages = self.help.len().max(1);
         let before = self.shell.help_page;
-        if ctx.input.was_pressed(Key::Right) || ctx.input.was_pressed(Key::Tab) || ctx.input.was_pressed(Key::Down) {
+        if crate::game::gui::pressed(ctx, Key::Right) || crate::game::gui::pressed(ctx, Key::Tab) || crate::game::gui::pressed(ctx, Key::Down) {
             self.shell.help_page = (self.shell.help_page + 1) % pages;
         }
-        if ctx.input.was_pressed(Key::Left) || ctx.input.was_pressed(Key::Up) {
+        if crate::game::gui::pressed(ctx, Key::Left) || crate::game::gui::pressed(ctx, Key::Up) {
             self.shell.help_page = (self.shell.help_page + pages - 1) % pages;
         }
         let mouse = self.ui_mouse();
-        if ctx.input.was_mouse_pressed(MouseButton::Left) {
+        if self.left_click(ctx) {
             for i in 0..pages {
                 if mouse.is_some_and(|m| Self::help_tab(i).contains(m)) {
                     self.shell.help_page = i;
@@ -1070,7 +947,7 @@ impl Lucky {
         if self.shell.help_page != before {
             crate::ui::sfx(ctx, &self.assets.menu_move, 0.7, 0.0);
         }
-        if ctx.input.was_pressed(Key::Escape) || ctx.input.was_pressed(Key::Enter) {
+        if crate::game::gui::pressed(ctx, Key::Escape) || crate::game::gui::pressed(ctx, Key::Enter) {
             self.close_sub(ctx);
         }
     }
@@ -1085,7 +962,7 @@ impl Lucky {
         canvas.blit_sprite(&a.econ_window, vec2(WIN.x, WIN.y), Blit::default());
         canvas.blit_sprite(&a.icon_help, vec2(WIN.x + 40.0, WIN.y + 30.0), Blit::default());
         ui::plain(canvas, &a.font, "HOW TO PLAY", vec2(WIN.x + 74.0, WIN.y + 28.0), 24.0, GOLD, Align::Left);
-        ui::plain(canvas, &a.font, "Up / Down or click: a page  ·  Esc: back", vec2(WIN.right() - 30.0, WIN.y + 36.0), 12.0, MUTED, Align::Right);
+        ui::plain(canvas, &a.font, "Click a page on the left", vec2(WIN.right() - 30.0, WIN.y + 36.0), 12.0, MUTED, Align::Right);
         let page = self.shell.help_page.min(self.help.len().saturating_sub(1));
         for (i, (title, _)) in self.help.iter().enumerate() {
             let r = Self::help_tab(i);
@@ -1118,7 +995,7 @@ impl Lucky {
     // ---------------------------------------------------------------
 
     /// A result came in: its screen, its sound, the clock stops.
-    pub(super) fn show_outcome(&mut self, ctx: &mut Context, o: Outcome) {
+    pub fn show_outcome(&mut self, ctx: &mut Context, o: Outcome) {
         self.clock.paused = true;
         self.fate.shown = true;
         crate::ui::sfx(ctx, if o.won() { &self.assets.victory } else { &self.assets.defeat }, 0.9, 0.0);
@@ -1140,22 +1017,21 @@ impl Lucky {
             return;
         }
         let mouse = self.ui_mouse();
-        let on_play = o.can_play_on() && (ctx.input.was_pressed(Key::Enter) || ctx.input.was_mouse_pressed(MouseButton::Left) && mouse.is_some_and(|m| OUTCOME_PLAY.contains(m)));
-        let to_menu = ctx.input.was_pressed(Key::Escape) || ctx.input.was_pressed(Key::M) || ctx.input.was_mouse_pressed(MouseButton::Left) && mouse.is_some_and(|m| OUTCOME_MENU.contains(m));
+        let on_play = o.can_play_on() && (crate::game::gui::pressed(ctx, Key::Enter) || self.left_click(ctx) && mouse.is_some_and(|m| OUTCOME_PLAY.contains(m)));
+        let to_menu = crate::game::gui::pressed(ctx, Key::M) || self.left_click(ctx) && mouse.is_some_and(|m| OUTCOME_MENU.contains(m));
         if on_play {
             self.fate.playing_on = true;
             self.clock.paused = false;
             crate::ui::sfx(ctx, &self.assets.click, 0.8, 0.0);
             self.go(Screen::Map);
             let words = match o {
-                Outcome::Lost(crate::victory::Loss::Vassal) => "Playing on as a vassal: win back your independence (K: the war room, P: diplomacy)",
+                Outcome::Lost(crate::victory::Loss::Vassal) => "Playing on as a vassal: win back your independence (the war room and diplomacy are on the right)",
                 Outcome::Lost(_) => "Playing on: rebuild, and the world may still be yours",
                 Outcome::Won(_) => "Playing on: the world goes on (other victories still count)",
             };
             self.notify(ctx, words.to_string(), CRITICAL);
         } else if to_menu {
-            self.leave_game(ctx);
-            self.open_menu();
+            self.run(ctx, super::cmd::Cmd::AskMainMenu);
         }
     }
 
@@ -1259,7 +1135,7 @@ impl Lucky {
 
         // The buttons.
         let mouse = self.ui_mouse();
-        for (r, words, show) in [(OUTCOME_PLAY, if o.won() { "PLAY ON (Enter)" } else { "PLAY ON (Enter)" }, o.can_play_on()), (OUTCOME_MENU, "MAIN MENU (Esc)", true)] {
+        for (r, words, show) in [(OUTCOME_PLAY, "Play on", o.can_play_on()), (OUTCOME_MENU, "Main menu", true)] {
             if !show {
                 continue;
             }
@@ -1377,21 +1253,41 @@ impl Lucky {
         ui::dim(canvas, 0.6);
         self.push_ui(canvas);
         canvas.blit_sprite(&a.econ_window, vec2(WIN.x, WIN.y), Blit::default());
-        canvas.blit_sprite(&a.icon_bell, vec2(WIN.x + 40.0, WIN.y + 30.0), Blit::default());
-        ui::plain(canvas, &a.font, "NOTIFICATIONS", vec2(WIN.x + 74.0, WIN.y + 28.0), 24.0, GOLD, Align::Left);
+        canvas.label("news log", WIN);
+        super::gui::icon(canvas, a, "news", vec2(WIN.x + 34.0, WIN.y + 24.0), 24.0, GOLD);
+        ui::plain(canvas, &a.serif, "News log", vec2(WIN.x + 68.0, WIN.y + 20.0), 26.0, super::gui::IVORY, Align::Left);
         let shown = ["only what matters most", "important news", "everything"][self.settings.notifications as usize];
-        ui::plain(canvas, &a.font, &format!("Newest first. Pop-ups show {shown} (Settings). L or Esc: close"), vec2(WIN.right() - 30.0, WIN.y + 36.0), 12.0, MUTED, Align::Right);
-        for (k, (date, words, level)) in self.notes.log.iter().rev().take(19).enumerate() {
-            let y = WIN.y + 96.0 + k as f32 * 24.0;
+        ui::plain(canvas, &a.font, &format!("Newest first · the mouse wheel scrolls · the news strip shows {shown} (Settings)"), vec2(WIN.right() - 52.0, WIN.y + 30.0), 12.0, MUTED, Align::Right);
+        let rows = 19;
+        let n = self.notes.log.len();
+        let first = self.notes.log_scroll.min(n.saturating_sub(1));
+        for (k, (date, words, level)) in self.notes.log.iter().rev().skip(first).take(rows).enumerate() {
+            let y = WIN.y + 80.0 + k as f32 * 25.0;
             let color = match *level {
                 CRITICAL => GOLD,
-                IMPORTANT => Color::WHITE,
+                IMPORTANT => super::gui::IVORY,
                 _ => MUTED,
             };
-            ui::plain(canvas, &a.font, date, vec2(WIN.x + 40.0, y), 13.0, SOFT, Align::Left);
-            ui::text(canvas, &a.font, words, vec2(WIN.x + 190.0, y), 14.0, color, Align::Left, WIN.w - 230.0);
+            ui::plain(canvas, &a.font, date, vec2(WIN.x + 34.0, y), 13.0, SOFT, Align::Left);
+            super::gui::fit(canvas, &a.font, words, vec2(WIN.x + 170.0, y), 14.0, color, Align::Left, WIN.w - 220.0);
+        }
+        if n == 0 {
+            ui::plain(canvas, &a.font, "Nothing has happened yet.", vec2(WIN.center().x, WIN.y + 200.0), 16.0, MUTED, Align::Center);
+        } else if n > rows {
+            // Where the list is, down the right edge.
+            let track = Rect::new(WIN.right() - 20.0, WIN.y + 80.0, 4.0, rows as f32 * 25.0);
+            canvas.fill_rect(track, Color::rgba(255, 255, 255, 20));
+            let h = (track.h * rows as f32 / n as f32).max(20.0);
+            let t = first as f32 / (n - rows).max(1) as f32;
+            canvas.fill_rect(Rect::new(track.x, track.y + (track.h - h) * t.min(1.0), 4.0, h), GOLD);
         }
         self.pop_ui(canvas);
+        self.draw_widgets(canvas, &self.log_widgets(), true);
+    }
+
+    /// Whether the open window's buttons light up (nothing is on top of it).
+    pub(super) fn window_live(&self) -> bool {
+        !self.shell.pause && self.shell.confirm.is_none() && self.map_ui.card.is_none() && !self.notes.log_open && self.screen == Screen::Map
     }
 
     /// A sound by name (for code that decides which before it can borrow the assets).
@@ -1522,6 +1418,19 @@ impl Lucky {
         )
     }
 
+    /// A tooltip for a rectangle given in screen pixels.
+    pub fn tip_screen(&self, rect: Rect, words: String) {
+        if self.settings.tooltips && !words.is_empty() {
+            self.tips.areas.borrow_mut().push((rect, words));
+        }
+    }
+
+    /// An old-style button, drawn in the new look, its shortcut in its tooltip.
+    pub(super) fn button(&self, canvas: &mut Canvas, b: &ui::Button, pulse: bool) {
+        b.draw(canvas, &self.assets, self.mouse, self.time, pulse);
+        self.tip_words(b.rect(), b.key.to_string());
+    }
+
     /// Like `tip`, with words made on the spot.
     pub fn tip_words(&self, rect: Rect, words: String) {
         if self.settings.tooltips {
@@ -1552,7 +1461,7 @@ impl Lucky {
     pub(super) fn draw_tip(&self, canvas: &mut Canvas) {
         let Some((r, words)) = self.tips.hover.as_ref().filter(|_| self.tips.hover_time > 0.35) else { return };
         let a = &self.assets;
-        let mut st = ui::style(14.0, Color::WHITE);
+        let mut st = ui::style(14.0, super::gui::IVORY);
         st.outline = 0.0;
         st.shadow = None;
         st.wrap = Some(330.0);
@@ -1565,6 +1474,10 @@ impl Lucky {
         let h = lines * full.y * 1.25 + 16.0;
         let mut x = r.x;
         let mut y = r.bottom() + 6.0;
+        if self.tips.beside.borrow().contains(r) {
+            x = if r.right() + 8.0 + w <= ui::W - 6.0 { r.right() + 8.0 } else { r.x - 8.0 - w };
+            y = r.y;
+        }
         if x + w > ui::W - 6.0 {
             x = ui::W - 6.0 - w;
         }
@@ -1572,8 +1485,8 @@ impl Lucky {
             y = r.y - h - 6.0;
         }
         let box_ = Rect::new(x.max(6.0), y.max(6.0), w, h);
-        canvas.fill_rect(box_, Color::rgba(12, 6, 32, 238));
-        canvas.draw_rect(box_, ui::alpha(MUTED, 0.8));
+        canvas.fill_rect(box_, Color::rgba(13, 23, 34, 246));
+        canvas.draw_rect(box_, super::gui::BRONZE);
         canvas.draw_font_text(&a.font, words, vec2(box_.x + 12.0, box_.y + 9.0), &st);
         canvas.label("tooltip", box_);
     }
@@ -1601,8 +1514,8 @@ impl Lucky {
 }
 
 /// The outcome screen's buttons.
-const OUTCOME_PLAY: Rect = Rect { x: 420.0, y: 660.0, w: 210.0, h: 44.0 };
-const OUTCOME_MENU: Rect = Rect { x: 650.0, y: 660.0, w: 210.0, h: 44.0 };
+pub(super) const OUTCOME_PLAY: Rect = Rect { x: 420.0, y: 660.0, w: 210.0, h: 44.0 };
+pub(super) const OUTCOME_MENU: Rect = Rect { x: 650.0, y: 660.0, w: 210.0, h: 44.0 };
 
 /// A dark rounded panel with a soft outline.
 pub fn panel(canvas: &mut Canvas, r: Rect) {
@@ -1618,8 +1531,8 @@ struct SavedRef<'a> {
     landed: &'a Vec<crate::fate::Landed>,
     player: &'a Option<crate::country::Country>,
     rivals: &'a Vec<crate::country::Country>,
-    world: &'a crate::world::World,
-    sim: SimRef<'a>,
+    world: Option<&'a crate::world::World>,
+    sim: Option<SimRef<'a>>,
     spectating: bool,
     setup: &'a crate::save::Setup,
     fate: &'a crate::victory::Fate,

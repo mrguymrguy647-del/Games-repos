@@ -1,0 +1,15 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Save: a floppy disk (white, the game tints it)",
+ "seed": 1,
+ "palette": {"white": "#FFFFFF"},
+ "commands": [
+  {"cmd": "canvas", "width": 24, "height": 24},
+  {"cmd": "layer", "name": "Icon"},
+  {"cmd": "polygon", "points": [[4.2, 3.0], [16.8, 3.0], [21.0, 7.2], [21.0, 19.8], [19.8, 21.0], [4.2, 21.0], [3.0, 19.8], [3.0, 4.2]], "fill": "white"},
+  {"cmd": "rect", "x": 7.0, "y": 5.0, "width": 8.0, "height": 4.4, "fill": "white", "erase": true},
+  {"cmd": "rect", "x": 11.6, "y": 5.0, "width": 2.0, "height": 4.4, "fill": "white"},
+  {"cmd": "rect", "x": 6.5, "y": 13.0, "width": 11.0, "height": 6.0, "radius": 0.6, "fill": "white", "erase": true}
+ ]
+}

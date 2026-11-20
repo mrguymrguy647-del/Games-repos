@@ -4,9 +4,9 @@
   "title": "Quit: a power symbol",
   "seed": 1,
   "palette": {
-    "ink": "#1A1030",
-    "gold": "#F5C542",
-    "red": "#FF6070"
+    "ink": "#0d1722",
+    "red": "#d8574a",
+    "bronze": "#8a6d2f"
   },
   "commands": [
     {
@@ -26,7 +26,7 @@
       ],
       "radius": 11,
       "fill": "ink",
-      "outline": "gold",
+      "outline": "bronze",
       "outline_size": 1.5
     },
     {

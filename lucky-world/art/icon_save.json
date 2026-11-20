@@ -4,13 +4,13 @@
   "title": "Save: a floppy disk",
   "seed": 1,
   "palette": {
-    "ink": "#1A1030",
-    "gold": "#F5C542",
+    "ink": "#0d1722",
     "white": "#FFFFFF",
-    "accent": "#7FA8FF",
-    "lavender": "#B7A9E0",
-    "silver": "#C9C4D8",
-    "blue_dark": "#3E5AA8"
+    "accent": "#8fb4d9",
+    "lavender": "#a9b3bd",
+    "silver": "#c8d0da",
+    "blue_dark": "#3a5a7c",
+    "bronze": "#8a6d2f"
   },
   "commands": [
     {
@@ -30,7 +30,7 @@
       ],
       "radius": 11,
       "fill": "ink",
-      "outline": "gold",
+      "outline": "bronze",
       "outline_size": 1.5
     },
     {

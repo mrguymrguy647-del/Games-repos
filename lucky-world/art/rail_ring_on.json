@@ -1,0 +1,15 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Rail button, selected: lighter disc, gold ring",
+ "seed": 1,
+ "palette": {"navy_on": "#15273a", "gold": "#e2b84a"},
+ "commands": [
+  {"cmd": "canvas", "width": 48, "height": 48},
+  {"cmd": "layer", "name": "Ring"},
+  {"cmd": "ellipse", "center": [24.0, 24.0], "radius": 23.0, "fill": "gold"},
+  {"cmd": "ellipse", "center": [24.0, 24.0], "radius": 21.0, "fill": "navy_on"},
+  {"cmd": "ellipse", "center": [24.0, 24.0], "radius": 20.0, "fill": {"gradient": "linear", "from": [0, 4], "to": [0, 44], "colors": ["#e9e2cf40", "#e9e2cf06"]}},
+  {"cmd": "ellipse", "center": [24.0, 24.0], "radius": 19.0, "fill": "navy_on"}
+ ]
+}

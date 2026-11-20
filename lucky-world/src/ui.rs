@@ -6,19 +6,38 @@ use duckforge::prelude::*;
 pub const W: f32 = 1280.0;
 pub const H: f32 = 720.0;
 
-pub const GOLD: Color = Color::from_hex(0xf5c542);
-pub const GOLD_HI: Color = Color::from_hex(0xfff1b8);
-pub const INK: Color = Color::from_hex(0x120a28);
-pub const MUTED: Color = Color::from_hex(0xb7a9e0);
-pub const SOFT: Color = Color::from_hex(0x8d80bd);
-pub const BLUE: Color = Color::from_hex(0x7fa8ff);
+pub const GOLD: Color = Color::from_hex(0xe2b84a);
+pub const GOLD_HI: Color = Color::from_hex(0xf6e3a8);
+pub const INK: Color = Color::from_hex(0x0a121b);
+pub const MUTED: Color = Color::from_hex(0xa9b3bd);
+pub const SOFT: Color = Color::from_hex(0x7d8894);
+pub const BLUE: Color = Color::from_hex(0x9fb4c8);
 pub const RED: Color = Color::from_hex(0xff6070);
 pub const GREEN: Color = Color::from_hex(0x6ee08a);
+
+/// The flat icons the screens use (assets/art/ic_<name>.png).
+pub const ICONS: [&str; 36] = [
+    "treasury", "gdp", "inflation", "jobless", "stability", "pause", "play", "menu", "home", "plus", "minus", "close", "economy", "war", "battles", "diplomacy", "spies",
+    "news", "government", "leader", "province", "people", "army", "save", "load", "gear", "help", "quit", "resume", "build", "show", "warning", "trade", "card", "zoom", "spin",
+];
 
 /// Everything loaded from `assets/`, once, at the start.
 pub struct Assets {
     pub font: Font,
     pub serif: Font,
+    /// The UI font's heavier weight (values, titles of buttons).
+    pub bold: Font,
+    /// The flat white icons (assets/art/ic_*.png), by name without "ic_"; the game tints them.
+    pub icons: std::collections::BTreeMap<String, Sprite>,
+    /// Panel corners (rounded, 10 px), the rail's ring, the count badge, the battle marker, the slider knob.
+    pub corner: Option<Sprite>,
+    pub corner_gold: Option<Sprite>,
+    pub corner_plain: Option<Sprite>,
+    pub rail_ring: Option<Sprite>,
+    pub rail_ring_on: Option<Sprite>,
+    pub badge: Option<Sprite>,
+    pub marker_battle: Option<Sprite>,
+    pub slider_knob: Option<Sprite>,
     pub backdrop: Sprite,
     pub pointer: Sprite,
     pub hub: Sprite,
@@ -112,9 +131,26 @@ impl Assets {
     pub fn load() -> Result<Assets, duckforge::LoadError> {
         let art = |name: &str| crate::files::sprite(format!("assets/art/{name}.png"));
         let sound = |name: &str| crate::files::load(format!("assets/sound/{name}.wav"), |p| Wav::load(p));
+        let maybe = |name: &str| art(name).ok();
+        let mut icons = std::collections::BTreeMap::new();
+        for name in ICONS {
+            if let Ok(s) = art(&format!("ic_{name}")) {
+                icons.insert(name.to_string(), s);
+            }
+        }
         Ok(Assets {
-            font: crate::files::font("assets/fonts/Inter-Bold.otf")?,
-            serif: crate::files::font("assets/fonts/DejaVuSerif-Bold.ttf")?,
+            font: crate::files::font("assets/fonts/BarlowSemiCondensed-Medium.ttf")?,
+            serif: crate::files::font("assets/fonts/Marcellus-Regular.ttf")?,
+            bold: crate::files::font("assets/fonts/BarlowSemiCondensed-SemiBold.ttf")?,
+            icons,
+            corner: maybe("panel_corner"),
+            corner_gold: maybe("panel_corner_gold"),
+            corner_plain: maybe("panel_corner_plain"),
+            rail_ring: maybe("rail_ring"),
+            rail_ring_on: maybe("rail_ring_on"),
+            badge: maybe("badge"),
+            marker_battle: maybe("marker_battle"),
+            slider_knob: maybe("slider_knob"),
             backdrop: art("backdrop")?,
             pointer: art("pointer")?,
             hub: art("hub")?,
@@ -294,22 +330,14 @@ impl Button {
         mouse.is_some_and(|m| self.rect().contains(m))
     }
 
-    pub fn draw(&self, canvas: &mut Canvas, assets: &Assets, mouse: Option<Vec2>, time: f32, pulse: bool) {
-        let hot = self.hovered(mouse) || (pulse && (time * 2.5).sin() > 0.3);
-        let sprite = match (self.kind, hot) {
-            (_, true) => &assets.button_hot,
-            (ButtonKind::Gold, false) => &assets.button,
-            (ButtonKind::Blue, false) => &assets.button_blue,
-        };
-        let lift = if self.hovered(mouse) { -2.0 } else { 0.0 };
-        canvas.blit_sprite(sprite, self.at + vec2(0.0, lift), Blit::default());
-        let ink = match self.kind {
-            ButtonKind::Blue if !hot => Color::from_hex(0x0a1540),
-            _ => Color::from_hex(0x3a2400),
-        };
-        let center = self.at.x + 130.0;
-        plain(canvas, &assets.font, self.label, vec2(center, self.at.y + 11.0 + lift), 22.0, ink, Align::Center);
-        plain(canvas, &assets.font, self.key, vec2(center, self.at.y + 36.0 + lift), 12.0, alpha(ink, 0.7), Align::Center);
+    /// Draws it in the game's look (gold: the main action; blue: the
+    /// others). `pulse` is kept for callers; the look is calm now.
+    pub fn draw(&self, canvas: &mut Canvas, assets: &Assets, mouse: Option<Vec2>, _time: f32, _pulse: bool) {
+        let hot = self.hovered(mouse);
+        let r = self.rect();
+        let r = Rect::new(r.x + 6.0, r.y + 6.0, r.w - 12.0, r.h - 12.0);
+        let w = crate::game::gui::Widget::new(crate::game::gui::Kind::Button, r, self.label, crate::game::gui::Act::None).on(self.kind == ButtonKind::Gold);
+        crate::game::gui::draw_widget(canvas, assets, &w, hot, false);
         canvas.label(&format!("button {}", self.label), self.rect());
     }
 }

@@ -1,0 +1,14 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Menu: three lines (white, the game tints it)",
+ "seed": 1,
+ "palette": {"white": "#FFFFFF"},
+ "commands": [
+  {"cmd": "canvas", "width": 24, "height": 24},
+  {"cmd": "layer", "name": "Icon"},
+  {"cmd": "rect", "x": 3.0, "y": 5.0, "width": 18.0, "height": 2.0, "radius": 1.0, "fill": "white"},
+  {"cmd": "rect", "x": 3.0, "y": 11.0, "width": 18.0, "height": 2.0, "radius": 1.0, "fill": "white"},
+  {"cmd": "rect", "x": 3.0, "y": 17.0, "width": 18.0, "height": 2.0, "radius": 1.0, "fill": "white"}
+ ]
+}

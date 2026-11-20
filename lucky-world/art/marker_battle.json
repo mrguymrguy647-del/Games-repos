@@ -1,0 +1,23 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Battle marker: red disc, dark rim, ivory crossed swords",
+ "seed": 1,
+ "palette": {"navy": "#0d1722", "ivory": "#e9e2cf"},
+ "commands": [
+  {"cmd": "canvas", "width": 36, "height": 36},
+  {"cmd": "layer", "name": "Disc"},
+  {"cmd": "ellipse", "center": [18.0, 18.0], "radius": 18.0, "fill": "navy"},
+  {"cmd": "ellipse", "center": [18.0, 18.0], "radius": 15.8, "fill": {"gradient": "linear", "from": [0, 2], "to": [0, 34], "colors": ["#d44338", "#bb2f26"]}},
+  {"cmd": "layer", "name": "Swords"},
+  {"cmd": "polygon", "points": [[21.6, 24.1], [9.46, 11.95], [7.96, 8.36], [11.55, 9.86], [23.7, 22.0]], "fill": "ivory"},
+  {"cmd": "polygon", "points": [[19.42, 25.37], [24.97, 19.82], [26.39, 21.25], [20.85, 26.79]], "fill": "ivory"},
+  {"cmd": "polygon", "points": [[22.76, 24.73], [24.33, 23.16], [26.88, 25.71], [25.31, 27.28]], "fill": "ivory"},
+  {"cmd": "ellipse", "center": [26.47, 26.87], "radius": 1.7, "fill": "ivory"},
+  {"cmd": "polygon", "points": [[12.72, 20.02], [20.3, 12.45], [23.95, 16.1], [16.38, 23.68]], "fill": "ivory", "erase": true},
+  {"cmd": "polygon", "points": [[12.3, 22.0], [24.45, 9.86], [28.04, 8.36], [26.54, 11.95], [14.4, 24.1]], "fill": "ivory"},
+  {"cmd": "polygon", "points": [[11.03, 19.82], [16.58, 25.37], [15.15, 26.79], [9.61, 21.25]], "fill": "ivory"},
+  {"cmd": "polygon", "points": [[11.67, 23.16], [13.24, 24.73], [10.69, 27.28], [9.12, 25.71]], "fill": "ivory"},
+  {"cmd": "ellipse", "center": [9.53, 26.87], "radius": 1.7, "fill": "ivory"}
+ ]
+}

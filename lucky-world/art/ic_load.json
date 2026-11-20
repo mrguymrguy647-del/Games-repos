@@ -1,0 +1,22 @@
+{
+ "format": "duckquill-script",
+ "version": 1,
+ "title": "Load: an open folder (white, the game tints it)",
+ "seed": 1,
+ "palette": {"white": "#FFFFFF"},
+ "commands": [
+  {"cmd": "canvas", "width": 24, "height": 24},
+  {"cmd": "layer", "name": "Icon"},
+  {"cmd": "polygon", "points": [[2.0, 5.4], [2.9, 4.5], [8.6, 4.5], [10.8, 6.8], [18.4, 6.8], [19.3, 7.7], [19.3, 20.0], [2.0, 20.0]], "fill": "white"},
+  {"cmd": "polygon", "points": [[5.3, 9.7], [24.0, 9.7], [24.0, 22.0], [0.6, 22.0]], "fill": "white", "erase": true},
+  {"cmd": "polygon", "points": [[6.6, 11.2], [22.6, 11.2], [19.4, 20.0], [3.2, 20.0]], "fill": "white"},
+  {"cmd": "polygon", "points": [[6.6, 11.6], [22.6, 11.6], [22.6, 10.8], [6.6, 10.8]], "fill": "white"},
+  {"cmd": "polygon", "points": [[22.22, 11.06], [19.02, 19.86], [19.78, 20.14], [22.98, 11.34]], "fill": "white"},
+  {"cmd": "polygon", "points": [[19.4, 19.6], [3.2, 19.6], [3.2, 20.4], [19.4, 20.4]], "fill": "white"},
+  {"cmd": "polygon", "points": [[3.57, 20.14], [6.97, 11.34], [6.23, 11.06], [2.83, 19.86]], "fill": "white"},
+  {"cmd": "ellipse", "center": [6.6, 11.2], "radius": 0.4, "fill": "white"},
+  {"cmd": "ellipse", "center": [22.6, 11.2], "radius": 0.4, "fill": "white"},
+  {"cmd": "ellipse", "center": [19.4, 20.0], "radius": 0.4, "fill": "white"},
+  {"cmd": "ellipse", "center": [3.2, 20.0], "radius": 0.4, "fill": "white"}
+ ]
+}

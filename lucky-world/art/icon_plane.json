@@ -4,18 +4,9 @@
  "title": "Air icon: a jet",
  "seed": 1,
  "palette": {
-  "ink": "#1A1030",
-  "gold": "#F5C542",
-  "gold_dark": "#A8740E",
-  "gold_hi": "#FFF1B8",
-  "white": "#FFFFFF",
+  "ink": "#0d1722",
   "steel": "#C8D0DA",
-  "steel_dark": "#7A8696",
-  "red": "#F06A6A",
-  "brown": "#6B4A2E",
-  "paper": "#EFE3C4",
-  "paper_dark": "#D8C79C",
-  "ink_brown": "#4A3420"
+  "bronze": "#8a6d2f"
  },
  "commands": [
   {
@@ -35,7 +26,7 @@
    ],
    "radius": 11,
    "fill": "ink",
-   "outline": "gold",
+   "outline": "bronze",
    "outline_size": 1.5
   },
   {

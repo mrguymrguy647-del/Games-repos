@@ -215,6 +215,10 @@ pub fn reserved(k: Key) -> bool {
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 #[serde(default)]
 pub struct Settings {
+    /// Which game wrote the file (2: phase 8, full screen by default). A
+    /// file without it is older: its windowed start is from before.
+    #[serde(default = "old_file")]
+    pub version: u32,
     pub quality: Quality,
     /// The window's size when the game starts: 1 is 1280 x 720, 2 is 2560 x 1440.
     pub window_scale: usize,
@@ -222,7 +226,7 @@ pub struct Settings {
     /// 0 to 1.
     pub music: f32,
     pub effects: f32,
-    /// The windows and menus' size: 0.9 to 1.2.
+    /// The windows and menus' size: 0.9 to 1.15.
     pub ui_scale: f32,
     /// Saves itself every game year.
     pub autosave: bool,
@@ -230,24 +234,35 @@ pub struct Settings {
     pub notifications: u8,
     /// Hover a number to read what it is.
     pub tooltips: bool,
+    /// In fullscreen, the screen's edges push the map along.
+    pub edge_scroll: bool,
     /// Action id -> key name; missing actions use their default.
     pub keys: BTreeMap<String, String>,
     /// The tutorial was offered (the first New Game suggests it once).
     pub tutorial_offered: bool,
 }
 
+/// The settings files' version now.
+const VERSION: u32 = 2;
+
+fn old_file() -> u32 {
+    1
+}
+
 impl Default for Settings {
     fn default() -> Settings {
         Settings {
+            version: VERSION,
             quality: Quality::High,
             window_scale: 1,
-            fullscreen: false,
+            fullscreen: true,
             music: 0.7,
             effects: 0.9,
             ui_scale: 1.0,
             autosave: true,
             notifications: 1,
             tooltips: true,
+            edge_scroll: true,
             keys: BTreeMap::new(),
             tutorial_offered: false,
         }
@@ -277,10 +292,17 @@ impl Settings {
 
     /// Numbers in range; unknown key names dropped.
     pub fn clean(mut self) -> Settings {
+        // Older games started in a window, so their files say so: full
+        // screen is the default now (Settings or Alt+Enter turn it off).
+        if self.version < VERSION {
+            self.fullscreen = true;
+            self.edge_scroll = true;
+            self.version = VERSION;
+        }
         self.window_scale = self.window_scale.clamp(1, 2);
         self.music = self.music.clamp(0.0, 1.0);
         self.effects = self.effects.clamp(0.0, 1.0);
-        self.ui_scale = self.ui_scale.clamp(0.9, 1.2);
+        self.ui_scale = self.ui_scale.clamp(0.9, 1.15);
         self.notifications = self.notifications.min(2);
         self.keys.retain(|act, key| Act::ALL.iter().any(|a| a.id() == act) && Key::from_name(key).is_some_and(|k| !reserved(k)));
         self

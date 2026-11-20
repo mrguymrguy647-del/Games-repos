@@ -21,9 +21,10 @@ use crate::ui::{self, GOLD, MUTED, SOFT};
 use crate::war::report::{battle_text, big};
 use crate::war::{self, land, peace, player, supply, Order, Wars, FRONTS, LEVELS};
 
-const WIN: Rect = Rect { x: 110.0, y: 64.0, w: 1060.0, h: 600.0 };
+use super::windows::WIN;
+/// The live battle's panel (left of the right rail).
+pub const BATTLE_PANEL: Rect = Rect { x: 840.0, y: 56.0, w: 366.0, h: 446.0 };
 /// The war room button on the top bar (under the economy button).
-pub const WAR_BUTTON: Rect = Rect { x: 1086.0, y: 62.0, w: 180.0, h: 22.0 };
 const PAPER: Vec2 = Vec2 { x: 360.0, y: 140.0 };
 const INK: Color = Color::rgb(46, 34, 22);
 const GOOD: Color = Color::rgb(107, 212, 138);
@@ -54,9 +55,6 @@ impl Page {
         }
     }
 
-    fn tab_rect(k: usize) -> Rect {
-        Rect::new(WIN.x + 24.0 + k as f32 * 168.0, WIN.y + 16.0, 160.0, 40.0)
-    }
 }
 
 /// What the war screens remember between frames.
@@ -161,10 +159,6 @@ impl Lucky {
         if self.spectating { self.map_ui.brain.unwrap_or(0) } else { 0 }
     }
 
-    pub(super) fn war_viewer_pub(&self) -> usize {
-        self.war_viewer()
-    }
-
     /// A day (or many) of war went by: news, sounds, borders, reports.
     /// A loaded game's battles, reports, news and offers are old news.
     pub(super) fn war_seen_all(&mut self) {
@@ -229,7 +223,7 @@ impl Lucky {
         if let Some(o) = w.offers.iter().filter(|o| o.3 >= ui.offers_seen).max_by_key(|o| o.3) {
             if viewer.is_some() {
                 let from = w.names[w.wars[o.0].sides[o.1][0]].clone();
-                notes.push((format!("{from} offers peace: {}. K: the war room to answer", o.2.words(w)), super::shell::CRITICAL, None));
+                notes.push((format!("{from} offers peace: {}. Answer in the war room", o.2.words(w)), super::shell::CRITICAL, None));
             }
             ui.offers_seen = o.3 + 1;
         }
@@ -353,25 +347,28 @@ impl Lucky {
     /// The war room's keys (K closes it).
     pub(super) fn update_war_room(&mut self, ctx: &mut Context) {
         let Some(page) = self.map_ui.war.open else { return };
-        let mouse = self.ui_mouse();
-        if ctx.input.was_pressed(Key::Escape) || ctx.input.was_pressed(Key::K) {
+        // Tabs, the close button, rows and the bottom bar (windows.rs).
+        let ws = self.war_widgets();
+        let (act, outside) = self.window_clicks(ctx, &ws);
+        match act {
+            Some(super::gui::Act::Cmd(cmd)) => {
+                self.run(ctx, cmd);
+                return;
+            }
+            Some(super::gui::Act::Row(i)) => self.map_ui.war.row = i,
+            _ => {}
+        }
+        let wheel = ctx.input.scroll();
+        let key_k = self.settings.key(crate::settings::Act::WarRoom);
+        if crate::game::gui::pressed(ctx, Key::Escape) || crate::game::gui::pressed(ctx, key_k) || outside {
             self.map_ui.war.open = None;
             crate::ui::sfx(ctx, &self.assets.click, 0.7, 0.0);
             return;
         }
         let mut next = None;
-        if ctx.input.was_pressed(Key::Tab) {
+        if crate::game::gui::pressed(ctx, Key::Tab) {
             let k = Page::ALL.iter().position(|&p| p == page).unwrap_or(0);
             next = Some(Page::ALL[(k + 1) % Page::ALL.len()]);
-        }
-        if ctx.input.was_mouse_pressed(MouseButton::Left) {
-            if let Some(m) = mouse {
-                for (k, p) in Page::ALL.iter().enumerate() {
-                    if Page::tab_rect(k).contains(m) {
-                        next = Some(*p);
-                    }
-                }
-            }
         }
         if let Some(p) = next {
             self.map_ui.war.open = Some(p);
@@ -381,18 +378,21 @@ impl Lucky {
         }
         let rows = self.war_rows(page);
         let ui = &mut self.map_ui.war;
-        if ctx.input.was_pressed(Key::Down) && rows > 0 {
+        if crate::game::gui::pressed(ctx, Key::Down) && rows > 0 {
             ui.row = (ui.row + 1) % rows;
             crate::ui::sfx(ctx, &self.assets.pan_tick, 0.5, 0.0);
         }
-        if ctx.input.was_pressed(Key::Up) && rows > 0 {
+        if crate::game::gui::pressed(ctx, Key::Up) && rows > 0 {
             ui.row = (ui.row + rows - 1) % rows;
             crate::ui::sfx(ctx, &self.assets.pan_tick, 0.5, 0.0);
+        }
+        if wheel != 0.0 && rows > 0 {
+            ui.row = (ui.row as i32 - wheel.signum() as i32).clamp(0, rows as i32 - 1) as usize;
         }
         ui.row = ui.row.min(rows.saturating_sub(1));
         let row = ui.row;
         if page == Page::Reports {
-            if ctx.input.was_pressed(Key::Enter) {
+            if crate::game::gui::pressed(ctx, Key::Enter) {
                 if let Some(&k) = self.report_list().get(row) {
                     self.map_ui.war.full = Some(k);
                     crate::ui::sfx(ctx, &self.assets.card_sound, 0.7, 0.0);
@@ -407,60 +407,59 @@ impl Lucky {
         let (Some(w), Some(e)) = (self.wars.as_mut(), self.economy.as_mut()) else { return };
         let ed = &self.econ_data;
         let mut did = false;
+        let mut ask_war: Option<usize> = None;
         match page {
             Page::Wars => {
                 let list = player::wars_in_view(w);
                 if let Some(&k) = list.get(row) {
-                    if ctx.input.was_pressed(Key::E) {
+                    if crate::game::gui::pressed(ctx, Key::E) {
                         did = player::escalate(w, k);
                     }
-                    if ctx.input.was_pressed(Key::M) {
+                    if crate::game::gui::pressed(ctx, Key::M) {
                         player::answer_escalation(w, e, ed, k, true);
                         did = true;
                     }
-                    if ctx.input.was_pressed(Key::B) {
+                    if crate::game::gui::pressed(ctx, Key::B) {
                         player::answer_escalation(w, e, ed, k, false);
                         did = true;
                     }
-                    if ctx.input.was_pressed(Key::P) {
+                    if crate::game::gui::pressed(ctx, Key::P) {
                         player::offer_peace(w, e, ed, k);
                         did = true;
                     }
                     let offer = w.offers.iter().position(|o| o.0 == k);
                     if let Some(o) = offer {
-                        if ctx.input.was_pressed(Key::Y) {
+                        if crate::game::gui::pressed(ctx, Key::Y) {
                             player::answer_offer(w, e, ed, o, true);
                             did = true;
-                        } else if ctx.input.was_pressed(Key::N) {
+                        } else if crate::game::gui::pressed(ctx, Key::N) {
                             player::answer_offer(w, e, ed, o, false);
                             did = true;
                         }
                     }
                 }
-                if ctx.input.was_pressed(Key::L) {
+                if crate::game::gui::pressed(ctx, Key::L) {
                     self.map_ui.war.declare_level = self.map_ui.war.declare_level % 4 + 1;
                     did = true;
                 }
-                if ctx.input.was_pressed(Key::D) {
-                    let target = self.map_ui.selected.and_then(|p| w.owner[p]).filter(|&o| o != 0);
-                    if let Some(t) = target {
-                        did = player::declare(w, e, ed, t, self.map_ui.war.declare_level).is_some();
-                    }
+                if crate::game::gui::pressed(ctx, Key::D) {
+                    // Declaring war always asks first.
+                    ask_war = self.map_ui.selected.and_then(|p| w.owner[p]).filter(|&o| o != 0);
                 }
             }
             Page::Army => {
                 let front = row.min(FRONTS.len() - 1);
-                let order = if ctx.input.was_pressed(Key::A) {
+                let order = if crate::game::gui::pressed(ctx, Key::A) {
                     player::front_target(w, front).map(Order::Attack)
-                } else if ctx.input.was_pressed(Key::H) {
+                } else if crate::game::gui::pressed(ctx, Key::H) {
                     Some(Order::Hold)
-                } else if ctx.input.was_pressed(Key::G) {
+                } else if crate::game::gui::pressed(ctx, Key::G) {
                     Some(Order::DigIn)
-                } else if ctx.input.was_pressed(Key::R) {
+                } else if crate::game::gui::pressed(ctx, Key::R) {
                     Some(Order::Retreat)
-                } else if ctx.input.was_pressed(Key::U) {
+                } else if crate::game::gui::pressed(ctx, Key::U) {
                     Some(Order::Auto)
-                } else if ctx.input.was_pressed(Key::F) {
+                } else if crate::game::gui::pressed(ctx, Key::F) {
                     self.map_ui.selected.filter(|&p| w.owner[p] == Some(0)).map(Order::Reinforce)
                 } else {
                     None
@@ -473,24 +472,24 @@ impl Lucky {
                 let f = 0;
                 if row < FRONTS.len() {
                     let p = &mut w.forces[f].priority[row];
-                    if ctx.input.was_pressed(Key::Right) && *p < 3 {
+                    if crate::game::gui::pressed(ctx, Key::Right) && *p < 3 {
                         *p += 1;
                         did = true;
                     }
-                    if ctx.input.was_pressed(Key::Left) && *p > 0 {
+                    if crate::game::gui::pressed(ctx, Key::Left) && *p > 0 {
                         *p -= 1;
                         did = true;
                     }
                 } else if let Some(&k) = request_list(w, f).get(row - FRONTS.len()) {
-                    if ctx.input.was_pressed(Key::Y) {
+                    if crate::game::gui::pressed(ctx, Key::Y) {
                         supply::answer(w, f, k, true);
                         did = true;
-                    } else if ctx.input.was_pressed(Key::N) {
+                    } else if crate::game::gui::pressed(ctx, Key::N) {
                         supply::answer(w, f, k, false);
                         did = true;
                     }
                 }
-                if ctx.input.was_pressed(Key::T) {
+                if crate::game::gui::pressed(ctx, Key::T) {
                     w.forces[f].auto = !w.forces[f].auto;
                     did = true;
                 }
@@ -500,6 +499,9 @@ impl Lucky {
         if did {
             self.map_ui.war.refresh();
             crate::ui::sfx(ctx, &self.assets.select, 0.7, 0.0);
+        }
+        if let Some(t) = ask_war {
+            self.run(ctx, super::cmd::Cmd::AskWar(t));
         }
     }
 
@@ -514,7 +516,7 @@ impl Lucky {
     }
 
     /// The viewer's battle reports, newest first (watching: everyone's).
-    fn report_list(&self) -> Vec<usize> {
+    pub(super) fn report_list(&self) -> Vec<usize> {
         let Some(w) = self.wars.as_ref() else { return Vec::new() };
         let v = self.war_viewer();
         (0..w.reports.len())
@@ -567,11 +569,19 @@ impl Lucky {
         let Some(w) = self.wars.as_ref() else { return };
         let a = &self.assets;
         for &(k, at, size) in &self.map_ui.war.markers {
-            let pulse = 1.0 + 0.12 * (self.time * 5.0 + k as f32).sin();
+            // A round red marker, beating a little.
+            let pulse = 1.0 + 0.1 * (self.time * 5.0 + k as f32).sin();
             let s = size * pulse;
-            canvas.fill_circle(at, s * 0.62, Color::rgba(160, 20, 20, 150));
-            canvas.blit_sprite(&a.icon_swords, at - vec2(s / 2.0, s / 2.0), Blit { scale: s / 32.0, ..Blit::default() });
-            canvas.label(&format!("battle {}", w.battles[k].report.province_name), Rect::new(at.x - s / 2.0, at.y - s / 2.0, s, s));
+            match a.marker_battle.as_ref() {
+                Some(m) => canvas.blit_sprite(m, at - vec2(s / 2.0, s / 2.0), Blit { scale: s / m.width() as f32, ..Blit::default() }),
+                None => {
+                    canvas.fill_circle(at, s * 0.5, Color::rgb(200, 55, 45));
+                    canvas.blit_sprite(&a.icon_swords, at - vec2(s * 0.35, s * 0.35), Blit { scale: s * 0.7 / 32.0, ..Blit::default() });
+                }
+            }
+            let r = Rect::new(at.x - s / 2.0, at.y - s / 2.0, s, s);
+            canvas.label(&format!("battle {}", w.battles[k].report.province_name), r);
+            self.tip_screen(r, format!("Battle of {}: click to watch it", w.battles[k].report.province_name));
         }
         let window = self.map_ui.econ.open.is_some() || self.map_ui.war.open.is_some() || self.map_ui.diplo.wants_escape();
         if let Some(b) = self.map_ui.war.watching.filter(|_| !window) {
@@ -583,9 +593,8 @@ impl Lucky {
         let a = &self.assets;
         let bt = &w.battles[b];
         let r = &bt.report;
-        let rect = Rect::new(900.0, 70.0, 366.0, 446.0);
-        canvas.fill_rect(rect, Color::rgba(14, 8, 28, 228));
-        canvas.draw_rect(rect, Color::rgba(245, 197, 66, 160));
+        let rect = BATTLE_PANEL;
+        super::gui::panel(canvas, a, rect);
         canvas.label("battle panel", rect);
         let (x, mut y) = (rect.x + 16.0, rect.y + 12.0);
         canvas.blit_sprite(&a.icon_swords, vec2(x, y), Blit::default());
@@ -649,52 +658,55 @@ impl Lucky {
         if bt.over {
             let words = if r.winner == 0 { "The attackers took the province." } else { "The defenders held." };
             plain(canvas, &a.font, words, vec2(x, y + 2.0), 15.0, GOLD);
-            plain(canvas, &a.font, "J: the biggest battle · Esc: close", vec2(x, rect.bottom() - 22.0), 12.0, SOFT);
-            return;
+                return;
         }
         let share = if ma + md > 0.0 { (ma / (ma + md)) as f32 } else { 0.5 };
         let bar = Rect::new(x, y + 4.0, 334.0, 12.0);
         canvas.fill_rect(bar, Color::rgba(90, 120, 220, 220));
         canvas.fill_rect(Rect::new(bar.x, bar.y, bar.w * share, bar.h), Color::rgba(220, 70, 60, 230));
         plain(canvas, &a.font, "attackers · soldiers left · defenders", vec2(x, y + 20.0), 11.0, SOFT);
-        plain(canvas, &a.font, "J: the biggest battle · Esc: close", vec2(x, rect.bottom() - 22.0), 12.0, SOFT);
     }
 
     /// The card after one of the player's battles, and a report opened in full.
     pub(super) fn draw_battle_reports(&self, canvas: &mut Canvas) {
         let Some(w) = self.wars.as_ref() else { return };
         let a = &self.assets;
-        if let Some((k, left)) = self.map_ui.war.card {
-            if self.map_ui.war.full.is_none() && self.map_ui.war.open.is_none() && k < w.reports.len() {
-                let r = &w.reports[k];
-                let rect = Rect::new(ui::W - 330.0, 432.0, 316.0, 92.0);
-                let _ = left;
-                canvas.fill_rect(rect, Color::rgba(236, 224, 196, 240));
-                canvas.draw_rect(rect, Color::rgba(120, 80, 40, 255));
-                canvas.label("battle report card", rect);
-                let we = r.attacker.factions.iter().any(|&f| w.nation_of(f) == 0);
-                let won = (r.winner == 0) == we;
-                canvas.blit_sprite(&a.icon_swords, vec2(rect.x + 10.0, rect.y + 10.0), Blit::default());
-                fit(canvas, &a.serif, &format!("Battle of {}", r.province_name), vec2(rect.x + 48.0, rect.y + 8.0), 17.0, INK, 256.0);
-                plain(canvas, &a.font, if won { "VICTORY" } else { "DEFEAT" }, vec2(rect.x + 48.0, rect.y + 30.0), 12.0, if won { Color::rgb(30, 120, 50) } else { Color::rgb(160, 30, 30) });
-                let (us, them) = if we { (&r.attacker, &r.defender) } else { (&r.defender, &r.attacker) };
-                fit(
-                    canvas,
-                    &a.font,
-                    &format!("We lost {} dead, {} captured · they lost {} dead, {} captured", big(us.killed), big(us.captured + us.surrendered), big(them.killed), big(them.captured + them.surrendered)),
-                    vec2(rect.x + 12.0, rect.y + 50.0),
-                    12.0,
-                    INK,
-                    292.0,
-                );
-                plain(canvas, &a.font, "Enter: the full report", vec2(rect.x + 12.0, rect.y + 70.0), 11.0, Color::rgb(110, 80, 50));
+        if let Some(k) = self.report_card() {
+            let r = &w.reports[k];
+            let rect = super::hud::REPORT_CARD;
+            let sc = self.settings.ui_scale;
+            super::gui::Space::TopRight.push(canvas, sc);
+            let hot = self.mouse.is_some_and(|m| super::gui::Space::TopRight.to_screen(sc, rect).contains(m));
+            if hot {
+                super::gui::panel_gold(canvas, a, rect);
+            } else {
+                super::gui::panel(canvas, a, rect);
             }
+            let we = r.attacker.factions.iter().any(|&f| w.nation_of(f) == 0);
+            let won = (r.winner == 0) == we;
+            super::gui::icon(canvas, a, "battles", vec2(rect.x + 12.0, rect.y + 12.0), 24.0, if won { super::gui::GREEN } else { super::gui::RED });
+            super::gui::fit(canvas, &a.serif, &format!("Battle of {}", r.province_name), vec2(rect.x + 46.0, rect.y + 9.0), 18.0, super::gui::IVORY, Align::Left, rect.w - 58.0);
+            plain(canvas, &a.bold, if won { "VICTORY" } else { "DEFEAT" }, vec2(rect.x + 46.0, rect.y + 32.0), 12.0, if won { super::gui::GREEN } else { super::gui::RED });
+            let (us, them) = if we { (&r.attacker, &r.defender) } else { (&r.defender, &r.attacker) };
+            super::gui::fit(
+                canvas,
+                &a.font,
+                &format!("We lost {} dead, {} captured · they lost {} dead, {} captured", big(us.killed), big(us.captured + us.surrendered), big(them.killed), big(them.captured + them.surrendered)),
+                vec2(rect.x + 14.0, rect.y + 54.0),
+                12.0,
+                super::gui::IVORY,
+                Align::Left,
+                rect.w - 28.0,
+            );
+            plain(canvas, &a.font, "Click for the full report", vec2(rect.x + 14.0, rect.y + 74.0), 11.0, super::gui::LABEL);
+            canvas.label("battle report card", rect);
+            canvas.pop_camera();
         }
         if let Some(k) = self.map_ui.war.full {
             if k < w.reports.len() {
                 ui::dim(canvas, 0.55);
                 self.draw_report_paper(canvas, w, k, PAPER);
-                plain(canvas, &a.font, "Enter or Esc: close", vec2(PAPER.x + 400.0, PAPER.y + 438.0), 12.0, SOFT);
+                plain(canvas, &a.font, "Click anywhere to close", vec2(PAPER.x + 380.0, PAPER.y + 438.0), 12.0, SOFT);
             }
         }
     }
@@ -716,21 +728,10 @@ impl Lucky {
     pub(super) fn draw_war_room(&self, canvas: &mut Canvas) {
         let (Some(page), Some(w), Some(e)) = (self.map_ui.war.open, self.wars.as_ref(), self.economy.as_ref()) else { return };
         let a = &self.assets;
-        ui::dim(canvas, 0.45);
         canvas.blit_sprite(&a.econ_window, vec2(WIN.x, WIN.y), Blit::default());
         canvas.label("war room", WIN);
-        let icons = [&a.icon_swords, &a.icon_army, &a.icon_crate, &a.icon_chart];
-        for (k, p) in Page::ALL.iter().enumerate() {
-            let r = Page::tab_rect(k);
-            let on = *p == page;
-            let hot = self.ui_mouse().is_some_and(|m| r.contains(m));
-            canvas.fill_rect(r, if on { Color::rgba(240, 106, 106, 80) } else if hot { Color::rgba(255, 255, 255, 30) } else { Color::rgba(255, 255, 255, 12) });
-            canvas.blit_sprite(icons[k], vec2(r.x + 10.0, r.y + 8.0), Blit { scale: if k == 0 { 0.75 } else { 1.0 }, ..Blit::default() });
-            plain(canvas, &a.font, p.name(), vec2(r.x + 42.0, r.y + 11.0), 15.0, if on { GOLD } else { Color::WHITE });
-            canvas.label(&format!("tab {}", p.name()), r);
-        }
         let v = self.war_viewer();
-        right(canvas, &a.font, &format!("{} · {}", w.names[v], if self.spectating { "watching" } else { "your war room" }), vec2(WIN.right() - 28.0, WIN.y + 28.0), 13.0, SOFT);
+        right(canvas, &a.font, &format!("{} · {}", w.names[v], if self.spectating { "watching" } else { "your war room" }), vec2(WIN.right() - 50.0, WIN.y + 28.0), 13.0, SOFT);
         let row = self.map_ui.war.row;
         match page {
             Page::Wars => self.draw_wars_page(canvas, w, e, row),
@@ -738,14 +739,9 @@ impl Lucky {
             Page::Supply => self.draw_supply_page(canvas, w, e, v, row),
             Page::Reports => self.draw_reports_page(canvas, w, row),
         }
-        let help = match (page, self.spectating) {
-            (Page::Reports, _) => "Up/Down: choose a battle  ·  Enter: the full report  ·  Tab: next page  ·  K or Esc: close",
-            (_, true) => "Watching: the war room only shows  ·  Up/Down: choose  ·  Tab: next page  ·  K or Esc: close",
-            (Page::Wars, _) => "E: escalate · M: match · B: back down · P: offer peace · Y/N: their offer · D: declare on the selected nation · L: level · Tab · K: close",
-            (Page::Army, _) => "Up/Down: a front  ·  A: attack · H: hold · G: dig in · R: retreat · F: reinforce the selected province · U: back to the general",
-            (Page::Supply, _) => "Up/Down: choose  ·  Left/Right: a front's priority  ·  Y/N: approve or deny a request  ·  T: Auto on/off  ·  Tab: next page",
-        };
-        plain(canvas, &a.font, help, vec2(WIN.x + 26.0, WIN.bottom() - 30.0), 13.0, SOFT);
+        self.pop_ui(canvas);
+        self.draw_widgets(canvas, &self.war_widgets(), self.window_live());
+        self.push_ui(canvas);
     }
 
     fn draw_wars_page(&self, canvas: &mut Canvas, w: &Wars, e: &Economy, row: usize) {
@@ -849,18 +845,18 @@ impl Lucky {
                 fit(canvas, &a.font, &format!("Result: {res}"), vec2(dx, dy), 14.0, GOOD, 470.0);
             } else if player::side(w, k).is_some() {
                 if let Some((t, yes)) = player::peace_on_offer(w, e, k) {
-                    fit(canvas, &a.font, &format!("P: offer peace ({})", t.words(w)), vec2(dx, dy), 13.0, Color::WHITE, 470.0);
+                    fit(canvas, &a.font, &format!("Our peace terms: {}", t.words(w)), vec2(dx, dy), 13.0, Color::WHITE, 470.0);
                     plain(canvas, &a.font, if yes { "They would sign it today." } else { "They would refuse it today." }, vec2(dx, dy + 18.0), 13.0, if yes { GOOD } else { BAD });
                 }
                 if let Some(o) = w.offers.iter().find(|o| o.0 == k) {
-                    fit(canvas, &a.font, &format!("THEIR OFFER: {}  ·  Y: sign · N: refuse", o.2.words(w)), vec2(dx, dy + 40.0), 13.0, WARN, 470.0);
+                    fit(canvas, &a.font, &format!("THEIR OFFER: {}", o.2.words(w)), vec2(dx, dy + 40.0), 13.0, WARN, 470.0);
                 }
             }
         }
         // Declaring.
         let target = self.map_ui.selected.and_then(|p| w.owner[p]).filter(|&o| o != 0 || self.spectating);
         let words = match target {
-            Some(t) if !self.spectating => format!("D: declare on {} as a {} (L: change)", w.names[t], LEVELS[self.map_ui.war.declare_level].to_lowercase()),
+            Some(t) if !self.spectating => format!("Chosen on the map: {} (a war would begin as a {})", w.names[t], LEVELS[self.map_ui.war.declare_level].to_lowercase()),
             _ => format!("To declare: select a province of theirs on the map, then D (level: {})", LEVELS[self.map_ui.war.declare_level].to_lowercase()),
         };
         fit(canvas, &a.font, &words, vec2(dx, WIN.bottom() - 58.0), 13.0, WARN, 470.0);
@@ -1047,7 +1043,7 @@ impl Lucky {
             }
             fit(canvas, &a.font, &format!("“{}”", r.words()), vec2(rx, ry), 14.0, Color::WHITE, 490.0);
             let (status, color) = match r.answered {
-                None => ("waiting for you  ·  Y: approve · N: deny".to_string(), WARN),
+                None => ("waiting for your answer".to_string(), WARN),
                 Some(true) => ("approved: it goes out as supplies allow".to_string(), GOOD),
                 Some(false) => ("denied".to_string(), BAD),
             };
@@ -1095,7 +1091,7 @@ fn order_name(w: &Wars, o: Order) -> String {
 }
 
 /// A faction's requests, waiting ones first, then the latest answered.
-fn request_list(w: &Wars, f: usize) -> Vec<usize> {
+pub(super) fn request_list(w: &Wars, f: usize) -> Vec<usize> {
     let r = &w.forces[f].requests;
     let mut out: Vec<usize> = (0..r.len()).rev().filter(|&k| r[k].answered.is_none()).collect();
     out.extend((0..r.len()).rev().filter(|&k| r[k].answered.is_some()).take(8));
