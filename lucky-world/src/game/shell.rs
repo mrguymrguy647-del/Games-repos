@@ -999,6 +999,7 @@ impl Lucky {
         self.clock.paused = true;
         self.fate.shown = true;
         crate::ui::sfx(ctx, if o.won() { &self.assets.victory } else { &self.assets.defeat }, 0.9, 0.0);
+        self.particles.clear();
         if o.won() {
             ui::confetti(&mut self.particles, &mut self.fx, 160);
         }
@@ -1016,9 +1017,9 @@ impl Lucky {
         if self.screen_time < 0.6 {
             return;
         }
-        let mouse = self.ui_mouse();
+        let mouse = self.full_mouse();
         let on_play = o.can_play_on() && (crate::game::gui::pressed(ctx, Key::Enter) || self.left_click(ctx) && mouse.is_some_and(|m| OUTCOME_PLAY.contains(m)));
-        let to_menu = crate::game::gui::pressed(ctx, Key::M) || self.left_click(ctx) && mouse.is_some_and(|m| OUTCOME_MENU.contains(m));
+        let to_menu = crate::game::gui::pressed(ctx, Key::M) || self.left_click(ctx) && mouse.is_some_and(|m| self.outcome_menu().contains(m));
         if on_play {
             self.fate.playing_on = true;
             self.clock.paused = false;
@@ -1041,7 +1042,7 @@ impl Lucky {
         let (Some(world), Some(e)) = (self.world.as_ref(), self.economy.as_ref()) else { return };
         let ed = &self.econ_data;
         let me = &world.nations[0];
-        self.push_ui(canvas);
+        self.push_full(canvas);
         let banner = if o.won() { &a.banner_victory } else { &a.banner_defeat };
         let rise = (1.0 - ui::ease_out_back(self.screen_time / 0.7)) * -60.0;
         if o.won() {
@@ -1134,18 +1135,19 @@ impl Lucky {
         }
 
         // The buttons.
-        let mouse = self.ui_mouse();
-        for (r, words, show) in [(OUTCOME_PLAY, "Play on", o.can_play_on()), (OUTCOME_MENU, "Main menu", true)] {
+        let mouse = self.full_mouse();
+        for (r, words, show, gold) in [(OUTCOME_PLAY, "Play on", o.can_play_on(), true), (self.outcome_menu(), "Main menu", true, !o.can_play_on())] {
             if !show {
                 continue;
             }
             let hot = mouse.is_some_and(|m| r.contains(m));
-            canvas.fill_rect(r, if hot { Color::rgba(245, 197, 66, 120) } else { Color::rgba(245, 197, 66, 50) });
-            canvas.draw_rect(r, GOLD);
-            ui::plain(canvas, &a.font, words, vec2(r.center().x, r.y + 10.0), 17.0, Color::WHITE, Align::Center);
+            let w = super::gui::Widget::new(super::gui::Kind::Button, r, words, super::gui::Act::None).on(gold);
+            super::gui::draw_widget(canvas, a, &w, hot, false);
             canvas.label(&format!("button {words}"), r);
         }
         self.pop_ui(canvas);
+        let tip = if o.can_play_on() { "Keep playing this world (shortcut: Enter)" } else { "" };
+        self.tip_screen(self.full_rect(OUTCOME_PLAY), tip.to_string());
     }
 
     /// One sentence on why the game ended this way.
@@ -1507,6 +1509,42 @@ impl Lucky {
         self.tips.scaled.set(false);
     }
 
+    /// The end screen's Main menu button: beside Play on, or alone in the middle.
+    pub(super) fn outcome_menu(&self) -> Rect {
+        if self.fate.outcome.is_some_and(|o| o.can_play_on()) {
+            OUTCOME_MENU
+        } else {
+            Rect::new(ui::W / 2.0 - OUTCOME_MENU.w / 2.0, OUTCOME_MENU.y, OUTCOME_MENU.w, OUTCOME_MENU.h)
+        }
+    }
+
+    /// The UI scale of screens that fill the screen's width (the end
+    /// screen): they never grow past 1, or they'd leave the screen.
+    fn full_scale(&self) -> f32 {
+        self.settings.ui_scale.min(1.0)
+    }
+
+    pub(super) fn push_full(&self, canvas: &mut Canvas) {
+        let mut cam = Camera2D::new(ui::W, ui::H);
+        cam.zoom = self.full_scale();
+        cam.position = vec2(ui::W / 2.0, ui::H / 2.0);
+        canvas.push_camera(&cam);
+        self.tips.scaled.set(true);
+    }
+
+    pub(super) fn full_mouse(&self) -> Option<Vec2> {
+        let s = self.full_scale();
+        let c = vec2(ui::W / 2.0, ui::H / 2.0);
+        self.mouse.map(|m| (m - c) * (1.0 / s) + c)
+    }
+
+    /// A rectangle of the full-width screens, in screen pixels.
+    pub(super) fn full_rect(&self, r: Rect) -> Rect {
+        let s = self.full_scale();
+        let c = vec2(ui::W / 2.0, ui::H / 2.0);
+        Rect::new(c.x + (r.x - c.x) * s, c.y + (r.y - c.y) * s, r.w * s, r.h * s)
+    }
+
     /// The mouse in the scaled windows' coordinates.
     pub fn ui_mouse(&self) -> Option<Vec2> {
         let s = self.settings.ui_scale;
@@ -1521,9 +1559,8 @@ pub(super) const OUTCOME_MENU: Rect = Rect { x: 650.0, y: 660.0, w: 210.0, h: 44
 
 /// A dark rounded panel with a soft outline.
 pub fn panel(canvas: &mut Canvas, r: Rect) {
-    canvas.fill_rect(r, Color::rgba(18, 10, 44, 236));
-    canvas.draw_rect(r, Color::rgba(127, 168, 255, 170));
-    canvas.draw_rect(Rect::new(r.x + 3.0, r.y + 3.0, r.w - 6.0, r.h - 6.0), Color::rgba(255, 255, 255, 30));
+    canvas.fill_rect(r, super::gui::NAVY);
+    canvas.draw_rect(r, super::gui::BRONZE);
 }
 
 /// The save file's shape, borrowing the game's parts (no copies).

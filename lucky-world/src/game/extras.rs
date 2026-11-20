@@ -186,9 +186,9 @@ impl Lucky {
             Screen::Settings | Screen::Help => {}
             Screen::Outcome => {
                 if self.fate.outcome.is_some_and(|o| o.can_play_on()) {
-                    out.push(("PLAY ON".to_string(), centre(super::shell::OUTCOME_PLAY)));
+                    out.push(("Play on".to_string(), self.full_rect(super::shell::OUTCOME_PLAY).center()));
                 }
-                out.push(("MAIN MENU".to_string(), centre(super::shell::OUTCOME_MENU)));
+                out.push(("Main menu".to_string(), self.full_rect(self.outcome_menu()).center()));
             }
             Screen::Map => {
                 if self.notes.log_open {

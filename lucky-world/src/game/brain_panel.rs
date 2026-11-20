@@ -12,7 +12,7 @@ use crate::country;
 use crate::ui::{self, GOLD, MUTED, SOFT};
 
 /// Where the panel sits (right of the map, above the minimap).
-pub const BRAIN_PANEL: Rect = Rect { x: 892.0, y: 64.0, w: 378.0, h: 440.0 };
+pub const BRAIN_PANEL: Rect = Rect { x: 828.0, y: 64.0, w: 378.0, h: 440.0 };
 
 const BAR_GOOD: Color = Color::rgb(107, 212, 138);
 const BAR_WARN: Color = Color::rgb(245, 197, 66);
@@ -32,8 +32,8 @@ impl Lucky {
         let Some(brain) = brains.brain(nation) else { return };
         let a = &self.assets;
         let r = BRAIN_PANEL;
-        canvas.fill_rect(r, Color::rgba(14, 8, 34, 236));
-        canvas.draw_rect(r, Color::rgba(245, 197, 66, 150));
+        canvas.fill_rect(r, super::gui::NAVY);
+        canvas.draw_rect(r, super::gui::BRONZE);
         canvas.label("brain panel", r);
         let (x, w) = (r.x + 14.0, r.w - 28.0);
         let mut y = r.y + 10.0;

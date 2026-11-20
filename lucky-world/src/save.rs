@@ -174,15 +174,17 @@ pub fn from_bytes(bytes: &[u8]) -> Result<(Summary, Saved), String> {
 /// Where saves live: a `saves` folder beside the game (`--saves DIR` or a
 /// test can point elsewhere).
 pub fn folder() -> PathBuf {
-    FOLDER.lock().ok().and_then(|f| f.clone()).unwrap_or_else(|| PathBuf::from("saves"))
+    FOLDER.with(|f| f.borrow().clone()).unwrap_or_else(|| PathBuf::from("saves"))
 }
 
-static FOLDER: std::sync::Mutex<Option<PathBuf>> = std::sync::Mutex::new(None);
+// Per thread: the game runs on one thread (a save's path is chosen there),
+// and tests running side by side each keep their own folder.
+thread_local! {
+    static FOLDER: std::cell::RefCell<Option<PathBuf>> = const { std::cell::RefCell::new(None) };
+}
 
 pub fn set_folder(dir: impl Into<PathBuf>) {
-    if let Ok(mut f) = FOLDER.lock() {
-        *f = Some(dir.into());
-    }
+    FOLDER.with(|f| *f.borrow_mut() = Some(dir.into()));
 }
 
 /// A safe file name for a slot ("Autosave 3", "My empire").

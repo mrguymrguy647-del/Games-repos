@@ -235,7 +235,52 @@ pub fn shots(args: &[String]) -> Result<(), String> {
     let mut bot = Bot::new(g, 21);
     bot.wait(20);
     shot(&mut bot, "menu");
-    if !bot.new_game(map, "normal") {
+    // The New Game screen, a wheel before and after its spin, a round
+    // card, the country card, the rivals: all by click.
+    bot.click_on("New Game");
+    bot.wait(30);
+    let world = bot.g().data.maps[map].name.clone();
+    bot.click_on(&world);
+    bot.sim.move_mouse(vec2(640.0, 420.0));
+    shot(&mut bot, "new_game");
+    bot.click_on("Spin the wheels");
+    bot.wait(40);
+    bot.sim.move_mouse(vec2(400.0, 330.0));
+    shot(&mut bot, "wheel_ready");
+    bot.click_on("wheel");
+    bot.wait(25);
+    shot(&mut bot, "wheel_spinning");
+    bot.wait_until(1500, |g| !g.landed.is_empty());
+    bot.wait(40);
+    shot(&mut bot, "wheel_landed");
+    for _ in 0..12 {
+        if matches!(bot.screen(), Screen::Round(_)) {
+            break;
+        }
+        if bot.g().view.as_ref().is_some_and(|v| v.landed) {
+            bot.click_on("Spin");
+        } else {
+            bot.click_on("wheel");
+            bot.wait_until(1500, |g| g.view.as_ref().is_some_and(|v| v.landed));
+        }
+        bot.wait(20);
+    }
+    bot.wait(40);
+    shot(&mut bot, "round_card");
+    bot.click_on("Skip spin");
+    bot.wait_until(60, |g| g.screen == Screen::Final);
+    bot.wait(200);
+    shot(&mut bot, "country_card_final");
+    bot.click_on("Meet your rivals");
+    bot.wait_until(60, |g| g.screen == Screen::Rivals);
+    bot.wait(90);
+    shot(&mut bot, "rivals");
+    bot.click_on("rival 1");
+    bot.wait(10);
+    shot(&mut bot, "rival_card");
+    bot.click_on("Back");
+    bot.click_on("Begin");
+    if !bot.wait_until(120, |g| g.screen == Screen::Map) {
         return Err(format!("couldn't start a game: {:?}", bot.log));
     }
     bot.wait(30);
@@ -250,6 +295,13 @@ pub fn shots(args: &[String]) -> Result<(), String> {
     }
     bot.sim.move_mouse(vec2(760.0, 260.0));
     shot(&mut bot, "map");
+    // The map's views.
+    for view in ["Terrain", "Resources", "Industry", "Alliances"] {
+        bot.click_on(view);
+        bot.wait(5);
+        shot(&mut bot, &format!("view_{}", view.to_lowercase()));
+    }
+    bot.click_on("Nations");
     // Hover a top-bar number.
     if let Some((_, at)) = bot.g().click_targets().into_iter().find(|(n, _)| n.contains('$') || n.ends_with('B') || n.ends_with('T')) {
         hover(&mut bot, at);
@@ -312,6 +364,27 @@ pub fn shots(args: &[String]) -> Result<(), String> {
         }
     }
     bot.sim.game_mut().settings.ui_scale = 1.0;
+    // Watching a world of brains, with one nation's brain panel open.
+    let mut watch = Bot::new(crate::new_game().map_err(|e| e.to_string())?, 22);
+    watch.wait(10);
+    watch.click_on("New Game");
+    watch.click_on("Watch the brains");
+    watch.wait_until(200, |g| g.screen == Screen::Map);
+    watch.wait(400);
+    if let Some((_, at)) = (0..4).find_map(|n| watch.g().clickable_province(n)) {
+        watch.click(at);
+    }
+    watch.sim.move_mouse(vec2(500.0, 300.0));
+    shot(&mut watch, "spectator");
+    // The end screens (a result given by hand: the game's own come later).
+    for (o, name) in [(crate::victory::Outcome::Won(crate::victory::Win::Score), "victory"), (crate::victory::Outcome::Lost(crate::victory::Loss::Conquered), "defeat")] {
+        bot.sim.with_context(|g, ctx| {
+            g.fate.outcome = Some(o);
+            g.show_outcome(ctx, o);
+        });
+        bot.wait(90);
+        shot(&mut bot, name);
+    }
     Ok(())
 }
 

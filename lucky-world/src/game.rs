@@ -983,7 +983,7 @@ impl Lucky {
         let drop = (1.0 - ui::ease_out_back(self.screen_time / 0.8)) * -120.0;
         canvas.blit_sprite(&a.logo, vec2(140.0, 26.0 + drop), Blit::default());
         canvas.label("logo", Rect::new(162.0, 51.0, 960.0, 150.0));
-        ui::text(canvas, &a.font, "Spin sixteen wheels. Become a nation. Outplay your rivals.", vec2(640.0, 212.0), 24.0, Color::WHITE, Align::Center, 1100.0);
+        ui::text(canvas, &a.font, "Spin the wheels. Become a nation. Outplay your rivals.", vec2(640.0, 212.0), 24.0, Color::WHITE, Align::Center, 1100.0);
         ui::plain(canvas, &a.font, "CHOOSE YOUR WORLD", vec2(640.0, 262.0), 18.0, GOLD, Align::Center);
         for (i, m) in self.data.maps.iter().enumerate() {
             let r = map_card_rect(i);
@@ -1015,23 +1015,24 @@ impl Lucky {
         }
         let years = if self.setup.years == 0 { "No time limit".to_string() } else { format!("{} years", self.setup.years) };
         let chips = [
-            ("WORLD (4 or R)", if self.random_map { "Random: fate decides".to_string() } else { self.data.maps[self.map].name.clone() }, "random"),
-            ("DIFFICULTY (D)", capitalise(&self.setup.difficulty), "difficulty"),
-            ("GAME LENGTH (L)", years, "length"),
+            ("WORLD", if self.random_map { "Random: fate decides".to_string() } else { self.data.maps[self.map].name.clone() }, "random"),
+            ("DIFFICULTY", capitalise(&self.setup.difficulty), "difficulty"),
+            ("GAME LENGTH", years, "length"),
         ];
         for (i, (title, value, id)) in chips.iter().enumerate() {
             let r = title_chip(i);
             let hot = self.mouse.is_some_and(|m| r.contains(m));
-            canvas.fill_rect(r, Color::rgba(18, 10, 44, if hot { 245 } else { 215 }));
-            canvas.draw_rect(r, if hot { GOLD } else { Color::rgba(127, 168, 255, 160) });
-            ui::plain(canvas, &a.font, title, vec2(r.center().x, r.y + 6.0), 11.0, GOLD, Align::Center);
-            ui::text(canvas, &a.font, value, vec2(r.center().x, r.y + 22.0), 18.0, Color::WHITE, Align::Center, r.w - 20.0);
+            canvas.fill_rect(r, if hot { gui::NAVY_HI } else { gui::NAVY });
+            canvas.draw_rect(r, if hot { GOLD } else { gui::BRONZE });
+            ui::plain(canvas, &a.font, title, vec2(r.center().x, r.y + 6.0), 11.0, gui::LABEL, Align::Center);
+            ui::text(canvas, &a.font, value, vec2(r.center().x, r.y + 22.0), 18.0, gui::IVORY, Align::Center, r.w - 20.0);
             canvas.label(&format!("chip {id}"), r);
         }
         let d = DIFFICULTIES.iter().position(|d| *d == self.setup.difficulty).unwrap_or(1);
         let tip = ["Easy: the brains plan poorly, react slowly and misjudge wars", "Normal: the brains as they were built", "Hard: sharper, quicker brains that gang up on you sooner", "Brutal: the best planners, quickest to react; never cheating"][d];
-        self.tip_words(title_chip(1), format!("{tip}. Difficulty never gives the brains more money, soldiers or sight than you have."));
-        self.tip_words(title_chip(2), "The game ends on score after this many years (a conquest, economic or diplomatic win can come sooner). You can play on afterwards.".to_string());
+        self.tip_words(title_chip(0), "Click: let fate pick the world too (shortcut: R)".to_string());
+        self.tip_words(title_chip(1), format!("{tip}. Difficulty never gives the brains more money, soldiers or sight than you have. Click to change (shortcut: D)."));
+        self.tip_words(title_chip(2), "The game ends on score after this many years (a conquest, economic or diplomatic win can come sooner). You can play on afterwards. Click to change (shortcut: L).".to_string());
         self.button(canvas, &TITLE_SPIN, true);
         self.button(canvas, &TITLE_SKIP, false);
         self.button(canvas, &TITLE_WATCH, false);

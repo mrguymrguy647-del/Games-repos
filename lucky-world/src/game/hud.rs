@@ -113,6 +113,9 @@ impl Lucky {
         out.push(("view buttons", Space::BottomLeft.to_screen(s, Rect::new(LEFT_X, VIEW_Y, 5.0 * (VIEW_W + 4.0) - 4.0, 30.0))));
         out.push(("news strip", self.strip()));
         out.push(("minimap", Space::BottomRight.to_screen(s, Rect::new(MINIMAP_FRAME.x - 36.0, MINIMAP_FRAME.y, 292.0 + 36.0, 176.0))));
+        if fullest || self.map_ui.econ.overlay != super::econ_screen::Overlay::Off {
+            out.push(("overlay key", Space::BottomLeft.to_screen(s, Lucky::LEGEND)));
+        }
         if fullest || self.report_card().is_some() {
             out.push(("battle card", Space::TopRight.to_screen(s, REPORT_CARD)));
         }

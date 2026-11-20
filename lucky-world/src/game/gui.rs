@@ -74,6 +74,7 @@ pub fn pressed(ctx: &Context, key: Key) -> bool {
 }
 
 /// How many real key presses the game has acted on (on this thread).
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn real_keys() -> u64 {
     REAL_KEYS.with(|k| k.get())
 }

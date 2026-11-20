@@ -592,8 +592,8 @@ impl Lucky {
         ctx.check("the player's economy has sane numbers", n.gdp.is_finite() && n.gdp > 0.0 && n.stock.iter().all(|s| *s >= -1e-6));
     }
 
-    /// Date, speed and the headline numbers, on the top bar.
-    /// The overlay's key, bottom left.
+    /// The overlay's key: bottom left, right of the left cards and above
+    /// the view buttons.
     pub(super) fn draw_overlay_legend(&self, canvas: &mut Canvas) {
         let a = &self.assets;
         let ed = &self.econ_data;
@@ -601,12 +601,23 @@ impl Lucky {
         if ui.overlay == Overlay::Off {
             return;
         }
-        let r = Rect::new(14.0, 520.0, 230.0, 168.0);
-        canvas.fill_rect(r, Color::rgba(12, 6, 30, 210));
+        super::gui::Space::BottomLeft.push(canvas, self.settings.ui_scale);
+        self.draw_legend_body(canvas, a, ed, ui.overlay);
+        canvas.pop_camera();
+    }
+
+    /// Where the overlay's key sits (bottom-left space).
+    pub(super) const LEGEND: Rect = Rect { x: 256.0, y: ui::H - 46.0 - 172.0, w: 230.0, h: 172.0 };
+
+    fn draw_legend_body(&self, canvas: &mut Canvas, a: &crate::ui::Assets, ed: &EconData, overlay: Overlay) {
+        let r = Self::LEGEND;
+        super::gui::panel(canvas, a, r);
         canvas.label("overlay legend", r);
-        match ui.overlay {
+        let ui = &self.map_ui.econ;
+        let _ = ui;
+        match overlay {
             Overlay::Resources => {
-                plain(canvas, &a.font, "RESOURCES (V)", vec2(r.x + 12.0, r.y + 8.0), 12.0, GOLD);
+                plain(canvas, &a.font, "RESOURCES", vec2(r.x + 12.0, r.y + 8.0), 12.0, GOLD);
                 let raws: Vec<usize> = (0..ed.goods.len()).filter(|&g| ed.goods[g].tier == Tier::Raw).collect();
                 for (k, &g) in raws.iter().enumerate() {
                     let y = r.y + 30.0 + k as f32 * 21.0;
@@ -615,7 +626,7 @@ impl Lucky {
                 }
             }
             Overlay::Industry => {
-                plain(canvas, &a.font, "INDUSTRY (V)", vec2(r.x + 12.0, r.y + 8.0), 12.0, GOLD);
+                plain(canvas, &a.font, "INDUSTRY", vec2(r.x + 12.0, r.y + 8.0), 12.0, GOLD);
                 plain(canvas, &a.font, "What each province's", vec2(r.x + 12.0, r.y + 34.0), 14.0, Color::WHITE);
                 plain(canvas, &a.font, "buildings make a day", vec2(r.x + 12.0, r.y + 52.0), 14.0, Color::WHITE);
                 for k in 0..20 {
@@ -627,7 +638,7 @@ impl Lucky {
                 plain(canvas, &a.font, "Grey: none", vec2(r.x + 12.0, r.y + 138.0), 13.0, SOFT);
             }
             Overlay::War => {
-                plain(canvas, &a.font, "WAR (V)", vec2(r.x + 12.0, r.y + 8.0), 12.0, GOLD);
+                plain(canvas, &a.font, "WAR", vec2(r.x + 12.0, r.y + 8.0), 12.0, GOLD);
                 plain(canvas, &a.font, "Each province in the colour", vec2(r.x + 12.0, r.y + 30.0), 13.0, Color::WHITE);
                 plain(canvas, &a.font, "of whoever holds it", vec2(r.x + 12.0, r.y + 47.0), 13.0, Color::WHITE);
                 plain(canvas, &a.font, "Bright: occupied land", vec2(r.x + 12.0, r.y + 72.0), 13.0, SOFT);
@@ -637,7 +648,7 @@ impl Lucky {
                 plain(canvas, &a.font, "(1 figure = 1,000 soldiers)", vec2(r.x + 12.0, r.y + 138.0), 13.0, SOFT);
             }
             Overlay::Alliances => {
-                plain(canvas, &a.font, "ALLIANCES (V)", vec2(r.x + 12.0, r.y + 8.0), 12.0, GOLD);
+                plain(canvas, &a.font, "ALLIANCES", vec2(r.x + 12.0, r.y + 8.0), 12.0, GOLD);
                 plain(canvas, &a.font, "Each bloc of alliances and", vec2(r.x + 12.0, r.y + 30.0), 13.0, Color::WHITE);
                 plain(canvas, &a.font, "defensive pacts in the colour", vec2(r.x + 12.0, r.y + 47.0), 13.0, Color::WHITE);
                 plain(canvas, &a.font, "of its strongest member", vec2(r.x + 12.0, r.y + 64.0), 13.0, Color::WHITE);
@@ -645,7 +656,7 @@ impl Lucky {
                 plain(canvas, &a.font, "No allies", vec2(r.x + 36.0, r.y + 90.0), 13.0, SOFT);
             }
             Overlay::Relations => {
-                plain(canvas, &a.font, "RELATIONS (V)", vec2(r.x + 12.0, r.y + 8.0), 12.0, GOLD);
+                plain(canvas, &a.font, "RELATIONS", vec2(r.x + 12.0, r.y + 8.0), 12.0, GOLD);
                 plain(canvas, &a.font, if self.spectating { "With the chosen nation" } else { "With you" }, vec2(r.x + 12.0, r.y + 30.0), 13.0, Color::WHITE);
                 for k in 0..20 {
                     let t = k as f32 / 19.0 * 2.0 - 1.0;
